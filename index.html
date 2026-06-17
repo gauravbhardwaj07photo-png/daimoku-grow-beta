@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Daimoku Grow - Spiritual Chant & Garden</title>
+  
+  <!-- SEO & PWA Meta Tags -->
+  <meta name="description" content="A beautiful spiritual guide and motivation app. Track your Daimoku (chanting), water your virtual plant, and watch it grow into a majestic tree.">
+  <meta name="theme-color" content="#f4f7f4">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  
+  <!-- Icons (FontAwesome for clean symbols) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="theme-sage-light">
+  <div id="debug-error-banner" style="display:none; position:fixed; top:0; left:0; width:100%; background:red; color:white; z-index:999999; padding:20px; font-size:14px; white-space:pre-wrap; overflow-y:auto; max-height:50vh;"></div>
+  <script>
+    window.addEventListener('error', function(e) {
+      var banner = document.getElementById('debug-error-banner');
+      banner.style.display = 'block';
+      banner.innerHTML += 'Error: ' + e.message + ' at ' + e.filename + ':' + e.lineno + ':' + e.colno + '\n' + (e.error && e.error.stack ? e.error.stack : '') + '\n\n';
+    });
+    window.addEventListener('unhandledrejection', function(e) {
+      var banner = document.getElementById('debug-error-banner');
+      banner.style.display = 'block';
+      banner.innerHTML += 'Unhandled Promise Rejection: ' + e.reason + '\n\n';
+    });
+  </script>
+
+  <!-- Shared SVG Definitions for Wave Animations -->
+  <svg style="display: none;">
+    <defs>
+      <path id="gentle-wave" d="M-160 44c30 0 58-18 88-18s 58 18 88 18 58-18 88-18 58 18 88 18v44h-352z" />
+    </defs>
+  </svg>
+
+  <div class="app-container">
+    
+    <!-- Top Header -->
+    <header class="app-header">
+      <div class="logo-container">
+        <div class="logo">
+          <span class="logo-leaf"><i class="fa-solid fa-leaf"></i></span>
+          <h1>Daimoku Grow</h1>
+        </div>
+        <div id="user-block-badge" class="user-block-badge hidden">Wisdom</div>
+      </div>
+      <div class="header-right">
+        <div class="water-indicator" id="header-water-indicator" title="Plant Health">
+          <i class="fa-solid fa-droplet"></i>
+          <span id="header-health-value">100%</span>
+        </div>
+        <button id="btn-logout" class="btn-header-action hidden" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></button>
+      </div>
+    </header>
+
+    <!-- Main Navigation Content Views -->
+    <main class="app-content">
+      
+      <!-- In-app Notification Banner -->
+      <div id="app-notification-banner" class="notification-banner hidden">
+        <div class="notification-icon"><i class="fa-solid fa-circle-exclamation"></i></div>
+        <div class="notification-text" id="notification-banner-text">Your plant is thirsty! Water it by chanting.</div>
+        <button class="notification-close" id="notification-banner-close"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <!-- VIEW 1: DASHBOARD -->
+      <section id="view-dashboard" class="content-view active">
+        <div class="dashboard-grid">
+          
+          <!-- Plant Visualization Section -->
+          <div class="card plant-card">
+            <div class="plant-status-overlay">
+              <span id="plant-stage-badge" class="badge">Seed</span>
+              <span id="plant-mood-badge" class="badge mood-badge">Happy</span>
+            </div>
+            <div class="canvas-container">
+              <canvas id="plant-canvas" width="400" height="420"></canvas>
+            </div>
+            <div class="plant-health-bar-container">
+              <div class="health-label">
+                <span>Plant Vitality</span>
+                <span id="plant-health-percent">100%</span>
+              </div>
+              <div class="progress-bar-track">
+                <div id="plant-health-fill" class="progress-bar-fill" style="width: 100%;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Total Progress Card -->
+          <div class="card progress-card">
+            <h2>Chanting Progress</h2>
+            <div class="stats-row">
+              <div class="stat-box">
+                <span class="stat-number" id="stat-total-hours">0.0</span>
+                <span class="stat-label">Hours Logged</span>
+              </div>
+              <div class="stat-box">
+                <span class="stat-number" id="stat-target-hours">333</span>
+                <span class="stat-label">Target Hours</span>
+              </div>
+            </div>
+            
+            <div class="linear-progress-section">
+              <div class="progress-label">
+                <span id="progress-percent-label">0% of Journey</span>
+                <span id="progress-remaining-label">333h remaining</span>
+              </div>
+              <div class="progress-bar-track large">
+                <div id="journey-progress-fill" class="progress-bar-fill journey-fill" style="width: 0%;"></div>
+              </div>
+            </div>
+
+            <!-- Revival Progress (Hidden by default, shown when plant is dead) -->
+            <div id="revival-progress-container" class="revival-box hidden">
+              <h3><i class="fa-solid fa-heart-pulse pulse-icon"></i> Reviving Plant</h3>
+              <p>Your plant has withered. Chant 3 hours 20 minutes (200 mins) to revive it.</p>
+              <div class="revival-progress-bar-section">
+                <div class="progress-label">
+                  <span id="revival-time-label">0 / 200 mins</span>
+                  <span id="revival-percent-label">0%</span>
+                </div>
+                <div class="progress-bar-track warning">
+                  <div id="revival-progress-fill" class="progress-bar-fill revival-fill" style="width: 0%;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Daily Guidance by Daisaku Ikeda Card -->
+          <div class="card guidance-card">
+            <div class="guidance-header">
+              <span class="guidance-icon"><i class="fa-solid fa-book-open"></i></span>
+              <h2>Daily Guidance</h2>
+            </div>
+            <p id="guidance-text">"Even one daimoku can pervade the entire universe. Truly heartfelt and determined daimoku, therefore, has the power to move everything."</p>
+            <span id="guidance-author">— Daisaku Ikeda</span>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- VIEW 2: CHANT (TIMER) -->
+      <section id="view-chant" class="content-view">
+        <div class="chant-grid">
+          
+          <div class="card timer-card">
+            <!-- Timer Type Toggle -->
+            <div class="timer-type-selector">
+              <button id="btn-timer-stopwatch" class="selector-btn active">Stopwatch</button>
+              <button id="btn-timer-countdown" class="selector-btn">Focus Timer</button>
+            </div>
+
+            <!-- Focus Presets (Visible only in Countdown mode) -->
+            <div id="countdown-presets" class="presets-container hidden">
+              <button class="preset-btn" data-mins="5">5m</button>
+              <button class="preset-btn" data-mins="15">15m</button>
+              <button class="preset-btn active" data-mins="30">30m</button>
+              <button class="preset-btn" data-mins="45">45m</button>
+              <button class="preset-btn" data-mins="60">1h</button>
+              <button class="preset-btn" id="preset-custom-btn">Custom</button>
+            </div>
+
+            <div id="custom-minutes-input-container" class="custom-input-box hidden">
+              <label for="custom-minutes">Minutes:</label>
+              <input type="number" id="custom-minutes" min="1" max="60" value="30">
+              <button id="btn-apply-custom-time" class="btn-small">Set</button>
+            </div>
+
+            <!-- Timer Display -->
+            <div class="timer-display-container">
+              <div class="timer-digits-box">
+                <div class="timer-time" id="timer-time-display">00:00:00</div>
+                <div class="timer-label" id="timer-state-label">Ready</div>
+              </div>
+            </div>
+
+            <!-- Target & Campaign Associations Dropdowns -->
+            <div class="target-link-box double-selects" style="display:flex; gap:10px; margin: 12px 0;">
+              <div style="flex:1; display:flex; flex-direction:column; gap:4px;">
+                <label for="timer-personal-select" style="font-size:11px; font-weight:600; color:var(--text-muted);"><i class="fa-solid fa-bullseye"></i> Personal Target:</label>
+                <select id="timer-personal-select" style="width:100%; border:var(--border); border-radius:10px; padding:10px; background:var(--accent-cream); color:var(--text-main); font-size:13px; outline:none;">
+                  <option value="">-- General Chanting (None) --</option>
+                </select>
+              </div>
+              <div style="flex:1; display:flex; flex-direction:column; gap:4px;">
+                <label for="timer-campaign-select" style="font-size:11px; font-weight:600; color:var(--text-muted);"><i class="fa-solid fa-bullhorn"></i> SGI Campaign:</label>
+                <select id="timer-campaign-select" style="width:100%; border:var(--border); border-radius:10px; padding:10px; background:var(--accent-cream); color:var(--text-main); font-size:13px; outline:none;">
+                  <option value="">-- General Chanting (None) --</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Timer Controls -->
+            <div class="timer-controls">
+              <button id="btn-timer-start" class="btn btn-primary"><i class="fa-solid fa-play"></i> Start</button>
+              <button id="btn-timer-pause" class="btn btn-secondary hidden"><i class="fa-solid fa-pause"></i> Pause</button>
+              <button id="btn-timer-stop" class="btn btn-success hidden"><i class="fa-solid fa-stop"></i> Stop & Record</button>
+              <button id="btn-timer-cancel" class="btn btn-danger hidden"><i class="fa-solid fa-rotate-left"></i> Reset</button>
+              <button id="btn-manual-gong" class="btn btn-icon-gong" title="Sound Bell"><i class="fa-solid fa-bell"></i></button>
+            </div>
+          </div>
+
+          <!-- Manual Session Log Entry Card -->
+          <div class="card manual-log-card">
+            <h2>Log Daimoku Manually</h2>
+            <form id="manual-log-form">
+              <div class="form-group-row">
+                <div class="form-group">
+                  <label for="log-hours">Hours</label>
+                  <input type="number" id="log-hours" min="0" max="24" value="0">
+                </div>
+                <div class="form-group">
+                  <label for="log-minutes">Minutes</label>
+                  <input type="number" id="log-minutes" min="0" max="60" value="15">
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="log-date">Date</label>
+                <input type="date" id="log-date" required>
+              </div>
+              <div class="form-group-row" style="margin-bottom:14px; gap:10px;">
+                <div class="form-group" style="flex:1; margin-bottom:0;">
+                  <label for="manual-personal-select"><i class="fa-solid fa-bullseye"></i> Personal Target</label>
+                  <select id="manual-personal-select" style="width:100%;">
+                    <option value="">-- General Chanting (None) --</option>
+                  </select>
+                </div>
+                <div class="form-group" style="flex:1; margin-bottom:0;">
+                  <label for="manual-campaign-select"><i class="fa-solid fa-bullhorn"></i> SGI Campaign</label>
+                  <select id="manual-campaign-select" style="width:100%;">
+                    <option value="">-- General Chanting (None) --</option>
+                  </select>
+                </div>
+              </div>
+              <button type="submit" class="btn btn-secondary btn-full"><i class="fa-solid fa-plus"></i> Add Session</button>
+            </form>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- VIEW 1.5: TARGETS (PRAYERS & DETERMINATIONS) -->
+      <section id="view-prayers" class="content-view">
+        <div class="targets-grid">
+          
+          <!-- Add Target Card -->
+          <div class="card add-target-card">
+            <h2>New Determination</h2>
+            <form id="add-target-form">
+              <div class="form-group">
+                <label for="target-text">Prayer Target / Goal</label>
+                <input type="text" id="target-text" placeholder="e.g., Family health, Career breakthrough..." required>
+              </div>
+              <div class="form-group-row">
+                <div class="form-group">
+                  <label for="target-type-select">Target Type</label>
+                  <select id="target-type-select">
+                    <option value="none">Open-ended (No hours target)</option>
+                    <option value="hours">Hours Target</option>
+                  </select>
+                </div>
+                <div class="form-group hidden" id="target-hours-input-group">
+                  <label for="target-hours">Target Hours</label>
+                  <input type="number" id="target-hours" min="1" max="10000" value="10">
+                </div>
+              </div>
+              <button type="submit" class="btn btn-secondary btn-full"><i class="fa-solid fa-plus"></i> Create Target</button>
+            </form>
+          </div>
+
+          <!-- Active Targets Card -->
+          <div class="card active-targets-card">
+            <h2>My Determinations</h2>
+            <div id="active-targets-list" class="targets-list">
+              <!-- Dynamically populated -->
+              <div class="empty-state">
+                <i class="fa-solid fa-bullseye"></i>
+                <p>No active prayer targets. Set a determination to focus your Daimoku!</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Completed Targets Card -->
+          <div class="card completed-targets-card collapsible">
+            <button class="completed-targets-header" id="btn-toggle-completed-targets">
+              <span>Completed Targets (<span id="completed-targets-count">0</span>)</span>
+              <i class="fa-solid fa-chevron-down toggle-arrow"></i>
+            </button>
+            <div id="completed-targets-list" class="targets-list collapsed">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- VIEW 3: HISTORY -->
+      <section id="view-history" class="content-view">
+        <div class="history-grid">
+          
+          <!-- Analytics Panel -->
+          <div class="card analytics-card">
+            <h2>Chanting Summary</h2>
+            <div class="analytics-row">
+              <div class="analytic-item">
+                <span class="analytic-number" id="analytic-sessions">0</span>
+                <span class="analytic-label">Total Sessions</span>
+              </div>
+              <div class="analytic-item">
+                <span class="analytic-number" id="analytic-streak">0</span>
+                <span class="analytic-label">Day Streak</span>
+              </div>
+              <div class="analytic-item">
+                <span class="analytic-number" id="analytic-avg-session">0m</span>
+                <span class="analytic-label">Avg. Session</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- History Logs List -->
+          <div class="card logs-card">
+            <div class="logs-header">
+              <h2>Session Logs</h2>
+              <button id="btn-clear-history" class="btn-text-danger"><i class="fa-solid fa-trash-can"></i> Clear All</button>
+            </div>
+            <div id="logs-list-container" class="logs-list">
+              <!-- Dynamically populated -->
+              <div class="empty-state">
+                <i class="fa-solid fa-seedling"></i>
+                <p>No chanting sessions recorded yet. Start chanting to grow your plant!</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- VIEW 4: SETTINGS & DEVELOPER DEBUG -->
+      <section id="view-settings" class="content-view">
+        <div class="settings-grid">
+          
+          <!-- App Customization & Notifications -->
+          <div class="card settings-card">
+            <h2>App Settings</h2>
+            
+            <div class="settings-section">
+              <h3>Reminders (Water the Plant)</h3>
+              <p class="settings-desc">Keep your plant alive by enabling morning and evening reminders.</p>
+              
+              <div class="setting-toggle-row">
+                <div class="setting-info">
+                  <span class="setting-title">Morning Reminder</span>
+                  <span class="setting-subtitle">Alerts at 12:00 PM if not chanted yet</span>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="setting-morning-reminder">
+                  <span class="slider"></span>
+                </label>
+              </div>
+
+              <div class="setting-toggle-row">
+                <div class="setting-info">
+                  <span class="setting-title">Evening Reminder</span>
+                  <span class="setting-subtitle">Alerts at 8:00 PM if not chanted since noon</span>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="setting-evening-reminder">
+                  <span class="slider"></span>
+                </label>
+              </div>
+              
+              <button id="btn-request-notifications" class="btn btn-secondary btn-full"><i class="fa-regular fa-bell"></i> Request Notification Permission</button>
+              
+              <div class="setting-toggle-row" id="biometric-setting-row" style="margin-top: 14px;">
+                <div class="setting-info">
+                  <span class="setting-title">Biometric Lock</span>
+                  <span class="setting-subtitle">Unlock app with FaceID/TouchID</span>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="setting-biometric-lock">
+                  <span class="slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="settings-section">
+              <h3>Sound Settings</h3>
+              <div class="setting-toggle-row">
+                <div class="setting-info">
+                  <span class="setting-title">Focus Gong Sound</span>
+                  <span class="setting-subtitle">Plays a resonant gong when focus timer ends</span>
+                </div>
+                <button id="btn-test-gong" class="btn-icon-test" title="Test sound"><i class="fa-solid fa-volume-high"></i> Test</button>
+              </div>
+            </div>
+
+            <div class="settings-section">
+              <h3>Theme Customizer</h3>
+              <div class="theme-options">
+                <button class="theme-btn theme-sage active" data-theme="theme-sage-light">
+                  <span class="theme-dot" style="background: #e2ebe2; border: 2px solid #5a7a5a;"></span>
+                  Sage Light
+                </button>
+                <button class="theme-btn theme-wood" data-theme="theme-wood-sand">
+                  <span class="theme-dot" style="background: #f7f1eb; border: 2px solid #c48c5a;"></span>
+                  Warm Wood
+                </button>
+                <button class="theme-btn theme-forest" data-theme="theme-forest-dark">
+                  <span class="theme-dot" style="background: #1c2e1c; border: 2px solid #a3cfa3;"></span>
+                  Forest Dark
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Admin Control Panel (Collapsible, visible only to admin role) -->
+          <div class="card admin-card collapsible hidden" id="admin-panel-card">
+            <button class="admin-panel-header" id="btn-toggle-admin">
+              <span><i class="fa-solid fa-user-shield"></i> Administrator Control Panel</span>
+              <i class="fa-solid fa-chevron-down toggle-arrow"></i>
+            </button>
+            <div id="admin-panel-content" class="admin-content collapsed">
+              <p class="admin-desc">Manage block member emails, set target campaign hours, and view registration lists.</p>
+              
+              <!-- Section 1: Whitelist Manager -->
+              <div class="admin-control-group">
+                <h4>Member Whitelist Manager</h4>
+                <form id="admin-whitelist-form" class="admin-subform" style="display:flex; flex-direction:column; gap:8px;">
+                  <div class="form-group-row" style="margin-bottom:0; gap:8px;">
+                    <input type="email" id="whitelist-email-input" placeholder="new.member@email.com" required style="flex:2;">
+                    <input type="text" id="whitelist-code-input" placeholder="Code (optional)" style="flex:1; padding:10px 14px; border-radius:10px; border:var(--border); background:var(--accent-cream); color:var(--text-main); font-size:14px; outline:none;">
+                  </div>
+                  <button type="submit" class="btn btn-primary btn-full" style="padding: 10px 14px; font-size: 13px;"><i class="fa-solid fa-plus"></i> Whitelist Member</button>
+                </form>
+                <div class="whitelist-list" id="whitelist-list-container">
+                  <!-- Dynamically populated list of whitelisted emails with Delete buttons -->
+                </div>
+              </div>
+
+              <!-- Section 2: Campaign Target Editor -->
+              <div class="admin-control-group">
+                <h4>Campaign Target Hours</h4>
+                <div class="campaign-targets-editor" id="campaign-targets-container">
+                  <!-- Dynamically populated campaign target inputs -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Developer Debug Dashboard (Collapsible, critical for verification) -->
+          <div class="card debug-card collapsible">
+            <button class="debug-header" id="btn-toggle-debug">
+              <span><i class="fa-solid fa-bug"></i> Developer Debug Panel</span>
+              <i class="fa-solid fa-chevron-down toggle-arrow"></i>
+            </button>
+            <div id="debug-content" class="debug-content collapsed">
+              <p class="debug-desc">Use these tools to simulate time passage, plant stages, and trigger state conditions.</p>
+              
+              <div class="debug-control-group">
+                <h4>Simulate Chanting Hours</h4>
+                <div class="debug-buttons">
+                  <button class="btn-debug" data-hours="0">Reset to 0h</button>
+                  <button class="btn-debug" data-hours="5">Set to 5h (Sprout)</button>
+                  <button class="btn-debug" data-hours="35">Set to 35h (Seedling)</button>
+                  <button class="btn-debug" data-hours="100">Set to 100h (Young)</button>
+                  <button class="btn-debug" data-hours="220">Set to 220h (Shrub)</button>
+                  <button class="btn-debug" data-hours="333">Set to 333h (Tree!)</button>
+                </div>
+              </div>
+
+              <div class="debug-control-group">
+                <h4>Simulate Neglect & Health Decay</h4>
+                <div class="debug-buttons">
+                  <button class="btn-debug-health" data-health="100">Full 100% (Happy)</button>
+                  <button class="btn-debug-health" data-health="75">75% Health (Normal)</button>
+                  <button class="btn-debug-health" data-health="50">50% Health (Thirsty)</button>
+                  <button class="btn-debug-health" data-health="25">25% Health (Sad)</button>
+                  <button class="btn-debug-health" data-health="5">5% Health (Dying)</button>
+                  <button class="btn-debug-health" data-health="0">0% Health (Dead)</button>
+                </div>
+              </div>
+
+              <div class="debug-control-group">
+                <h4>Time Decay Simulation</h4>
+                <p class="debug-desc">Simulate decay thresholds to verify corresponding Ikeda quotes and plant alerts.</p>
+                <div class="debug-buttons">
+                  <button id="btn-debug-decay-24h" class="btn-debug-action">Simulate 24h (Thirsty)</button>
+                  <button id="btn-debug-decay-72h" class="btn-debug-action">Simulate 72h (Sad)</button>
+                  <button id="btn-debug-decay-7d" class="btn-debug-action">Simulate 7 Days (Dying)</button>
+                  <button id="btn-debug-decay-15d" class="btn-debug-action">Simulate 15 Days (Withered)</button>
+                  <button id="btn-debug-decay-30d" class="btn-debug-action">Simulate 30 Days (Dormant)</button>
+                  <button id="btn-debug-reset-date" class="btn-debug-action">Reset Last Chanted to Now</button>
+                </div>
+              </div>
+
+              <div class="debug-control-group">
+                <h4>Test Notifications & Alerts</h4>
+                <div class="debug-buttons">
+                  <button id="btn-debug-test-morning" class="btn-debug-action">Trigger Morning Check (Noon)</button>
+                  <button id="btn-debug-test-evening" class="btn-debug-action">Trigger Evening Check (8pm)</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- VIEW 5: CAMPAIGN -->
+      <section id="view-campaign" class="content-view">
+        <div class="campaign-grid">
+          <div class="card campaign-header-card">
+            <h2>Block Campaigns</h2>
+            <p class="section-desc">Chant together with your block members to grow the collective tree for each campaign.</p>
+          </div>
+          
+          <div class="campaigns-list" id="campaigns-list-container">
+            <!-- Dynamically populated campaign cards -->
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 6: CALENDAR -->
+      <section id="view-calendar" class="content-view">
+        <div class="calendar-grid">
+          <!-- Calendar Card -->
+          <div class="card calendar-card">
+            <div class="calendar-header-row">
+              <button id="btn-cal-prev" class="btn-cal-nav"><i class="fa-solid fa-chevron-left"></i></button>
+              <h2 id="calendar-month-year">June 2026</h2>
+              <button id="btn-cal-next" class="btn-cal-nav"><i class="fa-solid fa-chevron-right"></i></button>
+            </div>
+            <div class="calendar-weekdays">
+              <div>S</div><div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div>
+            </div>
+            <div class="calendar-days" id="calendar-days-grid">
+              <!-- Days grid populated by JS -->
+            </div>
+          </div>
+
+          <!-- Selected Day Events Card -->
+          <div class="card calendar-events-card">
+            <h3 id="selected-day-label">June 17, 2026</h3>
+            <div id="calendar-events-list" class="events-list">
+              <!-- Events populated by JS -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="app-nav">
+      <button id="nav-dashboard" class="nav-item active">
+        <i class="fa-solid fa-seedling"></i>
+        <span>Garden</span>
+      </button>
+      <button id="nav-prayers" class="nav-item">
+        <i class="fa-solid fa-bullseye"></i>
+        <span>Targets</span>
+      </button>
+      <button id="nav-chant" class="nav-item">
+        <i class="fa-regular fa-clock"></i>
+        <span>Chant</span>
+      </button>
+      <button id="nav-history" class="nav-item">
+        <i class="fa-solid fa-list-ul"></i>
+        <span>History</span>
+      </button>
+      <button id="nav-campaign" class="nav-item">
+        <i class="fa-solid fa-bullhorn"></i>
+        <span>Campaign</span>
+      </button>
+      <button id="nav-calendar" class="nav-item">
+        <i class="fa-regular fa-calendar-days"></i>
+        <span>Calendar</span>
+      </button>
+      <button id="nav-settings" class="nav-item">
+        <i class="fa-solid fa-sliders"></i>
+        <span>Settings</span>
+      </button>
+    </nav>
+
+  </div>
+
+  <!-- Audio Element for Gong -->
+  <audio id="gong-audio" src="sounds/gong.mp3" preload="auto"></audio>
+
+  <!-- Auth Overlay Screen -->
+  <div id="auth-overlay" class="auth-overlay">
+    <div class="auth-card card">
+      <div class="auth-logo">
+        <span class="logo-leaf"><i class="fa-solid fa-leaf"></i></span>
+        <h2>Daimoku Grow</h2>
+      </div>
+      
+      <!-- Login Form -->
+      <form id="login-form" class="auth-form active">
+        <h3>Login to your account</h3>
+        <div class="form-group">
+          <label for="login-email">Email</label>
+          <input type="email" id="login-email" required placeholder="name@email.com">
+        </div>
+        <div class="form-group">
+          <label for="login-password">Password</label>
+          <input type="password" id="login-password" required placeholder="••••••••">
+        </div>
+        <button type="submit" class="btn btn-primary btn-full"><i class="fa-solid fa-right-to-bracket"></i> Login</button>
+        
+        <div class="auth-divider"><span>OR</span></div>
+        
+        <button type="button" id="btn-biometric-login" class="btn btn-secondary btn-full"><i class="fa-solid fa-fingerprint"></i> Biometric Login</button>
+        
+        <p class="auth-switch-text">Don't have an account? <a href="#" id="link-to-register">Register here</a></p>
+        <p class="auth-switch-text" style="margin-top: 6px;"><a href="#" id="link-to-forgot">Forgot Password?</a></p>
+      </form>
+      
+      <!-- Register Form -->
+      <form id="register-form" class="auth-form">
+        <h3>Create an account</h3>
+        <div class="form-group">
+          <label for="register-username">Nickname / Alias</label>
+          <input type="text" id="register-username" required placeholder="e.g. JohnD">
+        </div>
+        <div class="form-group">
+          <label for="register-email">Email</label>
+          <input type="email" id="register-email" required placeholder="name@email.com">
+        </div>
+        <div class="form-group">
+          <label for="register-password">Password</label>
+          <input type="password" id="register-password" required placeholder="Min 6 characters">
+        </div>
+        <div class="form-group">
+          <label for="register-code">Registration Code</label>
+          <input type="text" id="register-code" required placeholder="e.g. SGI-1234">
+        </div>
+        <div class="form-group">
+          <label for="register-block">Select Block</label>
+          <select id="register-block" required>
+            <option value="" disabled selected>-- Select your Block --</option>
+            <option value="Wisdom">Wisdom Block</option>
+            <option value="Compassion">Compassion Block</option>
+            <option value="Courage">Courage Block</option>
+            <option value="Faith">Faith Block</option>
+            <option value="Harmony">Harmony Block</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary btn-full"><i class="fa-solid fa-user-plus"></i> Register</button>
+        
+        <p class="auth-switch-text">Already have an account? <a href="#" id="link-to-login">Login here</a></p>
+      </form>
+
+      <!-- Forgot Password Form -->
+      <form id="forgot-password-form" class="auth-form">
+        <h3>Reset Password</h3>
+        <p class="auth-desc-text" style="font-size:12px; color:var(--text-muted); text-align:center; margin-bottom:8px;">Enter your registered email to reset your password.</p>
+        <div class="form-group">
+          <label for="recovery-email">Email</label>
+          <input type="email" id="recovery-email" required placeholder="name@email.com">
+        </div>
+        <div class="form-group">
+          <label for="recovery-new-password">New Password</label>
+          <input type="password" id="recovery-new-password" required placeholder="Min 6 characters">
+        </div>
+        <button type="submit" class="btn btn-primary btn-full"><i class="fa-solid fa-key"></i> Update Password</button>
+        
+        <p class="auth-switch-text">Remembered your password? <a href="#" id="link-to-login-from-recovery">Login here</a></p>
+      </form>
+    </div>
+  </div>
+
+  <!-- Include App Logic and Scripts -->
+  <script src="plant.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

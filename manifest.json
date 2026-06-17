@@ -1,0 +1,45 @@
+{
+  "id": "/",
+  "name": "Daimoku Grow - Chanting Garden",
+  "short_name": "Daimoku Grow",
+  "description": "A beautiful spiritual guide and motivation app. Track your Daimoku (chanting), water your virtual plant, and watch it grow into a majestic tree.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "window-controls-overlay", "minimal-ui"],
+  "background_color": "#f3f6f3",
+  "theme_color": "#526f52",
+  "orientation": "portrait",
+  "lang": "en",
+  "categories": ["lifestyle", "health", "productivity"],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "wide"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
+}
