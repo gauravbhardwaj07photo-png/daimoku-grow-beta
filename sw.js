@@ -86,7 +86,111 @@ self.addEventListener('notificationclick', (event) => {
         }
         return client.focus();
       }
-      return clients.openWindow('/');
+      return clients.openWindow('./index.html');
     })
   );
+});
+
+// Check decay and show background notifications
+async function checkDecayAndShowNotification() {
+  try {
+    const cache = await caches.open('daimoku-state-cache');
+    const response = await cache.match('/notifications-state.json');
+    if (!response) return;
+    
+    const data = await response.json();
+    const lastChanted = new Date(data.lastChantedDate);
+    const now = new Date();
+    const diffMs = now - lastChanted;
+    const diffHours = diffMs / (1000 * 60 * 60);
+    
+    // 1. Check Decay notifications
+    let title = "";
+    let message = "";
+    let tag = "";
+    
+    if (diffHours >= 720) { // 30 days
+      title = "A dormant seed awaits you...";
+      message = "One month has passed. I am completely withered, but my roots remember your voice. 🌱";
+      tag = "decay-30d";
+    } else if (diffHours >= 360) { // 15 days
+      title = "Save my life!";
+      message = "15 days of silence. I have withered away. Let's bring this garden back! ❤️";
+      tag = "decay-15d";
+    } else if (diffHours >= 168) { // 7 days
+      title = "I am about to die...";
+      message = "A whole week without Daimoku! I am drying up. Please water me with your chanting! 🥀";
+      tag = "decay-7d";
+    } else if (diffHours >= 72) { // 72 hours
+      title = "Oh no! I am weakening...";
+      message = "It has been 72 hours. I am beginning to droop. Let's chant together and restore my vitality! 💧";
+      tag = "decay-72h";
+    } else if (diffHours >= 24) { // 24 hours
+      title = "Water me, please!";
+      message = "It has been 24 hours. My leaves are getting thirsty. I miss the sound of your Daimoku! 🌿";
+      tag = "decay-24h";
+    }
+    
+    if (title && message) {
+      // Check if we already showed this tag recently or if it was dismissed in state
+      const isDismissed = data.dismissedAlerts && data.dismissedAlerts.includes(tag);
+      if (!isDismissed) {
+        await self.registration.showNotification(title, {
+          body: message,
+          icon: "icons/icon-192.png",
+          badge: "icons/icon-192.png",
+          vibrate: [300, 100, 300],
+          tag: tag,
+          renotify: true
+        });
+      }
+    }
+    
+    // 2. Check Daily Reminders
+    const hours = now.getHours();
+    const dateTodayStr = now.toISOString().split('T')[0];
+    
+    if (data.settings && data.settings.morningReminder && hours >= 12 && hours < 20) {
+      const chantedToday = data.sessions && data.sessions.some(s => s.date.split('T')[0] === dateTodayStr);
+      if (!chantedToday) {
+        await self.registration.showNotification("Morning Chant Reminder", {
+          body: "It's past 12:00 PM! Don't forget to water your plant with morning chanting. 🌸",
+          icon: "icons/icon-192.png",
+          badge: "icons/icon-192.png",
+          vibrate: [300, 100, 300],
+          tag: `morning-reminder-${dateTodayStr}`,
+          renotify: true
+        });
+      }
+    } else if (data.settings && data.settings.eveningReminder && hours >= 20) {
+      const chantedSinceNoon = data.sessions && data.sessions.some(s => {
+        const sDate = new Date(s.date);
+        return sDate.toISOString().split('T')[0] === dateTodayStr && sDate.getHours() >= 12;
+      });
+      if (!chantedSinceNoon) {
+        await self.registration.showNotification("Evening Chant Reminder", {
+          body: "It's evening! Water your plant with evening chanting to keep it healthy. 🌙",
+          icon: "icons/icon-192.png",
+          badge: "icons/icon-192.png",
+          vibrate: [300, 100, 300],
+          tag: `evening-reminder-${dateTodayStr}`,
+          renotify: true
+        });
+      }
+    }
+  } catch (e) {
+    console.error("Error checking decay in service worker:", e);
+  }
+}
+
+self.addEventListener('periodicsync', (event) => {
+  if (event.tag === 'check-decay-and-reminders') {
+    event.waitUntil(checkDecayAndShowNotification());
+  }
+});
+
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'check-decay-and-reminders-sync') {
+    event.waitUntil(checkDecayAndShowNotification());
+  }
 });

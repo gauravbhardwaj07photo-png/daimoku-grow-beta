@@ -142,7 +142,8 @@ document.addEventListener('DOMContentLoaded', () => {
       morningReminder: true,
       eveningReminder: true
     },
-    theme: 'theme-sage-light'
+    theme: 'theme-sage-light',
+    dismissedAlerts: [] // Array of closed notification IDs
   };
 
   // --- Timer Variables ---
@@ -381,7 +382,8 @@ document.addEventListener('DOMContentLoaded', () => {
           morningReminder: true,
           eveningReminder: true
         },
-        theme: 'theme-sage-light'
+        theme: 'theme-sage-light',
+        dismissedAlerts: []
       };
     }
     
@@ -448,6 +450,144 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // --- PWA Native-like Notification Scheduling & Background Synchronization ---
+  async function saveStateToCacheForServiceWorker() {
+    if ('caches' in window) {
+      try {
+        const cache = await caches.open('daimoku-state-cache');
+        const stateData = {
+          lastChantedDate: state.lastChantedDate,
+          health: state.health,
+          isDead: state.isDead,
+          settings: state.settings,
+          sessions: state.sessions.map(s => ({ date: s.date })), // minimized to save cache size
+          dismissedAlerts: state.dismissedAlerts || []
+        };
+        const stateResponse = new Response(JSON.stringify(stateData), {
+          headers: { 'Content-Type': 'application/json' }
+        });
+        await cache.put('/notifications-state.json', stateResponse);
+        console.log("Saved state to cache for service worker background usage.");
+      } catch (e) {
+        console.warn("Failed to save state to cache:", e);
+      }
+    }
+  }
+
+  async function schedulePWANotifications() {
+    if (!('Notification' in window) || Notification.permission !== 'granted') {
+      return;
+    }
+    if (!('serviceWorker' in navigator)) {
+      return;
+    }
+    
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      
+      // Check if Notification Triggers are supported
+      const isTriggersSupported = 'showTrigger' in Notification.prototype || (typeof TimestampTrigger !== 'undefined');
+      
+      if (isTriggersSupported) {
+        console.log("Scheduling PWA notifications via Notification Triggers API...");
+        
+        const now = Date.now();
+        
+        // 1. Morning Chant Reminder (12:00 PM)
+        let morningTime = new Date();
+        morningTime.setHours(12, 0, 0, 0);
+        if (morningTime.getTime() <= now) {
+          morningTime.setDate(morningTime.getDate() + 1);
+        }
+        
+        reg.showNotification("Morning Chant Reminder", {
+          body: "It's past 12:00 PM! Don't forget to water your plant with morning chanting. 🌸",
+          icon: "icons/icon-192.png",
+          badge: "icons/icon-192.png",
+          vibrate: [300, 100, 300],
+          tag: "morning-reminder",
+          showTrigger: new TimestampTrigger(morningTime.getTime())
+        });
+        
+        // 2. Evening Chant Reminder (8:00 PM)
+        let eveningTime = new Date();
+        eveningTime.setHours(20, 0, 0, 0);
+        if (eveningTime.getTime() <= now) {
+          eveningTime.setDate(eveningTime.getDate() + 1);
+        }
+        
+        reg.showNotification("Evening Chant Reminder", {
+          body: "It's evening! Water your plant with evening chanting to keep it healthy. 🌙",
+          icon: "icons/icon-192.png",
+          badge: "icons/icon-192.png",
+          vibrate: [300, 100, 300],
+          tag: "evening-reminder",
+          showTrigger: new TimestampTrigger(eveningTime.getTime())
+        });
+        
+        // 3. Decay Reminders
+        const lastChanted = new Date(state.lastChantedDate).getTime();
+        
+        // 24h neglect (Thirsty)
+        const decay24hTime = lastChanted + 24 * 60 * 60 * 1000;
+        if (decay24hTime > now) {
+          reg.showNotification("Water me, please!", {
+            body: "It has been 24 hours. My leaves are getting thirsty. I miss the sound of your Daimoku! 🌿",
+            icon: "icons/icon-192.png",
+            badge: "icons/icon-192.png",
+            vibrate: [300, 100, 300],
+            tag: "decay-24h",
+            showTrigger: new TimestampTrigger(decay24hTime)
+          });
+        }
+        
+        // 72h neglect (Sad/Drooping)
+        const decay72hTime = lastChanted + 72 * 60 * 60 * 1000;
+        if (decay72hTime > now) {
+          reg.showNotification("Oh no! I am weakening...", {
+            body: "It has been 72 hours. I am beginning to droop. Let's chant together and restore my vitality! 💧",
+            icon: "icons/icon-192.png",
+            badge: "icons/icon-192.png",
+            vibrate: [300, 100, 300],
+            tag: "decay-72h",
+            showTrigger: new TimestampTrigger(decay72hTime)
+          });
+        }
+        
+        // 7d neglect (Dying)
+        const decay7dTime = lastChanted + 168 * 60 * 60 * 1000;
+        if (decay7dTime > now) {
+          reg.showNotification("I am about to die...", {
+            body: "A whole week without Daimoku! I am drying up. Please water me with your chanting! 🥀",
+            icon: "icons/icon-192.png",
+            badge: "icons/icon-192.png",
+            vibrate: [300, 100, 300, 100, 400],
+            tag: "decay-7d",
+            showTrigger: new TimestampTrigger(decay7dTime)
+          });
+        }
+
+        // 15d neglect (Withered)
+        const decay15dTime = lastChanted + 360 * 60 * 60 * 1000;
+        if (decay15dTime > now) {
+          reg.showNotification("Save my life!", {
+            body: "15 days of silence. I have withered away. Let's bring this garden back! ❤️",
+            icon: "icons/icon-192.png",
+            badge: "icons/icon-192.png",
+            vibrate: [300, 100, 300, 100, 400],
+            tag: "decay-15d",
+            showTrigger: new TimestampTrigger(decay15dTime)
+          });
+        }
+      } else {
+        console.log("Notification Triggers API not supported. Falling back to background cache updates.");
+        await saveStateToCacheForServiceWorker();
+      }
+    } catch (err) {
+      console.warn("Failed to schedule PWA notifications:", err);
+    }
+  }
+
   function loadState() {
     const user = MockFirebase.auth.getCurrentUser();
     if (user) {
@@ -463,6 +603,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (state.isDead === undefined) state.isDead = false;
           if (state.targets === undefined) state.targets = [];
           if (state.lastNotifiedThreshold === undefined) state.lastNotifiedThreshold = 0;
+          if (state.dismissedAlerts === undefined) state.dismissedAlerts = [];
           
           // Apply saved theme
           document.body.className = state.theme || 'theme-sage-light';
@@ -481,6 +622,10 @@ document.addEventListener('DOMContentLoaded', () => {
     updateUI();
     loadActiveTimer();
     updateQuote();
+    
+    // Cache state and schedule PWA notifications
+    saveStateToCacheForServiceWorker();
+    schedulePWANotifications();
   }
 
   function saveState() {
@@ -492,6 +637,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     updateUI();
+    
+    // Cache state and schedule PWA notifications
+    saveStateToCacheForServiceWorker();
+    schedulePWANotifications();
   }
 
   // --- Inactivity Alert Evaluator using Ikeda Quotes ---
@@ -883,39 +1032,109 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- In-App Notifications Drawer with Decay Milestones ---
   function updateNotificationBanner() {
-    notificationBanner.className = 'notification-banner hidden';
+    if (!state.dismissedAlerts) state.dismissedAlerts = [];
     
     const now = new Date();
     const lastChanted = new Date(state.lastChantedDate);
     const diffMs = now - lastChanted;
     const diffHours = diffMs / (1000 * 60 * 60);
     
+    let activeAlert = null;
+    
     if (state.isDead) {
       if (diffHours >= 720) { // 30 days
-        notificationBannerText.textContent = "My roots still remember your voice. Daisaku Ikeda Sensei guides: 'Sincere effort can bring any withered plant back to life.' I need a 3h 20m revival session! 🌱";
+        activeAlert = {
+          id: 'neglect_30d',
+          type: 'dead',
+          message: "My roots still remember your voice. Daisaku Ikeda Sensei guides: 'Sincere effort can bring any withered plant back to life.' I need a 3h 20m revival session! 🌱"
+        };
       } else if (diffHours >= 360) { // 15 days
-        notificationBannerText.textContent = "Save my life! I have completely withered. Daisaku Ikeda Sensei guides: 'No matter what, keep chanting Nam-myoho-renge-kyo.' Let's bring this garden back! ❤️";
+        activeAlert = {
+          id: 'neglect_15d',
+          type: 'dead',
+          message: "Save my life! I have completely withered. Daisaku Ikeda Sensei guides: 'No matter what, keep chanting Nam-myoho-renge-kyo.' Let's bring this garden back! ❤️"
+        };
       } else {
-        notificationBannerText.textContent = "Your plant has withered from neglect! Chant 3h 20m to revive it.";
+        activeAlert = {
+          id: 'neglect_dead',
+          type: 'dead',
+          message: "Your plant has withered from neglect! Chant 3h 20m to revive it."
+        };
       }
-      notificationBanner.classList.add('dead');
-      notificationBanner.classList.remove('hidden');
     } else if (diffHours >= 168) { // 7 days
-      notificationBannerText.textContent = "I am about to die! Please water me with your consistency. Daisaku Ikeda Sensei reminds us: 'Consistent efforts yield beautiful blooms.' 🥀";
-      notificationBanner.classList.add('dying');
-      notificationBanner.classList.remove('hidden');
+      activeAlert = {
+        id: 'neglect_7d',
+        type: 'dying',
+        message: "I am about to die! Please water me with your consistency. Daisaku Ikeda Sensei reminds us: 'Consistent efforts yield beautiful blooms.' 🥀"
+      };
     } else if (diffHours >= 72) { // 72 hours
-      notificationBannerText.textContent = "I am drooping and shrinking! Daisaku Ikeda Sensei teaches: 'Even one daimoku can pervade the entire universe.' Let's chant together and restore my vitality! 💧";
-      notificationBanner.classList.add('dying');
-      notificationBanner.classList.remove('hidden');
+      activeAlert = {
+        id: 'neglect_72h',
+        type: 'dying',
+        message: "I am drooping and shrinking! Daisaku Ikeda Sensei teaches: 'Even one daimoku can pervade the entire universe.' Let's chant together and restore my vitality! 💧"
+      };
     } else if (diffHours >= 24) { // 24 hours
-      notificationBannerText.textContent = "I miss the sound of your Daimoku! It is required for my sustenance... please water me! 🌿";
-      notificationBanner.classList.add('thirsty');
-      notificationBanner.classList.remove('hidden');
+      activeAlert = {
+        id: 'neglect_24h',
+        type: 'thirsty',
+        message: "I miss the sound of your Daimoku! It is required for my sustenance... please water me! 🌿"
+      };
+    }
+    
+    // If no decay alert is active, check daily reminders
+    if (!activeAlert) {
+      const hours = now.getHours();
+      const dateTodayStr = now.toISOString().split('T')[0];
+      
+      if (state.settings.morningReminder && hours >= 12 && hours < 20) {
+        const chantedToday = state.sessions.some(s => s.date.split('T')[0] === dateTodayStr);
+        if (!chantedToday) {
+          activeAlert = {
+            id: `morning_${dateTodayStr}`,
+            type: 'thirsty',
+            message: "It's past 12:00 PM! Don't forget to water your plant with morning chanting. 🌸"
+          };
+        }
+      } else if (state.settings.eveningReminder && hours >= 20) {
+        const chantedSinceNoon = state.sessions.some(s => {
+          const sDate = new Date(s.date);
+          return sDate.toISOString().split('T')[0] === dateTodayStr && sDate.getHours() >= 12;
+        });
+        if (!chantedSinceNoon) {
+          activeAlert = {
+            id: `evening_${dateTodayStr}`,
+            type: 'thirsty',
+            message: "It's evening! Water your plant with evening chanting to keep it healthy. 🌙"
+          };
+        }
+      }
+    }
+    
+    // Render the banner
+    if (activeAlert) {
+      if (state.dismissedAlerts.includes(activeAlert.id)) {
+        notificationBanner.className = 'notification-banner hidden';
+      } else {
+        notificationBannerText.textContent = activeAlert.message;
+        notificationBanner.className = 'notification-banner';
+        notificationBanner.classList.add(activeAlert.type);
+        notificationBanner.setAttribute('data-active-alert-id', activeAlert.id);
+        notificationBanner.classList.remove('hidden');
+      }
+    } else {
+      notificationBanner.className = 'notification-banner hidden';
     }
   }
 
   notificationBannerClose.addEventListener('click', () => {
+    const alertId = notificationBanner.getAttribute('data-active-alert-id');
+    if (alertId) {
+      if (!state.dismissedAlerts) state.dismissedAlerts = [];
+      if (!state.dismissedAlerts.includes(alertId)) {
+        state.dismissedAlerts.push(alertId);
+      }
+      saveState();
+    }
     notificationBanner.classList.add('hidden');
   });
 
@@ -1131,6 +1350,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // 2. Accumulate Chant Time
     state.lastNotifiedThreshold = 0; // Reset warning alert state
+    state.dismissedAlerts = []; // Reset dismissed alerts on chanting activity
     if (state.isDead) {
       // Dead plant mode: Chant goes to revival bucket
       state.revivalSeconds += durationSeconds;
@@ -1435,6 +1655,7 @@ document.addEventListener('DOMContentLoaded', () => {
       
       applyTimeDecay();
       calculateStreak();
+      state.dismissedAlerts = []; // Reset dismissed alerts on chanting activity change
       saveState();
       renderHistoryLogs();
     }
@@ -1450,6 +1671,7 @@ document.addEventListener('DOMContentLoaded', () => {
       state.lastChantedDate = new Date().toISOString();
       state.sessions = [];
       state.streak = 0;
+      state.dismissedAlerts = [];
       
       // Reset target progress as well
       state.targets.forEach(t => {
@@ -2603,9 +2825,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Resume animation if dashboard is active view
     const activeNav = document.querySelector('.nav-item.active');
     if (activeNav && activeNav.id === 'nav-dashboard') {
-      if (typeof PlantRenderer.startAnimation === 'function') {
-        PlantRenderer.startAnimation();
-      }
+      setTimeout(() => {
+        if (typeof PlantRenderer.resizeCanvas === 'function') {
+          PlantRenderer.resizeCanvas();
+        }
+        if (typeof PlantRenderer.startAnimation === 'function') {
+          PlantRenderer.startAnimation();
+        }
+      }, 50);
     }
   }
   
@@ -2972,7 +3199,30 @@ document.addEventListener('DOMContentLoaded', () => {
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('sw.js')
-        .then(reg => console.log('Service Worker registered successfully!', reg.scope))
+        .then(async (reg) => {
+          console.log('Service Worker registered successfully!', reg.scope);
+          
+          // Request permissions and register syncs
+          try {
+            if ('periodicSync' in reg) {
+              const status = await navigator.permissions.query({
+                name: 'periodic-background-sync',
+              });
+              if (status.state === 'granted') {
+                await reg.periodicSync.register('check-decay-and-reminders', {
+                  minInterval: 6 * 60 * 60 * 1000, // Check every 6 hours
+                });
+                console.log("Periodic background sync registered!");
+              }
+            }
+            if ('sync' in reg) {
+              await reg.sync.register('check-decay-and-reminders-sync');
+              console.log("Background sync registered!");
+            }
+          } catch (syncErr) {
+            console.warn("Sync registration skipped/failed:", syncErr);
+          }
+        })
         .catch(err => console.error('Service Worker registration failed:', err));
     });
   }

@@ -45,6 +45,8 @@ const PlantRenderer = (function() {
     }
   };
 
+  let resizeObserver = null;
+
   /**
    * Initialize the renderer on a canvas
    */
@@ -52,9 +54,20 @@ const PlantRenderer = (function() {
     canvas = canvasElement;
     ctx = canvas.getContext('2d');
     
-    // Set up high DPI support
+    // Set up high DPI support and responsive resizing
     resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
+    
+    if (window.ResizeObserver) {
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
+      resizeObserver = new ResizeObserver(() => {
+        resizeCanvas();
+      });
+      resizeObserver.observe(canvas);
+    } else {
+      window.addEventListener('resize', resizeCanvas);
+    }
     
     // Start the physics/sway loop
     startAnimation();
@@ -68,8 +81,17 @@ const PlantRenderer = (function() {
     const rect = canvas.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
     
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
+    let w = rect.width;
+    let h = rect.height;
+    
+    // Fallback if the canvas is hidden or hasn't laid out yet
+    if (w === 0 || h === 0) {
+      w = parseInt(canvas.getAttribute('width')) || 400;
+      h = parseInt(canvas.getAttribute('height')) || 420;
+    }
+    
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
     
     if (ctx) {
       ctx.scale(dpr, dpr);
