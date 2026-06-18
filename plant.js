@@ -21,23 +21,29 @@ const PlantRenderer = (function() {
   let lionX = -1000;
   let walkBob = 0;
   
-  // Theme Color Configurations (so the pot matches the active theme)
+  // Pot Styles configurations (explicitly customized by user)
+  let currentPotStyle = 'clay';
+  const potStyles = {
+    clay: { rim: '#d4896a', body: '#be6f50', shadow: '#964d32', accent: '#5e2714' },
+    lotus: { rim: '#ffd3e2', body: '#ff7bbd', shadow: '#d64b91', accent: '#f5c65a' },
+    marble: { rim: '#f2f2f2', body: '#e0e0e0', shadow: '#b3b3b3', accent: '#7f8c8d' },
+    jade: { rim: '#9ee2b2', body: '#62c382', shadow: '#3a9254', accent: '#1a4a27' }
+  };
+
+  // Theme Color Configurations
   const colors = {
     soil: '#4e3b31',
-    potSage: { rim: '#d4896a', body: '#be6f50', shadow: '#964d32', accent: '#5e2714' },
-    potWood: { rim: '#ce7c58', body: '#b6613d', shadow: '#8b4122', accent: '#5e2714' },
-    potForest: { rim: '#884227', body: '#71321b', shadow: '#4d1e0d', accent: '#300f04' },
     leaves: {
       healthy: ['#6b8e6b', '#7fa87f', '#557255', '#8bb48b'],
-      thirsty: ['#8ba373', '#9eb58b', '#778c61', '#adc499'],
-      sad: ['#a3a373', '#b8b88d', '#8a8a5e', '#cfcfad'],
-      dying: ['#8f7d6b', '#a38f7c', '#756555', '#bdaaa6'],
-      dead: ['#4a413a', '#544d47', '#3d3733']
+      thirsty: ['#8bb582', '#a2cc97', '#739e6a', '#b7dfad'], // Pale green
+      sad: ['#8fa87a', '#a6bf90', '#748c60', '#b9d4a3'],     // Dry sage green
+      dying: ['#7c8c6c', '#92a382', '#627052', '#a6b895'],   // Grayish olive green
+      dead: ['#5b6b4e', '#6e805f', '#46543b', '#809470']     // Withered olive green
     },
     wood: {
       healthy: '#70543e',
       dry: '#856a56',
-      dead: '#4a4038'
+      dead: '#7d664c' // Parched dry bark brown
     },
     flower: {
       petal: '#fdfaf2',
@@ -157,14 +163,34 @@ const PlantRenderer = (function() {
   }
 
   /**
-   * Helper: Get leaf color palette based on health
+   * Helper: Get leaf color palette based on health and growth stage
    */
   function getLeafColors(health, deadState) {
     if (deadState || health <= 0) return colors.leaves.dead;
     if (health <= 10) return colors.leaves.dying;
     if (health <= 40) return colors.leaves.sad;
     if (health <= 70) return colors.leaves.thirsty;
-    return colors.leaves.healthy;
+    
+    // Healthy green leaf color progression based on growth stage
+    const stageInfo = getGrowthStage(currentHours);
+    if (stageInfo.stage === 2) {
+      // Sprout: Light lime-green
+      return ['#aed581', '#c5e1a5', '#9ccc65', '#d4e157'];
+    }
+    if (stageInfo.stage === 3) {
+      // Seedling: Soft kelly-green
+      return ['#81c784', '#a5d6a7', '#66bb6a', '#4caf50'];
+    }
+    if (stageInfo.stage === 4) {
+      // Young Plant: True medium green
+      return ['#4caf50', '#81c784', '#388e3c', '#2e7d32'];
+    }
+    if (stageInfo.stage === 5) {
+      // Shrub: Deep organic green
+      return ['#2e7d32', '#4caf50', '#1b5e20', '#388e3c'];
+    }
+    // Stage 6 (Tree) or default: Majestic green
+    return ['#388e3c', '#4caf50', '#2e7d32', '#81c784'];
   }
 
   /**
@@ -197,14 +223,47 @@ const PlantRenderer = (function() {
   }
 
   /**
-   * Helper: Draw a flower
+   * Helper: Draw a single Peepal leaf (heart-shaped with a long tail tip)
    */
-  function drawFlower(x, y, size) {
+  function drawPeepalLeaf(x, y, length, width, angle, color) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    // Left side curve (upwards in Y)
+    ctx.bezierCurveTo(length * 0.1, -width * 0.5, length * 0.4, -width * 0.6, length * 0.7, -width * 0.1);
+    // Taper into long tail
+    ctx.quadraticCurveTo(length * 0.85, 0, length, 0);
+    // Right side curve (downwards in Y)
+    ctx.quadraticCurveTo(length * 0.85, 0, length * 0.7, width * 0.1);
+    ctx.bezierCurveTo(length * 0.4, width * 0.6, length * 0.1, width * 0.5, 0, 0);
+    ctx.closePath();
+    
+    ctx.fillStyle = color;
+    ctx.fill();
+    
+    // Central vein
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(length * 0.8, 0);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+    
+    ctx.restore();
+  }
+
+  /**
+   * Helper: Draw a flower with customizable petal color
+   */
+  function drawFlower(x, y, size, petalColor = colors.flower.petal) {
     ctx.save();
     ctx.translate(x, y);
     
     // Petals
-    ctx.fillStyle = colors.flower.petal;
+    ctx.fillStyle = petalColor;
     for (let i = 0; i < 5; i++) {
       ctx.rotate((Math.PI * 2) / 5);
       ctx.beginPath();
@@ -233,24 +292,16 @@ const PlantRenderer = (function() {
     // Clear canvas
     ctx.clearRect(0, 0, w, h);
     
-    // Determine active theme from document body to style the pot
-    let activePot = colors.potSage;
-    if (document.body.classList.contains('theme-wood-sand')) {
-      activePot = colors.potWood;
-    } else if (document.body.classList.contains('theme-forest-dark')) {
-      activePot = colors.potForest;
-    }
+    // Determine active pot style color coordinates
+    let activePot = potStyles[currentPotStyle] || potStyles.clay;
     
-    const potWidth = 110;      // half-width at the rim top
-    const potHeight = 75;      // total body height below the collar
+    const potWidth = 75;      // Scaled down half-width at the rim top (150px total) for better proportion
+    const potHeight = 55;      // Scaled down total body height below the collar for better proportion
     const potX = w / 2;
-    const potY = h - 95; // Position pot near bottom
+    const potY = h - 75; // Position pot slightly lower since it is shorter
     
-    // Pot geometry — matches the reference image:
-    //  - Wide flat cylindrical collar/rim at top
-    //  - Body tapers inward: top ~88% of rimWidth, bottom ~60% of rimWidth
-    //  - Bottom ends with a small rounded base curve
-    const rimH = 16;           // collar/rim height
+    // Pot geometry:
+    const rimH = 14;           // collar/rim height
     const bodyTopW  = potWidth * 0.88;  // body width just below rim
     const bodyBotW  = potWidth * 0.60;  // body width at base
     const baseY     = potY + rimH + potHeight; // Y of the pot base
@@ -258,7 +309,7 @@ const PlantRenderer = (function() {
     // 1. Draw Pot Shadow
     ctx.save();
     ctx.beginPath();
-    ctx.ellipse(potX, baseY + 4, bodyBotW * 0.8, 8, 0, 0, Math.PI * 2);
+    ctx.ellipse(potX, baseY + 3, bodyBotW * 0.8, 6, 0, 0, Math.PI * 2);
     ctx.fillStyle = document.body.classList.contains('theme-forest-dark') ? 'rgba(0, 0, 0, 0.5)' : 'rgba(0, 0, 0, 0.07)';
     ctx.fill();
     ctx.restore();
@@ -267,25 +318,158 @@ const PlantRenderer = (function() {
     const stageInfo = getGrowthStage(currentHours);
     
     // Size shrink factor based on health
-    // Fully healthy = scale 1.0, Dead = scale 0.45, dynamically scale in between
-    const healthScale = isDead ? 0.45 : (0.45 + 0.55 * (currentHealth / 100));
+    const healthScale = isDead ? 0.75 : (0.75 + 0.25 * (currentHealth / 100));
     
-    // Droop factor (stems and leaves bend down more when thirsty/sad)
-    const droopFactor = isDead ? 0.9 : (1 - currentHealth / 100);
+    // Droop factor
+    const droopFactor = isDead ? 0.85 : (1 - currentHealth / 100);
     
     // Master plant scale based on growth stage
     let stageScale = 1.0;
     switch (stageInfo.stage) {
-      case 2: stageScale = 0.4; break;   // Sprout
-      case 3: stageScale = 0.65; break;  // Seedling
-      case 4: stageScale = 0.85; break;  // Young Plant
-      case 5: stageScale = 1.0; break;   // Mature Shrub
-      case 6: stageScale = 1.25; break;  // Majestic Tree
+      case 2: stageScale = 0.80; break;  // Sprout
+      case 3: stageScale = 0.95; break;  // Seedling
+      case 4: stageScale = 1.0; break;   // Young Plant
+      case 5: stageScale = 1.15; break;  // Mature Shrub
+      case 6: stageScale = 1.4; break;   // Majestic Tree (Restored to original scale)
     }
     
     const masterScale = stageScale * healthScale;
     
-    // Draw the Plant (Before Pot, so stem is tucked behind soil rim)
+    // 2. Draw Soil in Pot (Inside Rim)
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(potX, potY + rimH - 4, bodyTopW * 0.9, 5, 0, 0, Math.PI * 2);
+    ctx.fillStyle = colors.soil;
+    ctx.fill();
+    ctx.restore();
+
+    // 3. Draw Pot Body
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(potX - bodyTopW, potY + rimH);
+    ctx.lineTo(potX + bodyTopW, potY + rimH);
+    ctx.quadraticCurveTo(
+      potX + bodyTopW * 0.85, potY + rimH + potHeight * 0.55,
+      potX + bodyBotW, baseY
+    );
+    ctx.quadraticCurveTo(potX, baseY + 5, potX - bodyBotW, baseY);
+    ctx.quadraticCurveTo(
+      potX - bodyTopW * 0.85, potY + rimH + potHeight * 0.55,
+      potX - bodyTopW, potY + rimH
+    );
+    ctx.closePath();
+    
+    const potGrad = ctx.createLinearGradient(potX - bodyTopW, potY, potX + bodyTopW, potY);
+    potGrad.addColorStop(0,    activePot.shadow);
+    potGrad.addColorStop(0.25, activePot.body);
+    potGrad.addColorStop(0.5,  activePot.rim);
+    potGrad.addColorStop(0.75, activePot.body);
+    potGrad.addColorStop(1,    activePot.shadow);
+    
+    ctx.fillStyle = potGrad;
+    ctx.fill();
+    ctx.strokeStyle = activePot.accent;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    
+    // --- Pot Style Special Decorations ---
+    if (currentPotStyle === 'lotus') {
+      // Golden Lotus outline on pot face
+      ctx.strokeStyle = '#f5c65a';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      // Center petal
+      ctx.moveTo(potX, potY + rimH + potHeight * 0.7);
+      ctx.quadraticCurveTo(potX - 6, potY + rimH + potHeight * 0.4, potX, potY + rimH + potHeight * 0.25);
+      ctx.quadraticCurveTo(potX + 6, potY + rimH + potHeight * 0.4, potX, potY + rimH + potHeight * 0.7);
+      // Left petal
+      ctx.quadraticCurveTo(potX - 12, potY + rimH + potHeight * 0.5, potX - 10, potY + rimH + potHeight * 0.35);
+      ctx.quadraticCurveTo(potX - 4, potY + rimH + potHeight * 0.4, potX, potY + rimH + potHeight * 0.7);
+      // Right petal
+      ctx.quadraticCurveTo(potX + 12, potY + rimH + potHeight * 0.5, potX + 10, potY + rimH + potHeight * 0.35);
+      ctx.quadraticCurveTo(potX + 4, potY + rimH + potHeight * 0.4, potX, potY + rimH + potHeight * 0.7);
+      ctx.stroke();
+    } else if (currentPotStyle === 'marble') {
+      // Subtle gray marble veins
+      ctx.strokeStyle = 'rgba(100, 100, 100, 0.15)';
+      ctx.lineWidth = 1.0;
+      ctx.beginPath();
+      ctx.moveTo(potX - bodyTopW * 0.4, potY + rimH + 3);
+      ctx.lineTo(potX - 5, potY + rimH + potHeight * 0.45);
+      ctx.lineTo(potX - 15, baseY - 3);
+      ctx.stroke();
+      
+      ctx.beginPath();
+      ctx.moveTo(potX + bodyTopW * 0.3, potY + rimH + 6);
+      ctx.lineTo(potX + 15, potY + rimH + potHeight * 0.4);
+      ctx.lineTo(potX + 25, baseY - 8);
+      ctx.stroke();
+    } else if (currentPotStyle === 'jade') {
+      // White glossy highlight line on jade pot
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+      ctx.lineWidth = 3.5;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(potX - bodyTopW * 0.25, potY + rimH + 4);
+      ctx.lineTo(potX - bodyBotW * 0.25, baseY - 4);
+      ctx.stroke();
+    }
+    
+    // Subtle horizontal ridge near base
+    const ridgeY = potY + rimH + potHeight * 0.82;
+    const ridgeW = bodyBotW + (bodyTopW - bodyBotW) * 0.18 + 2;
+    ctx.beginPath();
+    ctx.ellipse(potX, ridgeY, ridgeW, 3, 0, Math.PI * 0.05, Math.PI * 1.05);
+    ctx.strokeStyle = 'rgba(94, 39, 20, 0.18)';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+    ctx.restore();
+    
+    // 4. Draw Thick Flat Collar / Rim
+    const rimTopW = potWidth;
+    const rimBotW = bodyTopW * 1.00;
+    
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(potX - rimTopW, potY);
+    ctx.quadraticCurveTo(potX, potY + 4, potX + rimTopW, potY);
+    ctx.lineTo(potX + rimBotW, potY + rimH);
+    ctx.quadraticCurveTo(potX, potY + rimH + 5, potX - rimBotW, potY + rimH);
+    ctx.closePath();
+    
+    const rimGrad = ctx.createLinearGradient(potX - rimTopW, potY, potX + rimTopW, potY);
+    rimGrad.addColorStop(0,    activePot.shadow);
+    rimGrad.addColorStop(0.2,  activePot.body);
+    rimGrad.addColorStop(0.5,  activePot.rim);
+    rimGrad.addColorStop(0.8,  activePot.body);
+    rimGrad.addColorStop(1,    activePot.shadow);
+    
+    ctx.fillStyle = rimGrad;
+    ctx.fill();
+    ctx.strokeStyle = activePot.accent;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.restore();
+    
+    // 5. Draw Rim Top Ellipse
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(potX, potY, rimTopW, 4, 0, 0, Math.PI * 2);
+    
+    const lipGrad = ctx.createLinearGradient(potX - rimTopW, potY, potX + rimTopW, potY);
+    lipGrad.addColorStop(0,    activePot.shadow);
+    lipGrad.addColorStop(0.35, activePot.rim);
+    lipGrad.addColorStop(0.65, activePot.rim);
+    lipGrad.addColorStop(1,    activePot.shadow);
+    
+    ctx.fillStyle = lipGrad;
+    ctx.fill();
+    ctx.strokeStyle = activePot.accent;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.restore();ctx.restore();
+    
+    // Draw the Plant (Drawn after the pot so it is on top of the soil and visible)
     if (stageInfo.stage > 1) {
       ctx.save();
       // Translate to soil center
@@ -299,9 +483,16 @@ const PlantRenderer = (function() {
       // Render different growth stages
       if (stageInfo.stage === 2) {
         // --- STAGE 2: SPROUT ---
+        // Draw split seed shells at the base (soil level)
+        ctx.save();
+        ctx.fillStyle = '#6e5a4f';
+        ctx.beginPath(); ctx.arc(-6, 2, 3 * masterScale, Math.PI * 0.5, Math.PI * 1.5); ctx.fill();
+        ctx.beginPath(); ctx.arc(4, 3, 3 * masterScale, -Math.PI * 0.5, Math.PI * 0.5); ctx.fill();
+        ctx.restore();
+
         ctx.rotate(windAngle);
         
-        const stemLength = 60 * masterScale;
+        const stemLength = 75 * masterScale; // Increased stem length
         
         // Draw stem
         ctx.beginPath();
@@ -321,9 +512,16 @@ const PlantRenderer = (function() {
         
       } else if (stageInfo.stage === 3) {
         // --- STAGE 3: SEEDLING ---
+        // Draw split seed shells at the base (soil level)
+        ctx.save();
+        ctx.fillStyle = '#6e5a4f';
+        ctx.beginPath(); ctx.arc(-6, 2, 3 * masterScale, Math.PI * 0.5, Math.PI * 1.5); ctx.fill();
+        ctx.beginPath(); ctx.arc(4, 3, 3 * masterScale, -Math.PI * 0.5, Math.PI * 0.5); ctx.fill();
+        ctx.restore();
+
         ctx.rotate(windAngle);
         
-        const stemLength = 110 * masterScale;
+        const stemLength = 125 * masterScale; // Increased stem length
         
         // Draw central stem curve
         ctx.beginPath();
@@ -431,7 +629,7 @@ const PlantRenderer = (function() {
             const r = i / leaves;
             const ly = -length * r;
             const lSize = (22 + (1-r)*8) * masterScale;
-            const leafDroop = 0.2 + (0.65 * droopFactor);
+            const leafDroop = 0.25 + (0.65 * droopFactor);
             
             drawLeaf(0, ly, lSize, lSize * 0.5, -Math.PI/5 + leafDroop, leafColors[i % leafColors.length]);
             drawLeaf(0, ly, lSize, lSize * 0.5, -Math.PI*4/5 - leafDroop, leafColors[(i+1) % leafColors.length]);
@@ -455,34 +653,34 @@ const PlantRenderer = (function() {
         drawMatureBranch(0, 0, 180 * masterScale, 0, 2);
         
       } else if (stageInfo.stage === 6) {
-        // --- STAGE 6: MAJESTIC TREE ---
-        // Thick trunk, multiple levels of branches, blooming flowers
+        // --- STAGE 6: MAJESTIC TREE (Peepal Tree Style) ---
+        // Thick trunk, wide-spreading canopy, colorful deterministic flowers, peepal leaves
         ctx.rotate(windAngle * 0.8);
         
-        const drawTreeBranch = (startX, startY, length, angle, depth) => {
+        const drawTreeBranch = (startX, startY, length, angle, depth, branchId = 0) => {
           if (depth <= 0) return;
           
           ctx.save();
           ctx.translate(startX, startY);
           
-          const sway = Math.sin(windTime * 0.6 + depth) * 0.02 * (currentHealth / 100);
+          const sway = Math.sin(windTime * 0.6 + depth + branchId) * 0.02 * (currentHealth / 100);
           const droop = (3 - depth) * 0.12 * droopFactor;
           
           ctx.rotate(angle + sway + (angle > 0 ? droop : -droop));
           
-          // Thick tapering trunk/branch
+          // Thick tapering trunk/branch (Peepal trees have sturdy, thick structures)
           ctx.beginPath();
-          ctx.moveTo(-depth * 2 * masterScale, 0);
-          ctx.lineTo(-depth * 1.2 * masterScale, -length);
-          ctx.lineTo(depth * 1.2 * masterScale, -length);
-          ctx.lineTo(depth * 2 * masterScale, 0);
+          ctx.moveTo(-depth * 3.5 * masterScale, 0);
+          ctx.lineTo(-depth * 2.2 * masterScale, -length);
+          ctx.lineTo(depth * 2.2 * masterScale, -length);
+          ctx.lineTo(depth * 3.5 * masterScale, 0);
           ctx.closePath();
           ctx.fillStyle = woodColor;
           ctx.fill();
           
-          // If top level branch, render full cluster of leaves
+          // If top level branch, render full cluster of peepal leaves
           if (depth === 1) {
-            // Canopy leaves cluster
+            // Canopy peepal leaves cluster
             const leafCount = 8;
             for (let i = 0; i < leafCount; i++) {
               const leafAngle = (i / leafCount) * Math.PI * 2;
@@ -492,39 +690,41 @@ const PlantRenderer = (function() {
               const lSize = 25 * masterScale;
               const leafCol = leafColors[i % leafColors.length];
               
-              drawLeaf(lx, ly, lSize, lSize * 0.6, leafAngle + (Math.sin(windTime + i) * 0.1), leafCol);
+              drawPeepalLeaf(lx, ly, lSize, lSize * 0.65, leafAngle + (Math.sin(windTime + i) * 0.1), leafCol);
             }
             
-            // Blossom
-            if (!isDead && currentHealth > 50 && Math.random() > 0.3) {
-              drawFlower(0, -length - 4, 10 * masterScale);
+            // Colorful, deterministic, non-blinking blossoms
+            if (!isDead && currentHealth > 50) {
+              const blossomColors = ['#ff7bbd', '#ff9ebe', '#ffd3e2', '#cc99ff', '#ffb3d9']; // Colorful pinks, corals, purples
+              const petalColor = blossomColors[branchId % blossomColors.length];
+              drawFlower(0, -length - 4, 10 * masterScale, petalColor);
             }
           } else {
-            // Draw leaves along the trunk branches
+            // Draw peepal leaves along the trunk branches
             const innerLeaves = 3;
             for (let i = 1; i <= innerLeaves; i++) {
               const r = i / innerLeaves;
               const ly = -length * r;
               const lSize = 24 * masterScale;
-              drawLeaf(0, ly, lSize, lSize * 0.5, -Math.PI/4 + 0.3, leafColors[i % leafColors.length]);
-              drawLeaf(0, ly, lSize, lSize * 0.5, -Math.PI*3/4 - 0.3, leafColors[(i+1) % leafColors.length]);
+              drawPeepalLeaf(0, ly, lSize, lSize * 0.6, -Math.PI/4 + 0.3, leafColors[i % leafColors.length]);
+              drawPeepalLeaf(0, ly, lSize, lSize * 0.6, -Math.PI*3/4 - 0.3, leafColors[(i+1) % leafColors.length]);
             }
           }
           
-          // Recurse branches
+          // Recurse wide-spreading branches (Peepal shape)
           if (depth > 1) {
-            const nextLength = length * 0.72;
-            drawTreeBranch(0, -length, nextLength, -0.65, depth - 1);
-            drawTreeBranch(0, -length, nextLength, 0.65, depth - 1);
-            drawTreeBranch(0, -length * 0.55, nextLength * 0.8, -0.2, depth - 1);
-            drawTreeBranch(0, -length * 0.55, nextLength * 0.8, 0.2, depth - 1);
+            const nextLength = length * 0.75;
+            drawTreeBranch(0, -length, nextLength, -0.65, depth - 1, branchId * 4 + 1);
+            drawTreeBranch(0, -length, nextLength, 0.65, depth - 1, branchId * 4 + 2);
+            drawTreeBranch(0, -length * 0.55, nextLength * 0.8, -0.2, depth - 1, branchId * 4 + 3);
+            drawTreeBranch(0, -length * 0.55, nextLength * 0.8, 0.2, depth - 1, branchId * 4 + 4);
           }
           
           ctx.restore();
         };
         
-        // Root trunk width scale
-        drawTreeBranch(0, 0, 110 * masterScale, 0, 3);
+        // Root trunk width scale (base length 75 ensures it fits perfectly)
+        drawTreeBranch(0, 0, 75 * masterScale, 0, 3, 0);
       }
       
       // Happy sparkle particles logic (only when happy and actively chanting/testing)
@@ -542,109 +742,6 @@ const PlantRenderer = (function() {
       ctx.restore();
     }
 
-    // 2. Draw Soil in Pot (Inside Rim — top ellipse of soil)
-    ctx.save();
-    ctx.beginPath();
-    ctx.ellipse(potX, potY + rimH - 4, bodyTopW * 0.9, 6, 0, 0, Math.PI * 2);
-    ctx.fillStyle = colors.soil;
-    ctx.fill();
-    ctx.restore();
-
-    // 3. Draw Pot Body (Tapered walls from bodyTopW down to bodyBotW)
-    ctx.save();
-    ctx.beginPath();
-    // Top-left under collar
-    ctx.moveTo(potX - bodyTopW, potY + rimH);
-    // Top-right under collar
-    ctx.lineTo(potX + bodyTopW, potY + rimH);
-    // Right side — straight taper with very slight inward curve (like the photo)
-    ctx.quadraticCurveTo(
-      potX + bodyTopW * 0.85, potY + rimH + potHeight * 0.55,
-      potX + bodyBotW, baseY
-    );
-    // Bottom base curve
-    ctx.quadraticCurveTo(potX, baseY + 6, potX - bodyBotW, baseY);
-    // Left side — mirror
-    ctx.quadraticCurveTo(
-      potX - bodyTopW * 0.85, potY + rimH + potHeight * 0.55,
-      potX - bodyTopW, potY + rimH
-    );
-    ctx.closePath();
-    
-    // Pot body gradient — 3D shading (left shadow → mid highlight → right shadow)
-    const potGrad = ctx.createLinearGradient(potX - bodyTopW, potY, potX + bodyTopW, potY);
-    potGrad.addColorStop(0,    activePot.shadow);
-    potGrad.addColorStop(0.25, activePot.body);
-    potGrad.addColorStop(0.5,  activePot.rim);      // brightest centre
-    potGrad.addColorStop(0.75, activePot.body);
-    potGrad.addColorStop(1,    activePot.shadow);
-    
-    ctx.fillStyle = potGrad;
-    ctx.fill();
-    ctx.strokeStyle = activePot.accent;
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-    
-    // Subtle horizontal ridge near base (like the reference photo)
-    const ridgeY = potY + rimH + potHeight * 0.82;
-    const ridgeW = bodyBotW + (bodyTopW - bodyBotW) * 0.18 + 2;
-    ctx.beginPath();
-    ctx.ellipse(potX, ridgeY, ridgeW, 3.5, 0, Math.PI * 0.05, Math.PI * 1.05);
-    ctx.strokeStyle = 'rgba(94, 39, 20, 0.22)';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-    
-    ctx.restore();
-    
-    // 4. Draw Thick Flat Collar / Rim  (the most distinctive feature of the reference pot)
-    // The rim overhangs the body slightly and has a flat cylindrical face.
-    const rimTopW = potWidth;          // rim outer width (overhanging)
-    const rimBotW = bodyTopW * 1.00;  // rim bottom matches body top
-    
-    ctx.save();
-    ctx.beginPath();
-    // Top ellipse left
-    ctx.moveTo(potX - rimTopW, potY);
-    // Top ellipse arc (front top face)
-    ctx.quadraticCurveTo(potX, potY + 5, potX + rimTopW, potY);
-    // Drop straight down to bottom of rim
-    ctx.lineTo(potX + rimBotW, potY + rimH);
-    // Bottom ellipse arc of rim (front bottom face)
-    ctx.quadraticCurveTo(potX, potY + rimH + 6, potX - rimBotW, potY + rimH);
-    ctx.closePath();
-    
-    const rimGrad = ctx.createLinearGradient(potX - rimTopW, potY, potX + rimTopW, potY);
-    rimGrad.addColorStop(0,    activePot.shadow);
-    rimGrad.addColorStop(0.2,  activePot.body);
-    rimGrad.addColorStop(0.5,  activePot.rim);    // top-center brightest
-    rimGrad.addColorStop(0.8,  activePot.body);
-    rimGrad.addColorStop(1,    activePot.shadow);
-    
-    ctx.fillStyle = rimGrad;
-    ctx.fill();
-    ctx.strokeStyle = activePot.accent;
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-    ctx.restore();
-    
-    // 5. Draw Rim Top Ellipse (the flat top face of the collar that catches light)
-    ctx.save();
-    ctx.beginPath();
-    ctx.ellipse(potX, potY, rimTopW, 5, 0, 0, Math.PI * 2);
-    
-    const lipGrad = ctx.createLinearGradient(potX - rimTopW, potY, potX + rimTopW, potY);
-    lipGrad.addColorStop(0,    activePot.shadow);
-    lipGrad.addColorStop(0.35, activePot.rim);
-    lipGrad.addColorStop(0.65, activePot.rim);
-    lipGrad.addColorStop(1,    activePot.shadow);
-    
-    ctx.fillStyle = lipGrad;
-    ctx.fill();
-    ctx.strokeStyle = activePot.accent;
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-    ctx.restore();
-    
     // 6. Draw Animations during Chanting
     if (isChanting) {
       ctx.save();
@@ -982,6 +1079,13 @@ const PlantRenderer = (function() {
     }
   }
 
+  function setPotStyle(style) {
+    if (potStyles[style]) {
+      currentPotStyle = style;
+      draw();
+    }
+  }
+
   // API Expose
   return {
     init: init,
@@ -991,6 +1095,7 @@ const PlantRenderer = (function() {
     stopAnimation: stopAnimation,
     getGrowthStage: getGrowthStage,
     getPlantMood: getPlantMood,
-    resizeCanvas: resizeCanvas
+    resizeCanvas: resizeCanvas,
+    setPotStyle: setPotStyle
   };
 })();

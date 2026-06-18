@@ -53,9 +53,11 @@
       <div class="logo-container">
         <div class="logo">
           <span class="logo-leaf"><i class="fa-solid fa-leaf"></i></span>
-          <h1>Daimoku Grow</h1>
+          <div class="logo-text-group">
+            <h1>Daimoku Grow</h1>
+            <div id="user-block-badge" class="user-block-badge hidden">Wisdom</div>
+          </div>
         </div>
-        <div id="user-block-badge" class="user-block-badge hidden">Wisdom</div>
       </div>
       <div class="header-right">
         <div class="water-indicator" id="header-water-indicator" title="Plant Health">
@@ -80,41 +82,46 @@
 
         <div class="dashboard-grid">
           
-          <!-- Plant Visualization Section -->
+          <!-- Plant Visualization Section with Inline Stats & Merged Progress -->
           <div class="card plant-card">
             <div class="plant-status-overlay">
               <span id="plant-stage-badge" class="badge">Seed</span>
+              <div class="stars-level-badge">
+                <div id="stars-progress-container" class="stars-row-mini"></div>
+                <span id="stars-level-text" class="stars-level-text">Level 1: Seeker (Beginner)</span>
+              </div>
               <span id="plant-mood-badge" class="badge mood-badge">Happy</span>
             </div>
+
             <div class="canvas-container">
               <canvas id="plant-canvas" width="400" height="420"></canvas>
             </div>
-            <div class="plant-health-bar-container">
-              <div class="health-label">
-                <span>Plant Vitality</span>
-                <span id="plant-health-percent">100%</span>
-              </div>
-              <div class="progress-bar-track">
-                <div id="plant-health-fill" class="progress-bar-fill" style="width: 100%;"></div>
-              </div>
-            </div>
-          </div>
 
-          <!-- Total Progress Card -->
-          <div class="card progress-card">
-            <h2>Chanting Progress</h2>
-            <div class="stats-row">
-              <div class="stat-box">
-                <span class="stat-number" id="stat-total-hours">0.0</span>
-                <span class="stat-label">Hours Logged</span>
+            <!-- Horizontal Stats Row (Unobstructed & Clean) -->
+            <div class="stats-horizontal-row">
+              <div class="stat-bubble-inline clickable" id="stat-box-hours-logged" title="View Chanting History">
+                <span class="bubble-number" id="stat-total-hours">0.0</span>
+                <span class="bubble-label">Hours</span>
               </div>
-              <div class="stat-box">
-                <span class="stat-number" id="stat-target-hours">333</span>
-                <span class="stat-label">Target Hours</span>
+              <div class="stat-bubble-inline" id="stat-box-journey-percent">
+                <span class="bubble-number" id="journey-percent-value">0%</span>
+                <span class="bubble-label">Journey</span>
+              </div>
+              <div class="stat-bubble-inline" id="stat-box-target">
+                <span class="bubble-number" id="stat-target-hours">333</span>
+                <span class="bubble-label">Target</span>
+              </div>
+              <div class="stat-bubble-inline" id="stat-box-vitality">
+                <span class="bubble-number" id="plant-health-percent">100%</span>
+                <span class="bubble-label">Vitality</span>
+                <div class="progress-bar-track mini" style="width: 32px; height: 3px; margin-top: 3px; margin-left: auto; margin-right: auto;">
+                  <div id="plant-health-fill" class="progress-bar-fill" style="width: 100%;"></div>
+                </div>
               </div>
             </div>
-            
-            <div class="linear-progress-section">
+
+            <!-- Merged Bottom Progress Bar Section -->
+            <div class="linear-progress-section bottom-progress">
               <div class="progress-label">
                 <span id="progress-percent-label">0% of Journey</span>
                 <span id="progress-remaining-label">333h remaining</span>
@@ -127,10 +134,10 @@
             <!-- Revival Progress (Hidden by default, shown when plant is dead) -->
             <div id="revival-progress-container" class="revival-box hidden">
               <h3><i class="fa-solid fa-heart-pulse pulse-icon"></i> Reviving Plant</h3>
-              <p>Your plant has withered. Chant 3 hours 20 minutes (200 mins) to revive it.</p>
+              <p>Your plant has withered. Chant at least 15 minutes a day for 3 consecutive days to revive it.</p>
               <div class="revival-progress-bar-section">
                 <div class="progress-label">
-                  <span id="revival-time-label">0 / 200 mins</span>
+                  <span id="revival-time-label">0 / 3 days completed</span>
                   <span id="revival-percent-label">0%</span>
                 </div>
                 <div class="progress-bar-track warning">
@@ -143,8 +150,11 @@
           <!-- Daily Guidance by Daisaku Ikeda Card -->
           <div class="card guidance-card">
             <div class="guidance-header">
-              <span class="guidance-icon"><i class="fa-solid fa-book-open"></i></span>
-              <h2>Daily Guidance</h2>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span class="guidance-icon"><i class="fa-solid fa-book-open"></i></span>
+                <h2>Daily Guidance</h2>
+              </div>
+              <button id="btn-share-guidance" class="btn-share" title="Share Guidance"><i class="fa-solid fa-share-nodes"></i> Share</button>
             </div>
             <p id="guidance-text">"Even one daimoku can pervade the entire universe. Truly heartfelt and determined daimoku, therefore, has the power to move everything."</p>
             <span id="guidance-author">— Daisaku Ikeda</span>
@@ -253,99 +263,131 @@
         </div>
       </section>
 
-      <!-- VIEW 1.5: TARGETS (PRAYERS & DETERMINATIONS) -->
+      <!-- VIEW 1.5: PRAYERS/TARGETS -->
       <section id="view-prayers" class="content-view">
         <div class="targets-grid">
-          
-          <!-- Add Target Card -->
-          <div class="card add-target-card">
-            <h2>New Determination</h2>
-            <form id="add-target-form">
-              <div class="form-group">
-                <label for="target-text">Prayer Target / Goal</label>
-                <input type="text" id="target-text" placeholder="e.g., Family health, Career breakthrough..." required>
-              </div>
-              <div class="form-group-row">
+            
+            <!-- Add Target Card -->
+            <div class="card add-target-card">
+              <h2>New Determination</h2>
+              <form id="add-target-form">
                 <div class="form-group">
-                  <label for="target-type-select">Target Type</label>
-                  <select id="target-type-select">
-                    <option value="none">Open-ended (No hours target)</option>
-                    <option value="hours">Hours Target</option>
-                  </select>
+                  <label for="target-text">Prayer Target / Goal</label>
+                  <input type="text" id="target-text" placeholder="e.g., Family health, Career breakthrough..." required>
                 </div>
-                <div class="form-group hidden" id="target-hours-input-group">
-                  <label for="target-hours">Target Hours</label>
-                  <input type="number" id="target-hours" min="1" max="10000" value="10">
+                <div class="form-group-row">
+                  <div class="form-group">
+                    <label for="target-type-select">Target Type</label>
+                    <select id="target-type-select">
+                      <option value="none">Open-ended (No hours target)</option>
+                      <option value="hours">Hours Target</option>
+                    </select>
+                  </div>
+                  <div class="form-group hidden" id="target-hours-input-group">
+                    <label for="target-hours">Target Hours</label>
+                    <input type="number" id="target-hours" min="1" max="10000" value="10">
+                  </div>
+                </div>
+                <button type="submit" class="btn btn-secondary btn-full"><i class="fa-solid fa-plus"></i> Create Target</button>
+              </form>
+            </div>
+
+            <!-- Active Targets Card -->
+            <div class="card active-targets-card">
+              <h2>My Determinations</h2>
+              <div id="active-targets-list" class="targets-list">
+                <!-- Dynamically populated -->
+                <div class="empty-state">
+                  <i class="fa-solid fa-bullseye"></i>
+                  <p>No active prayer targets. Set a determination to focus your Daimoku!</p>
                 </div>
               </div>
-              <button type="submit" class="btn btn-secondary btn-full"><i class="fa-solid fa-plus"></i> Create Target</button>
-            </form>
-          </div>
+            </div>
 
-          <!-- Active Targets Card -->
-          <div class="card active-targets-card">
-            <h2>My Determinations</h2>
-            <div id="active-targets-list" class="targets-list">
-              <!-- Dynamically populated -->
-              <div class="empty-state">
-                <i class="fa-solid fa-bullseye"></i>
-                <p>No active prayer targets. Set a determination to focus your Daimoku!</p>
+            <!-- Completed Targets Card -->
+            <div class="card completed-targets-card collapsible">
+              <button class="completed-targets-header" id="btn-toggle-completed-targets">
+                <span>Completed Targets (<span id="completed-targets-count">0</span>)</span>
+                <i class="fa-solid fa-chevron-down toggle-arrow"></i>
+              </button>
+              <div id="completed-targets-list" class="targets-list collapsed">
+                <!-- Dynamically populated -->
               </div>
             </div>
-          </div>
 
-          <!-- Completed Targets Card -->
-          <div class="card completed-targets-card collapsible">
-            <button class="completed-targets-header" id="btn-toggle-completed-targets">
-              <span>Completed Targets (<span id="completed-targets-count">0</span>)</span>
-              <i class="fa-solid fa-chevron-down toggle-arrow"></i>
-            </button>
-            <div id="completed-targets-list" class="targets-list collapsed">
-              <!-- Dynamically populated -->
+          </div>
+      </section>
+
+      <!-- VIEW 1.6: CHANT HISTORY -->
+      <section id="view-history" class="content-view">
+        <div class="history-grid">
+            
+            <!-- Analytics Panel -->
+            <div class="card analytics-card">
+              <h2>Chanting Summary</h2>
+              <div class="analytics-row">
+                <div class="analytic-item">
+                  <span class="analytic-number" id="analytic-sessions">0</span>
+                  <span class="analytic-label">Total Sessions</span>
+                </div>
+                <div class="analytic-item">
+                  <span class="analytic-number" id="analytic-streak">0</span>
+                  <span class="analytic-label">Day Streak</span>
+                </div>
+                <div class="analytic-item">
+                  <span class="analytic-number" id="analytic-avg-session">0m</span>
+                  <span class="analytic-label">Avg. Session</span>
+                </div>
+              </div>
             </div>
-          </div>
 
+            <!-- History Logs List -->
+            <div class="card logs-card">
+              <div class="logs-header">
+                <h2>Session Logs</h2>
+                <button id="btn-clear-history" class="btn-text-danger"><i class="fa-solid fa-trash-can"></i> Clear All</button>
+              </div>
+              <div id="logs-list-container" class="logs-list">
+                <!-- Dynamically populated -->
+                <div class="empty-state">
+                  <i class="fa-solid fa-seedling"></i>
+                  <p>No chanting sessions recorded yet. Start chanting to grow your plant!</p>
+                </div>
+              </div>
+            </div>
+
+          </div>
         </div>
       </section>
 
-      <!-- VIEW 3: HISTORY -->
-      <section id="view-history" class="content-view">
-        <div class="history-grid">
+      <!-- VIEW 2.5: ACHIEVEMENTS / BADGES -->
+      <section id="view-achievements" class="content-view">
+        <div class="achievements-grid">
           
-          <!-- Analytics Panel -->
-          <div class="card analytics-card">
-            <h2>Chanting Summary</h2>
-            <div class="analytics-row">
-              <div class="analytic-item">
-                <span class="analytic-number" id="analytic-sessions">0</span>
-                <span class="analytic-label">Total Sessions</span>
+          <!-- Rank & Progress Card -->
+          <div class="card rank-card">
+            <h2>My Practice Rank</h2>
+            <div class="rank-display-row">
+              <div class="rank-lotus">
+                <svg class="lotus-svg-glowing" viewBox="0 0 24 24">
+                  <path d="M12,3 C10,7 6,9 6,13 C6,16 9,19 12,21 C15,19 18,16 18,13 C18,9 14,7 12,3 Z M12,7 C13,10 16,12 16,14 C16,16 14,18 12,18 C10,18 8,16 8,14 C8,12 11,10 12,7 Z" />
+                </svg>
               </div>
-              <div class="analytic-item">
-                <span class="analytic-number" id="analytic-streak">0</span>
-                <span class="analytic-label">Day Streak</span>
-              </div>
-              <div class="analytic-item">
-                <span class="analytic-number" id="analytic-avg-session">0m</span>
-                <span class="analytic-label">Avg. Session</span>
+              <div class="rank-info-box">
+                <span class="rank-name" id="achievement-rank-name">Seeker (Beginner)</span>
+                <div class="stars-row-rank" id="achievement-stars-container"></div>
               </div>
             </div>
           </div>
 
-          <!-- History Logs List -->
-          <div class="card logs-card">
-            <div class="logs-header">
-              <h2>Session Logs</h2>
-              <button id="btn-clear-history" class="btn-text-danger"><i class="fa-solid fa-trash-can"></i> Clear All</button>
-            </div>
-            <div id="logs-list-container" class="logs-list">
+          <!-- Badges List Card -->
+          <div class="card badges-card">
+            <h2>My Badges</h2>
+            <div id="badges-list-container" class="badges-container-list">
               <!-- Dynamically populated -->
-              <div class="empty-state">
-                <i class="fa-solid fa-seedling"></i>
-                <p>No chanting sessions recorded yet. Start chanting to grow your plant!</p>
-              </div>
             </div>
           </div>
-
+          
         </div>
       </section>
 
@@ -425,10 +467,32 @@
                 </button>
               </div>
             </div>
+
+            <div class="settings-section">
+              <h3>Pot Customizer</h3>
+              <div class="pot-options">
+                <button class="pot-btn active" data-pot="clay">
+                  <span class="pot-dot" style="background: #be6f50; border: 2px solid #5e2714;"></span>
+                  Rustic Clay
+                </button>
+                <button class="pot-btn" data-pot="lotus">
+                  <span class="pot-dot" style="background: #ff7bbd; border: 2px solid #f5c65a;"></span>
+                  Golden Lotus
+                </button>
+                <button class="pot-btn" data-pot="marble">
+                  <span class="pot-dot" style="background: #e0e0e0; border: 2px solid #7f8c8d;"></span>
+                  Pearl Marble
+                </button>
+                <button class="pot-btn" data-pot="jade">
+                  <span class="pot-dot" style="background: #62c382; border: 2px solid #1a4a27;"></span>
+                  Imperial Jade
+                </button>
+              </div>
+            </div>
           </div>
 
           <!-- Admin Control Panel (Collapsible, visible only to admin role) -->
-          <div class="card admin-card collapsible hidden" id="admin-panel-card">
+          <div class="card admin-card collapsible" id="admin-panel-card">
             <button class="admin-panel-header" id="btn-toggle-admin">
               <span><i class="fa-solid fa-user-shield"></i> Administrator Control Panel</span>
               <i class="fa-solid fa-chevron-down toggle-arrow"></i>
@@ -572,15 +636,19 @@
       </button>
       <button id="nav-prayers" class="nav-item">
         <i class="fa-solid fa-bullseye"></i>
-        <span>Targets</span>
+        <span>Practice</span>
       </button>
       <button id="nav-chant" class="nav-item">
         <i class="fa-regular fa-clock"></i>
         <span>Chant</span>
       </button>
       <button id="nav-history" class="nav-item">
-        <i class="fa-solid fa-list-ul"></i>
+        <i class="fa-solid fa-clock-rotate-left"></i>
         <span>History</span>
+      </button>
+      <button id="nav-achievements" class="nav-item">
+        <i class="fa-solid fa-trophy"></i>
+        <span>Badges</span>
       </button>
       <button id="nav-campaign" class="nav-item">
         <i class="fa-solid fa-bullhorn"></i>
@@ -605,7 +673,7 @@
   <div id="auth-overlay" class="auth-overlay">
     <div class="auth-card card">
       <div class="auth-logo">
-        <span class="logo-leaf"><i class="fa-solid fa-leaf"></i></span>
+        <span class="logo-leaf" style="font-size: 32px;"><i class="fa-solid fa-leaf"></i></span>
         <h2>Daimoku Grow</h2>
       </div>
       
@@ -681,6 +749,36 @@
         
         <p class="auth-switch-text">Remembered your password? <a href="#" id="link-to-login-from-recovery">Login here</a></p>
       </form>
+    </div>
+  </div>
+
+  <!-- Encouragement Modal -->
+  <div id="encouragement-modal" class="modal-overlay hidden" style="display: none;">
+    <div class="modal-card card encouragement-card-modal">
+      <div class="modal-lotus-icon">
+        <svg viewBox="0 0 24 24" width="48" height="48" fill="var(--primary)">
+          <path d="M12,3 C10,7 6,9 6,13 C6,16 9,19 12,21 C15,19 18,16 18,13 C18,9 14,7 12,3 Z M12,7 C13,10 16,12 16,14 C16,16 14,18 12,18 C10,18 8,16 8,14 C8,12 11,10 12,7 Z" />
+        </svg>
+      </div>
+      <h3>Session Recorded! 🙏</h3>
+      <p id="encouragement-message">"Keep up the wonderful practice! Every single Daimoku counts."</p>
+      <button id="btn-close-encouragement" class="btn btn-primary btn-full">Continue</button>
+    </div>
+  </div>
+
+  <!-- Share Guidance Modal -->
+  <div id="share-modal" class="modal-overlay hidden" style="display: none;">
+    <div class="modal-card card share-card-modal">
+      <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; width:100%; margin-bottom:12px;">
+        <h3 style="margin:0; font-family:var(--font-serif); font-size:18px;">Share Daily Guidance</h3>
+        <button id="btn-close-share" class="btn-close-modal"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="share-preview-container">
+        <canvas id="share-card-canvas" width="400" height="400" style="max-width:100%; border-radius:12px; box-shadow:0 8px 30px rgba(0,0,0,0.12); border:var(--border);"></canvas>
+      </div>
+      <div class="share-actions-row">
+        <button id="btn-download-share" class="btn btn-primary btn-full"><i class="fa-solid fa-download"></i> Download Image</button>
+      </div>
     </div>
   </div>
 

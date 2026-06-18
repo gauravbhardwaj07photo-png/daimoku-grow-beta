@@ -127,6 +127,103 @@ document.addEventListener('DOMContentLoaded', () => {
     { text: "Consistency is the path to mastership. Chanting daily, even for a short time, builds an invincible fortress in your heart.", author: "Daisaku Ikeda Sensei" }
   ];
 
+  // --- Achievements, Practice Ranks & Badges Logic (Defined early to prevent initialization errors) ---
+  const ACHIEVEMENTS_LIST = [
+    { id: 'streak_7', title: "7-Day Streak", desc: "Chant consecutively for 7 days", icon: "fa-fire", check: (s) => s.streak >= 7 },
+    { id: 'streak_15', title: "15-Day Streak", desc: "Chant consecutively for 15 days", icon: "fa-bolt", check: (s) => s.streak >= 15 },
+    { id: 'streak_30', title: "1-Month Streak", desc: "Chant consecutively for 30 days", icon: "fa-calendar-day", check: (s) => s.streak >= 30 },
+    { id: 'streak_90', title: "3-Month Streak", desc: "Chant consecutively for 90 days", icon: "fa-shield-halved", check: (s) => s.streak >= 90 },
+    { id: 'streak_180', title: "6-Month Streak", desc: "Chant consecutively for 180 days", icon: "fa-award", check: (s) => s.streak >= 180 },
+    { id: 'streak_365', title: "1-Year Streak", desc: "Chant consecutively for 365 days", icon: "fa-trophy", check: (s) => s.streak >= 365 },
+    
+    { id: 'session_1h', title: "Focus Master (1h)", desc: "Log a session of 1 hour or more", icon: "fa-clock", check: (s) => s.sessions.some(x => x.durationSeconds >= 3600) },
+    { id: 'session_2h', title: "Marathon Chanter (2h)", desc: "Log a session of 2 hours or more", icon: "fa-stopwatch", check: (s) => s.sessions.some(x => x.durationSeconds >= 7200) },
+    { id: 'session_3h20m', title: "Revival Hero (3h 20m)", desc: "Log a session of 3 hours 20 mins+", icon: "fa-heart-pulse", check: (s) => s.sessions.some(x => x.durationSeconds >= 12000) },
+    
+    { id: 'total_1h', title: "First Drop", desc: "Reach 1 hour of total chanting", icon: "fa-droplet", check: (s) => (s.totalSeconds / 3600) >= 1 },
+    { id: 'total_10h', title: "Garden Seedling", desc: "Reach 10 hours of total chanting", icon: "fa-seedling", check: (s) => (s.totalSeconds / 3600) >= 10 },
+    { id: 'total_50h', title: "Steady Roots", desc: "Reach 50 hours of total chanting", icon: "fa-tree", check: (s) => (s.totalSeconds / 3600) >= 50 },
+    { id: 'total_150h', title: "Strong Trunk", desc: "Reach 150 hours of total chanting", icon: "fa-mountain", check: (s) => (s.totalSeconds / 3600) >= 150 },
+    { id: 'total_333h', title: "Majestic Canopy", desc: "Reach 333 hours of total chanting", icon: "fa-crown", check: (s) => (s.totalSeconds / 3600) >= 333 },
+
+    { id: 'early_bird', title: "Early Bird", desc: "Chant before 8:00 AM", icon: "fa-sun", check: (s) => s.sessions.some(x => {
+      const date = new Date(x.date);
+      return !isNaN(date.getTime()) && date.getHours() < 8;
+    }) },
+    { id: 'night_owl', title: "Night Owl", desc: "Chant after 9:00 PM", icon: "fa-moon", check: (s) => s.sessions.some(x => {
+      const date = new Date(x.date);
+      return !isNaN(date.getTime()) && date.getHours() >= 21;
+    }) },
+    { id: 'first_target', title: "Determination", desc: "Create your first prayer target", icon: "fa-bullseye", check: (s) => s.targets.length >= 1 },
+    { id: 'target_completed', title: "Victory", desc: "Complete a prayer target", icon: "fa-circle-check", check: (s) => s.targets.some(x => x.completed) }
+  ];
+
+  function getRankDetails(hours) {
+    if (hours < 5) return { name: "Seeker (Beginner)", stars: 1 };
+    if (hours < 20) return { name: "Practitioner (Regular)", stars: 2 };
+    if (hours < 100) return { name: "Disciple (Advanced)", stars: 3 };
+    if (hours < 300) return { name: "Bodhisattva (Pro)", stars: 4 };
+    return { name: "Enlightened (Seasoned)", stars: 5 };
+  }
+
+  function renderStars(container, count) {
+    if (!container) return;
+    container.innerHTML = '';
+    for (let i = 1; i <= 5; i++) {
+      const star = document.createElement('i');
+      if (i <= count) {
+        star.className = 'fa-solid fa-star star-filled';
+      } else {
+        star.className = 'fa-regular fa-star star-empty';
+      }
+      container.appendChild(star);
+    }
+  }
+
+  function renderAchievements() {
+    const totalHours = (state.totalSeconds / 3600);
+    const rank = getRankDetails(totalHours);
+    
+    // Update main dashboard stars
+    const mainStarsContainer = document.getElementById('stars-progress-container');
+    renderStars(mainStarsContainer, rank.stars);
+    
+    // Update main dashboard level text
+    const starsLevelText = document.getElementById('stars-level-text');
+    if (starsLevelText) {
+      starsLevelText.textContent = `Level ${rank.stars}: ${rank.name}`;
+    }
+    
+    // Update achievements view rank & stars
+    const achRankName = document.getElementById('achievement-rank-name');
+    const achStarsContainer = document.getElementById('achievement-stars-container');
+    if (achRankName) achRankName.textContent = rank.name;
+    renderStars(achStarsContainer, rank.stars);
+    
+    // Render Badges list
+    const badgesContainer = document.getElementById('badges-list-container');
+    if (!badgesContainer) return;
+    
+    badgesContainer.innerHTML = '';
+    
+    ACHIEVEMENTS_LIST.forEach(ach => {
+      const isUnlocked = ach.check(state);
+      const div = document.createElement('div');
+      div.className = `badge-item ${isUnlocked ? 'unlocked' : 'locked'}`;
+      
+      div.innerHTML = `
+        <div class="badge-icon-box">
+          <i class="fa-solid ${ach.icon}"></i>
+        </div>
+        <div class="badge-info">
+          <span class="badge-title">${ach.title}</span>
+          <span class="badge-desc">${ach.desc}</span>
+        </div>
+      `;
+      badgesContainer.appendChild(div);
+    });
+  }
+
   // --- App State ---
   let state = {
     totalSeconds: 0,
@@ -140,10 +237,12 @@ document.addEventListener('DOMContentLoaded', () => {
     lastNotifiedThreshold: 0, // Inactivity alerts: 0 (ok), 24, 72, 168 (7d), 360 (15d), 720 (30d)
     settings: {
       morningReminder: true,
-      eveningReminder: true
+      eveningReminder: true,
+      potStyle: 'clay'
     },
     theme: 'theme-sage-light',
-    dismissedAlerts: [] // Array of closed notification IDs
+    dismissedAlerts: [], // Array of closed notification IDs
+    revivalDates: [] // Dates of consecutive daimoku for revival while dead
   };
 
   // --- Timer Variables ---
@@ -172,6 +271,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const progressPercentLabel = document.getElementById('progress-percent-label');
   const progressRemainingLabel = document.getElementById('progress-remaining-label');
   const journeyProgressFill = document.getElementById('journey-progress-fill');
+  const journeyPercentValue = document.getElementById('journey-percent-value');
   
   // Revival elements
   const revivalProgressContainer = document.getElementById('revival-progress-container');
@@ -179,9 +279,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const revivalPercentLabel = document.getElementById('revival-percent-label');
   const revivalProgressFill = document.getElementById('revival-progress-fill');
   
-  // Guidance
+  // Guidance & Share elements
   const guidanceText = document.getElementById('guidance-text');
   const guidanceAuthor = document.getElementById('guidance-author');
+  const btnShareGuidance = document.getElementById('btn-share-guidance');
+  const shareModal = document.getElementById('share-modal');
+  const btnCloseShare = document.getElementById('btn-close-share');
+  const shareCardCanvas = document.getElementById('share-card-canvas');
+  const btnDownloadShare = document.getElementById('btn-download-share');
 
   // Timer elements
   const btnTimerStopwatch = document.getElementById('btn-timer-stopwatch');
@@ -604,6 +709,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (state.targets === undefined) state.targets = [];
           if (state.lastNotifiedThreshold === undefined) state.lastNotifiedThreshold = 0;
           if (state.dismissedAlerts === undefined) state.dismissedAlerts = [];
+          if (state.revivalDates === undefined) state.revivalDates = [];
           
           // Apply saved theme
           document.body.className = state.theme || 'theme-sage-light';
@@ -653,11 +759,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (hours >= 720) { // 30 days
       threshold = 720;
       title = "A dormant seed awaits you...";
-      message = "One month has passed. I am completely withered, but my roots remember your voice. Daisaku Ikeda Sensei guides: 'Sincere effort can bring any withered plant back to life.' I need a 3h 20m revival session! 🌱";
+      message = "One month has passed. I am completely withered, but my roots remember your voice. Daisaku Ikeda Sensei guides: 'Sincere effort can bring any withered plant back to life.' Chant at least 15 minutes daily for 3 consecutive days to revive me! 🌱";
     } else if (hours >= 360) { // 15 days
       threshold = 360;
       title = "Save my life!";
-      message = "15 days of silence. I have withered away. Daisaku Ikeda Sensei guides: 'No matter what, keep chanting Nam-myoho-renge-kyo.' Sowing a seed of determination can bring me back! ❤️";
+      message = "15 days of silence. I have withered away. Daisaku Ikeda Sensei guides: 'No matter what, keep chanting Nam-myoho-renge-kyo.' Sincere chanting for 3 consecutive days (min 15 mins daily) will bring me back! ❤️";
     } else if (hours >= 168) { // 7 days (1 week)
       threshold = 168;
       title = "I am about to die...";
@@ -771,6 +877,11 @@ document.addEventListener('DOMContentLoaded', () => {
           renderHistoryLogs();
         }
         
+        // Refresh achievements UI when entering badges view
+        if (viewId === 'view-achievements') {
+          renderAchievements();
+        }
+        
         // Start/Stop plant canvas render loop to save CPU/GPU cycles when hidden
         if (viewId === 'view-dashboard') {
           if (typeof PlantRenderer.resizeCanvas === 'function') {
@@ -779,7 +890,7 @@ document.addEventListener('DOMContentLoaded', () => {
               PlantRenderer.startAnimation();
             }, 50);
           } else {
-            PlantRenderer.startAnimation();
+             PlantRenderer.startAnimation();
           }
         } else {
           if (typeof PlantRenderer.stopAnimation === 'function') {
@@ -787,23 +898,42 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         }
         
-        // Refresh targets UI when entering targets view
-        if (viewId === 'view-prayers') {
-          renderTargetsList();
-        }
+        setTimeout(() => {
+          if (viewId === 'view-history') {
+            renderHistoryLogs();
+            updateHistoryAnalytics();
+          }
+          
+          if (viewId === 'view-achievements') {
+            renderAchievements();
+          }
+          
+          if (viewId === 'view-calendar') {
+            renderCalendar();
+            renderSelectedDayEvents();
+          }
 
-        // Refresh campaign UI when entering campaigns view
-        if (viewId === 'view-campaign') {
-          renderCampaignsList();
-        }
+          if (viewId === 'view-prayers') {
+            renderTargetsList();
+          }
 
-        // Refresh calendar UI when entering calendar view
-        if (viewId === 'view-calendar') {
-          renderCalendar();
-          renderSelectedDayEvents();
-        }
+          if (viewId === 'view-campaign') {
+            renderCampaignsList();
+          }
+        }, 50);
       });
     });
+
+    // Navigate to history view when clicking hours logged stat box
+    const statBoxHoursLogged = document.getElementById('stat-box-hours-logged');
+    if (statBoxHoursLogged) {
+      statBoxHoursLogged.addEventListener('click', () => {
+        const navHistory = document.getElementById('nav-history');
+        if (navHistory) {
+          navHistory.click();
+        }
+      });
+    }
   }
 
   // --- Daily Quotes Picker ---
@@ -983,8 +1113,11 @@ document.addEventListener('DOMContentLoaded', () => {
       plantMoodBadge.classList.add('thirsty-badge');
     }
     
-    // Progress Card
+    // Progress Card / Flanking Stats
     statTotalHours.textContent = totalHours;
+    if (journeyPercentValue) {
+      journeyPercentValue.textContent = `${progressPercent}%`;
+    }
     progressPercentLabel.textContent = `${progressPercent}% of Journey`;
     const remaining = Math.max(0, GOAL_HOURS - parseFloat(totalHours)).toFixed(1);
     progressRemainingLabel.textContent = `${remaining}h remaining`;
@@ -993,19 +1126,38 @@ document.addEventListener('DOMContentLoaded', () => {
     // Revival Card Visibility
     if (state.isDead) {
       revivalProgressContainer.classList.remove('hidden');
-      const revivalMins = (state.revivalSeconds / 60).toFixed(0);
-      const targetMins = (REVIVAL_TARGET_SECONDS / 60).toFixed(0);
-      revivalTimeLabel.textContent = `${revivalMins} / ${targetMins} mins`;
+      const daysCount = state.revivalDates ? state.revivalDates.length : 0;
+      revivalTimeLabel.textContent = `${daysCount} / 3 days completed`;
       
-      const revPercent = Math.min(100, Math.round((state.revivalSeconds / REVIVAL_TARGET_SECONDS) * 100));
+      const revPercent = Math.min(100, Math.round((daysCount / 3) * 100));
       revivalPercentLabel.textContent = `${revPercent}%`;
       revivalProgressFill.style.width = `${revPercent}%`;
+      
+      // Insert daily note if not already present
+      let noteEl = revivalProgressContainer.querySelector('.revival-note');
+      if (!noteEl) {
+        noteEl = document.createElement('p');
+        noteEl.className = 'revival-note';
+        noteEl.style.cssText = 'font-size:11px; color:var(--text-muted); margin-top:6px; display:flex; align-items:center; gap:4px;';
+        noteEl.innerHTML = '<i class="fa-solid fa-circle-info" style="color:var(--accent-wood);"></i> Note: Chant minimum 15 minutes daily to record a day.';
+        revivalProgressContainer.appendChild(noteEl);
+      }
     } else {
       revivalProgressContainer.classList.add('hidden');
     }
     
+    // Update achievements and main dashboard stars
+    renderAchievements();
+    
     // Trigger canvas state updates
     PlantRenderer.updateState(parseFloat(totalHours), state.health, state.isDead, timerState === 'running');
+    
+    // Update pot style in PlantRenderer
+    if (state.settings && state.settings.potStyle) {
+      PlantRenderer.setPotStyle(state.settings.potStyle);
+    } else {
+      PlantRenderer.setPotStyle('clay');
+    }
     
     // In-App Alerts Banner
     updateNotificationBanner();
@@ -1020,6 +1172,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // Update theme toggle buttons highlights
     themeButtons.forEach(btn => {
       if (btn.getAttribute('data-theme') === state.theme) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+
+    // Update pot customizer buttons highlights
+    const potButtons = document.querySelectorAll('.pot-btn');
+    potButtons.forEach(btn => {
+      if (btn.getAttribute('data-pot') === ((state.settings && state.settings.potStyle) || 'clay')) {
         btn.classList.add('active');
       } else {
         btn.classList.remove('active');
@@ -1046,7 +1208,7 @@ document.addEventListener('DOMContentLoaded', () => {
         activeAlert = {
           id: 'neglect_30d',
           type: 'dead',
-          message: "My roots still remember your voice. Daisaku Ikeda Sensei guides: 'Sincere effort can bring any withered plant back to life.' I need a 3h 20m revival session! 🌱"
+          message: "My roots still remember your voice. Daisaku Ikeda Sensei guides: 'Sincere effort can bring any withered plant back to life.' Chant at least 15 minutes daily for 3 consecutive days to revive me! 🌱"
         };
       } else if (diffHours >= 360) { // 15 days
         activeAlert = {
@@ -1058,7 +1220,7 @@ document.addEventListener('DOMContentLoaded', () => {
         activeAlert = {
           id: 'neglect_dead',
           type: 'dead',
-          message: "Your plant has withered from neglect! Chant 3h 20m to revive it."
+          message: "Your plant has withered from neglect! Chant at least 15 minutes a day for 3 consecutive days to revive it. 🙏🌱"
         };
       }
     } else if (diffHours >= 168) { // 7 days
@@ -1351,25 +1513,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // 2. Accumulate Chant Time
     state.lastNotifiedThreshold = 0; // Reset warning alert state
     state.dismissedAlerts = []; // Reset dismissed alerts on chanting activity
+    // Always accumulate chanting time to total progress
+    state.totalSeconds += durationSeconds;
+    
     if (state.isDead) {
-      // Dead plant mode: Chant goes to revival bucket
-      state.revivalSeconds += durationSeconds;
-      
-      if (state.revivalSeconds >= REVIVAL_TARGET_SECONDS) {
-        // REVIVAL EVENT TRIGGERS!
-        state.isDead = false;
-        state.health = 100;
-        state.revivalSeconds = 0;
-        
-        // Penalty: reset tree height back to 1 hour (Sprout stage)
-        state.totalSeconds = 3600; // Reset to 1 hour (Stage 2)
-        state.lastChantedDate = now.toISOString();
-        
-        alert("Wonderful! Your plant has been successfully revived. It starts fresh as a green sprout again. Keep it hydrated!");
-      }
+      // Dead plant mode: check revival progress
+      const dateTodayStr = now.toISOString().split('T')[0];
+      updateRevivalProgress(dateTodayStr, durationSeconds);
     } else {
       // Normal healthy mode
-      state.totalSeconds += durationSeconds;
       state.health = 100; // Recover full hydration
       state.lastChantedDate = now.toISOString();
     }
@@ -1378,6 +1530,9 @@ document.addEventListener('DOMContentLoaded', () => {
     calculateStreak();
     
     saveState();
+    
+    // Trigger encouragement custom modal
+    showEncouragementPopUp();
   }
 
   function calculateStreak() {
@@ -1507,24 +1662,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const isNewest = state.sessions.length === 1 || new Date(session.date) > new Date(state.lastChantedDate);
     
     state.lastNotifiedThreshold = 0; // Reset warning alert state
+    state.totalSeconds += totalSecs;
+    
     if (state.isDead) {
-      state.revivalSeconds += totalSecs;
-      if (state.revivalSeconds >= REVIVAL_TARGET_SECONDS) {
-        state.isDead = false;
-        state.health = 100;
-        state.revivalSeconds = 0;
-        state.totalSeconds = 3600; // Reset sprout penalty
-        if (isNewest) state.lastChantedDate = session.date;
-        alert("Your plant has been successfully revived via manual log! It starts fresh as a green sprout.");
-      }
+      updateRevivalProgress(sessionDateString, totalSecs);
     } else {
-      state.totalSeconds += totalSecs;
       state.health = 100;
       if (isNewest) state.lastChantedDate = session.date;
     }
     
     calculateStreak();
     saveState();
+    
+    // Trigger encouragement custom modal
+    showEncouragementPopUp();
     
     // Reset fields
     logHours.value = 0;
@@ -1774,6 +1925,216 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  // Pot Customizer Swapper
+  const potButtons = document.querySelectorAll('.pot-btn');
+  potButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const potStyle = btn.getAttribute('data-pot');
+      if (!state.settings) {
+        state.settings = { morningReminder: true, eveningReminder: true };
+      }
+      state.settings.potStyle = potStyle;
+      PlantRenderer.setPotStyle(potStyle);
+      saveState();
+      updateUI();
+    });
+  });
+
+  // Helper to draw lotus path on canvas
+  function drawLotusWatermark(canvasCtx, cx, cy, size, color) {
+    canvasCtx.save();
+    canvasCtx.translate(cx, cy);
+    canvasCtx.scale(size / 24, size / 24);
+    canvasCtx.translate(-12, -12); // Center of 24x24 path
+    canvasCtx.fillStyle = color;
+    
+    // Draw the main outer petal
+    const p1 = new Path2D("M12,3 C10,7 6,9 6,13 C6,16 9,19 12,21 C15,19 18,16 18,13 C18,9 14,7 12,3 Z");
+    // Draw the inner petal
+    const p2 = new Path2D("M12,7 C13,10 16,12 16,14 C16,16 14,18 12,18 C10,18 8,16 8,14 C8,12 11,10 12,7 Z");
+    
+    canvasCtx.fill(p1);
+    canvasCtx.fill(p2);
+    canvasCtx.restore();
+  }
+
+  // Draw the high-fidelity guidance share card
+  function drawShareCard(canvas, quoteText, quoteAuthor) {
+    const ctx = canvas.getContext('2d');
+    
+    // Set fixed resolution for sharing (800x800)
+    canvas.width = 800;
+    canvas.height = 800;
+    
+    // Default light theme values
+    let bgGradStart = '#fcfbf7'; 
+    let bgGradEnd = '#f5f3eb';   
+    let textColor = '#2c3e50';   
+    let authorColor = '#7f8c8d'; 
+    let accentColor = '#8e7a5c'; 
+    let lotusColor = 'rgba(142, 122, 92, 0.04)'; 
+    let borderGradStart = '#dfd5bf'; 
+    let borderGradEnd = '#bfa57a';
+
+    // Apply colors according to theme
+    if (document.body.classList.contains('theme-forest-dark')) {
+      bgGradStart = '#162416';
+      bgGradEnd = '#0b130b';
+      textColor = '#e2ebe2';
+      authorColor = '#a3cfa3';
+      accentColor = '#dfd5bf';
+      lotusColor = 'rgba(223, 213, 191, 0.05)';
+      borderGradStart = '#5a7a5a';
+      borderGradEnd = '#8eb38e';
+    } else if (document.body.classList.contains('theme-wood-sand')) {
+      bgGradStart = '#fcf9f5';
+      bgGradEnd = '#f3e6d8';
+      textColor = '#5e432c';
+      authorColor = '#a8805f';
+      accentColor = '#c48c5a';
+      lotusColor = 'rgba(196, 140, 90, 0.04)';
+      borderGradStart = '#e6cca8';
+      borderGradEnd = '#c48c5a';
+    }
+    
+    // 1. Draw Background Gradient
+    const bgGrad = ctx.createLinearGradient(0, 0, 800, 800);
+    bgGrad.addColorStop(0, bgGradStart);
+    bgGrad.addColorStop(1, bgGradEnd);
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, 800, 800);
+    
+    // 2. Draw Translucent Lotus Watermark in center
+    drawLotusWatermark(ctx, 400, 400, 320, lotusColor);
+    
+    // 3. Draw Borders
+    // Elegant frame border
+    ctx.lineWidth = 4;
+    const frameGrad = ctx.createLinearGradient(40, 40, 760, 760);
+    frameGrad.addColorStop(0, borderGradStart);
+    frameGrad.addColorStop(1, borderGradEnd);
+    ctx.strokeStyle = frameGrad;
+    ctx.strokeRect(40, 40, 720, 720);
+    
+    // Thin inner line
+    ctx.lineWidth = 1.2;
+    ctx.strokeStyle = accentColor + '33'; // 20% opacity accent
+    ctx.strokeRect(48, 48, 704, 704);
+    
+    // Corner notches
+    ctx.fillStyle = accentColor;
+    const cornerSize = 8;
+    ctx.fillRect(38, 38, cornerSize, cornerSize);
+    ctx.fillRect(762 - cornerSize/2, 38, cornerSize, cornerSize);
+    ctx.fillRect(38, 762 - cornerSize/2, cornerSize, cornerSize);
+    ctx.fillRect(762 - cornerSize/2, 762 - cornerSize/2, cornerSize, cornerSize);
+    
+    // 4. Draw Small Lotus Icon at top
+    drawLotusWatermark(ctx, 400, 110, 48, accentColor);
+    
+    // 5. Wrap text
+    let cleanText = quoteText.trim();
+    // Wrap with double quotes if not present
+    if (!cleanText.startsWith('"')) cleanText = `"${cleanText}`;
+    if (!cleanText.endsWith('"')) cleanText = `${cleanText}"`;
+    
+    ctx.fillStyle = textColor;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    let fontSize = 34;
+    if (cleanText.length > 200) fontSize = 28;
+    else if (cleanText.length < 100) fontSize = 38;
+    
+    ctx.font = `italic ${fontSize}px 'Playfair Display', Georgia, serif`;
+    
+    const maxWidth = 580;
+    const lineHeight = fontSize * 1.45;
+    
+    const words = cleanText.split(' ');
+    let lines = [];
+    let currentLine = '';
+    
+    for (let n = 0; n < words.length; n++) {
+      let testLine = currentLine + words[n] + ' ';
+      let metrics = ctx.measureText(testLine);
+      let testWidth = metrics.width;
+      if (testWidth > maxWidth && n > 0) {
+        lines.push(currentLine.trim());
+        currentLine = words[n] + ' ';
+      } else {
+        currentLine = testLine;
+      }
+    }
+    lines.push(currentLine.trim());
+    
+    // Centering calculation
+    const totalTextHeight = lines.length * lineHeight;
+    let startY = 400 - (totalTextHeight / 2) + 20; // Offset for top logo
+    
+    for (let i = 0; i < lines.length; i++) {
+      ctx.fillText(lines[i], 400, startY + (i * lineHeight));
+    }
+    
+    // 6. Draw Divider Line
+    const dividerY = startY + totalTextHeight + 40;
+    ctx.beginPath();
+    ctx.moveTo(350, dividerY);
+    ctx.lineTo(450, dividerY);
+    ctx.strokeStyle = accentColor;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    
+    // 7. Draw Author
+    let cleanAuthor = quoteAuthor.trim();
+    if (cleanAuthor.startsWith('—') || cleanAuthor.startsWith('-')) {
+      cleanAuthor = cleanAuthor.substring(1).trim();
+    }
+    ctx.font = "bold 20px 'Outfit', 'Segoe UI', sans-serif";
+    ctx.fillStyle = authorColor;
+    ctx.fillText(cleanAuthor.toUpperCase(), 400, dividerY + 35);
+    
+    // 8. Draw App Branding
+    ctx.font = "500 13px 'Outfit', 'Segoe UI', sans-serif";
+    ctx.fillStyle = authorColor + '99'; // 60% opacity
+    ctx.fillText("DAIMOKU GROW GALAXY", 400, 715);
+  }
+
+  // Share Guidance Event Listeners
+  if (btnShareGuidance) {
+    btnShareGuidance.addEventListener('click', () => {
+      if (shareModal) {
+        shareModal.style.display = 'flex';
+        shareModal.classList.remove('hidden');
+        
+        // Render Guidance Card on Canvas
+        const text = guidanceText.textContent;
+        const author = guidanceAuthor.textContent || "Daisaku Ikeda";
+        drawShareCard(shareCardCanvas, text, author);
+      }
+    });
+  }
+
+  if (btnCloseShare) {
+    btnCloseShare.addEventListener('click', () => {
+      if (shareModal) {
+        shareModal.style.display = 'none';
+        shareModal.classList.add('hidden');
+      }
+    });
+  }
+
+  if (btnDownloadShare) {
+    btnDownloadShare.addEventListener('click', () => {
+      if (shareCardCanvas) {
+        const link = document.createElement('a');
+        link.download = 'daimoku-guidance.png';
+        link.href = shareCardCanvas.toDataURL('image/png');
+        link.click();
+      }
+    });
+  }
+
   // --- Reminder Check Mechanism (12:00 PM and 8:00 PM Checks) ---
   function runNotificationsChecks() {
     const now = new Date();
@@ -1808,7 +2169,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const chantedSinceNoon = state.sessions.some(s => {
           const sDate = new Date(s.date);
           const sHours = sDate.getHours();
-          return sDate.toISOString().split('T')[0] === dateTodayStr && sHours >= 12;
+          return sDate.toISOString().split('T')[0] === dateTodayStr && sDate.getHours() >= 12;
         });
         
         if (!chantedSinceNoon) {
@@ -1846,7 +2207,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const targetHealth = parseInt(btn.getAttribute('data-health'));
       state.health = targetHealth;
       state.isDead = (targetHealth === 0);
-      if (state.isDead) state.revivalSeconds = 0;
+      if (state.isDead) {
+        state.revivalDates = [];
+      }
       saveState();
       alert(`Debug: set plant health to ${targetHealth}%.`);
     });
@@ -2624,8 +2987,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Campaigns vs Calendar Sub Navigation tabs removed (Calendar is now a separate main tab)
-
 
   // --- Admin Panel Collapsible & Render Operations ---
   const btnToggleAdmin = document.getElementById('btn-toggle-admin');
@@ -3186,7 +3547,107 @@ document.addEventListener('DOMContentLoaded', () => {
   // Run notification check immediately on boot, and check every 5 minutes
   runNotificationsChecks();
   setInterval(runNotificationsChecks, 1000 * 60 * 5);
-  
+
+  // --- Encouragement Pop-ups & Revival Helpers (Moved early definitions) ---
+
+  const ENCOURAGEMENTS = [
+    "Wonderful chanting! Every single Daimoku resounds throughout the entire universe! 🌌✨",
+    "Brilliant effort! Your consistent Daimoku is watering the roots of your happiness! 🌸🌱",
+    "Fantastic session! 'A person of chanting is never defeated.' Keep shining! 🦁☀️",
+    "Amazing! Chanting Nam-myoho-renge-kyo is like the roar of a lion. Victory is yours! 🦁💪",
+    "Beautiful rhythm! You are tapping the boundless wisdom of the universe within your heart! 💖🧘",
+    "Superb consistency! Great trees grow from small, daily efforts. You are doing great! 🌳⭐",
+    "Incredible focus! Your prayers are transforming any poison into sweet medicine! 🧪➡️🍬",
+    "Resounding victory! Keep chanting with the vibrant rhythm of a galloping horse! 🐎✨",
+    "Sincere and powerful! You have watered your garden with the light of Buddhahood! ☀️🌷",
+    "Spectacular! No prayer is left unanswered. Trust in the power of your Daimoku! 🙏✨",
+    "Chant with joy! Chanting Daimoku itself is the highest form of absolute happiness! 😊💖",
+    "A fresh start today! Nichiren Buddhism is about starting from this very moment! 🌅🌱",
+    "Magnificent dedication! You are building an indestructible fortress of happiness! 🏰💎",
+    "Deep conviction! Your prayers are opening the golden treasury of your own life! 🪙✨",
+    "Splendid rhythm! Consistent Daimoku morning and evening brings complete freedom! ☀️🌙",
+    "Courageous heart! Your chanting dispels all darkness and brings forth infinite hope! 🌟🦁",
+    "Wonderful dedication! The key to victory is to continue chanting, no matter what! 🙌🔥",
+    "Inspirational effort! One day at a time, you are creating a beautiful, blooming life! 🌸🌺",
+    "Joyful sound! Your voice is a song of peace that harmonizes your entire environment! 🎵🕊️",
+    "Keep going! The lotus flower blooms most beautifully in the muddy water! 🪷💧",
+    "Pure light! You have connected your life with the fundamental power of the cosmos! 🌌💫",
+    "Radiant energy! Your chanting has filled your life with boundless courage and hope! ⚡☀️",
+    "Masterful session! Consistency is the direct path to achieving your determinations! 🎯🏆",
+    "Unshakeable faith! Even when it is tough, a sincere prayer moves everything! ⛰️🌊",
+    "Fantastic chanting! Believe in yourself and the ultimate power of your own life-force! 🌟🧘",
+    "Brilliant practice! You are developing the heart of a great champion! 🏆🦁",
+    "Beautifully done! The sun of Buddhahood is rising in your heart right now! 🌅💛",
+    "Chanting is power! Let's continue with fresh energy and dynamic action! 🚀✨",
+    "Pure dedication! The seeds of victory you sow today will bloom into amazing flowers! 🌻✨",
+    "Perfect harmony! Your Daimoku is the key to absolute peace and boundless joy! 🕊️💖"
+  ];
+
+  function showEncouragementPopUp(customText = "") {
+    const modal = document.getElementById('encouragement-modal');
+    const msgEl = document.getElementById('encouragement-message');
+    if (modal && msgEl) {
+      if (customText) {
+        msgEl.textContent = customText;
+      } else {
+        const randomIndex = Math.floor(Math.random() * ENCOURAGEMENTS.length);
+        msgEl.textContent = ENCOURAGEMENTS[randomIndex];
+      }
+      modal.style.display = 'flex';
+      modal.classList.remove('hidden');
+    }
+  }
+
+  const btnCloseEncouragement = document.getElementById('btn-close-encouragement');
+  if (btnCloseEncouragement) {
+    btnCloseEncouragement.addEventListener('click', () => {
+      const modal = document.getElementById('encouragement-modal');
+      if (modal) {
+        modal.style.display = 'none';
+        modal.classList.add('hidden');
+      }
+    });
+  }
+
+  function checkThreeConsecutiveDays(datesArray) {
+    if (datesArray.length < 3) return false;
+    const timestamps = datesArray.map(d => new Date(d + 'T12:00:00').getTime());
+    const oneDayMs = 24 * 60 * 60 * 1000;
+    
+    for (let i = 0; i <= timestamps.length - 3; i++) {
+      const t1 = timestamps[i];
+      const t2 = timestamps[i+1];
+      const t3 = timestamps[i+2];
+      if (t2 - t1 === oneDayMs && t3 - t2 === oneDayMs) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function updateRevivalProgress(sessionDateStr, durationSeconds) {
+    if (!state.isDead) return;
+    if (!state.revivalDates) state.revivalDates = [];
+    
+    const dateSessions = state.sessions.filter(s => s.date.split('T')[0] === sessionDateStr);
+    const totalSecsForDate = dateSessions.reduce((acc, s) => acc + s.durationSeconds, 0);
+    
+    if (totalSecsForDate >= 900) { // 900 seconds = 15 minutes
+      if (!state.revivalDates.includes(sessionDateStr)) {
+        state.revivalDates.push(sessionDateStr);
+        state.revivalDates.sort();
+      }
+    }
+    
+    if (checkThreeConsecutiveDays(state.revivalDates)) {
+      state.isDead = false;
+      state.health = 100;
+      state.revivalDates = [];
+      
+      showEncouragementPopUp("Wonderful! Your plant has been successfully revived through 3 days of consecutive Daimoku! Keep the rhythm strong! 🪷🌸");
+    }
+  }
+
   // Periodic decay check while app is open (every 10 seconds)
   setInterval(() => {
     if (!state.isDead && timerState !== 'running' && MockFirebase.auth.getCurrentUser()) {
@@ -3248,6 +3709,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
   document.body.addEventListener('click', goFullscreen);
   document.body.addEventListener('touchstart', goFullscreen);
+
 
 });
 
