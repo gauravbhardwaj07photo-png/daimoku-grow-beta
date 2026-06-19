@@ -42,8 +42,8 @@ document.addEventListener('DOMContentLoaded', () => {
     { month: 10, day: 28, title: "SGI Day of Spiritual Independence (1991)", type: 'anniversary' }
   ];
 
-  // Specific 2026 Friday & Saturday SGI activities
-  const CALENDAR_ACTIVITIES_2026 = {
+  // Specific 2026 Friday & Saturday SGI activities (Loaded from localStorage or defaults)
+  const CALENDAR_ACTIVITIES_2026 = JSON.parse(localStorage.getItem('daimoku_calendar_activities')) || {
     "2026-01-02": { title: "Family Day", type: "meeting" },
     "2026-01-06": { title: "Coordinators Meeting (Online)", type: "meeting" },
     "2026-01-09": { title: "New Year Gosho and Zadankai", type: "meeting" },
@@ -2577,8 +2577,8 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
     
-    // 4. Specific 2026 Friday & Saturday activities
-    if (year === 2026 && CALENDAR_ACTIVITIES_2026[dateStr]) {
+    // 4. Specific Friday & Saturday SGI activities (grows with custom events)
+    if (CALENDAR_ACTIVITIES_2026[dateStr]) {
       const act = CALENDAR_ACTIVITIES_2026[dateStr];
       events.push({
         title: act.title,
@@ -3166,6 +3166,114 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  function renderAdminCalendarSchedule() {
+    const container = document.getElementById('admin-events-list-container');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    // Sort dates chronologically
+    const dates = Object.keys(CALENDAR_ACTIVITIES_2026).sort();
+    
+    if (dates.length === 0) {
+      container.innerHTML = '<div style="font-size:12px; color:var(--text-muted); padding:10px 0; text-align:center;">No custom events scheduled.</div>';
+      return;
+    }
+    
+    dates.forEach(dateStr => {
+      const event = CALENDAR_ACTIVITIES_2026[dateStr];
+      const div = document.createElement('div');
+      div.style.display = 'flex';
+      div.style.justifyContent = 'space-between';
+      div.style.alignItems = 'center';
+      div.style.padding = '6px 8px';
+      div.style.background = 'rgba(255, 255, 255, 0.04)';
+      div.style.borderRadius = '8px';
+      div.style.fontSize = '12px';
+      div.style.border = '1px solid rgba(255,255,255,0.02)';
+      
+      const typeBadgeColor = event.type === 'meeting' ? 'var(--primary)' : (event.type === 'anniversary' ? '#cc99ff' : 'var(--text-muted)');
+      
+      div.innerHTML = `
+        <div style="display:flex; flex-direction:column; gap:2px; flex:1; overflow:hidden;">
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span style="font-weight:700; color:var(--text-main); font-family:monospace;">${dateStr}</span>
+            <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:white; background:${typeBadgeColor}; padding:1px 4px; border-radius:4px;">${event.type}</span>
+          </div>
+          <span style="color:var(--text-main); font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px;">${event.title}</span>
+        </div>
+        <div style="display:flex; gap:4px;">
+          <button class="btn-edit-event" data-date="${dateStr}" style="background:transparent; border:none; color:var(--primary); cursor:pointer; padding:4px; font-size:13px;"><i class="fa-solid fa-pen-to-square"></i></button>
+          <button class="btn-delete-event" data-date="${dateStr}" style="background:transparent; border:none; color:var(--accent-danger); cursor:pointer; padding:4px; font-size:13px;"><i class="fa-regular fa-trash-can"></i></button>
+        </div>
+      `;
+      
+      // Bind Edit Button
+      div.querySelector('.btn-edit-event').addEventListener('click', (e) => {
+        const d = e.currentTarget.getAttribute('data-date');
+        const ev = CALENDAR_ACTIVITIES_2026[d];
+        const dateInput = document.getElementById('calendar-event-date');
+        const titleInput = document.getElementById('calendar-event-title');
+        const typeInput = document.getElementById('calendar-event-type');
+        if (dateInput) dateInput.value = d;
+        if (titleInput) titleInput.value = ev.title;
+        if (typeInput) typeInput.value = ev.type || 'meeting';
+        
+        // Scroll the form into view smoothly
+        const form = document.getElementById('admin-calendar-form');
+        if (form) form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      });
+      
+      // Bind Delete Button
+      div.querySelector('.btn-delete-event').addEventListener('click', (e) => {
+        const d = e.currentTarget.getAttribute('data-date');
+        if (confirm(`Remove event on ${d} ("${CALENDAR_ACTIVITIES_2026[d].title}")?`)) {
+          delete CALENDAR_ACTIVITIES_2026[d];
+          localStorage.setItem('daimoku_calendar_activities', JSON.stringify(CALENDAR_ACTIVITIES_2026));
+          renderAdminCalendarSchedule();
+          if (document.getElementById('view-calendar').classList.contains('active')) {
+            renderCalendar();
+          }
+        }
+      });
+      
+      container.appendChild(div);
+    });
+  }
+
+  // Handle calendar schedule form submission
+  const adminCalendarForm = document.getElementById('admin-calendar-form');
+  if (adminCalendarForm) {
+    adminCalendarForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const dateInput = document.getElementById('calendar-event-date');
+      const titleInput = document.getElementById('calendar-event-title');
+      const typeInput = document.getElementById('calendar-event-type');
+      
+      if (!dateInput || !titleInput || !typeInput) return;
+      
+      const dateStr = dateInput.value;
+      const title = titleInput.value.trim();
+      const type = typeInput.value;
+      
+      if (!dateStr || !title) return;
+      
+      // Save or update
+      CALENDAR_ACTIVITIES_2026[dateStr] = { title, type };
+      localStorage.setItem('daimoku_calendar_activities', JSON.stringify(CALENDAR_ACTIVITIES_2026));
+      
+      // Clear title and date form values
+      titleInput.value = '';
+      
+      renderAdminCalendarSchedule();
+      if (document.getElementById('view-calendar').classList.contains('active')) {
+        renderCalendar();
+      }
+      
+      alert(`Event on ${dateStr} successfully added/updated! 📅`);
+    });
+  }
+
 
   // --- Authentication Screen Controllers & Overlays ---
   const authOverlay = document.getElementById('auth-overlay');
@@ -3321,6 +3429,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (adminPanelCard) adminPanelCard.classList.remove('hidden');
         renderWhitelist();
         renderCampaignTargetsEditor();
+        renderAdminCalendarSchedule();
       } else {
         if (adminPanelCard) adminPanelCard.classList.add('hidden');
       }
@@ -3351,6 +3460,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (adminPanelCard) adminPanelCard.classList.remove('hidden');
         renderWhitelist();
         renderCampaignTargetsEditor();
+        renderAdminCalendarSchedule();
       } else {
         if (adminPanelCard) adminPanelCard.classList.add('hidden');
       }
@@ -3391,6 +3501,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (adminPanelCard) adminPanelCard.classList.remove('hidden');
         renderWhitelist();
         renderCampaignTargetsEditor();
+        renderAdminCalendarSchedule();
       } else {
         if (adminPanelCard) adminPanelCard.classList.add('hidden');
       }
@@ -3530,6 +3641,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (adminPanelCard) adminPanelCard.classList.remove('hidden');
       renderWhitelist();
       renderCampaignTargetsEditor();
+      renderAdminCalendarSchedule();
     } else {
       if (adminPanelCard) adminPanelCard.classList.add('hidden');
     }

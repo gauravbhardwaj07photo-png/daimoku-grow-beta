@@ -519,6 +519,28 @@
                   <!-- Dynamically populated campaign target inputs -->
                 </div>
               </div>
+              
+              <!-- Section 3: Calendar Schedule Manager -->
+              <div class="admin-control-group">
+                <h4>Calendar Schedule Manager</h4>
+                <form id="admin-calendar-form" class="admin-subform" style="display:flex; flex-direction:column; gap:8px; margin-bottom: 10px;">
+                  <div class="form-group-row" style="margin-bottom:0; gap:8px;">
+                    <input type="date" id="calendar-event-date" required style="flex:1.2; padding:10px; border-radius:10px; border:var(--border); background:var(--accent-cream); color:var(--text-main); font-size:14px; outline:none;">
+                    <input type="text" id="calendar-event-title" placeholder="Event Title" required style="flex:2; padding:10px; border-radius:10px; border:var(--border); background:var(--accent-cream); color:var(--text-main); font-size:14px; outline:none;">
+                    <select id="calendar-event-type" style="flex:1; padding:10px; border-radius:10px; border:var(--border); background:var(--accent-cream); color:var(--text-main); font-size:14px; outline:none;">
+                      <option value="meeting">Meeting</option>
+                      <option value="anniversary">Anniversary</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                  <button type="submit" class="btn btn-primary btn-full" style="padding: 10px 14px; font-size: 13px;"><i class="fa-solid fa-plus"></i> Add / Update Event</button>
+                </form>
+                <div class="admin-event-list-container" style="max-height:180px; overflow-y:auto; border:var(--border); border-radius:10px; padding:8px; background:var(--accent-cream);">
+                  <div id="admin-events-list-container" style="display:flex; flex-direction:column; gap:6px;">
+                    <!-- Dynamically populated list of scheduled events with Edit/Delete options -->
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
