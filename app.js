@@ -2354,22 +2354,65 @@ document.addEventListener('DOMContentLoaded', () => {
     manualCampaignSelect.innerHTML = '<option value="">-- No Campaign (None) --</option>';
     
     const activeList = MockFirebase.db.getActiveCampaigns();
-    const campaigns = [
+    const campaignDates = MockFirebase.db.getCampaignDates();
+    
+    const allCampaigns = [
       { id: 'youth_division', name: "Youth Division Campaign" },
       { id: 'may_3rd', name: "May 3rd Campaign" },
       { id: 'mens_division', name: "Men's Division Campaign" },
       { id: 'womens_division', name: "Women's Division Campaign" },
       { id: 'july_3rd', name: "July 3rd Campaign" },
       { id: 'november_18th', name: "November 18th Campaign" }
-    ].filter(c => activeList.includes(c.id));
+    ];
     
-    campaigns.forEach(c => {
+    const now = new Date();
+    const timerTime = now.getTime();
+    
+    let manualTime = now.getTime();
+    const logDateVal = logDateInput ? logDateInput.value : '';
+    if (logDateVal) {
+      const logD = new Date(logDateVal + 'T12:00:00');
+      if (!isNaN(logD.getTime())) {
+        manualTime = logD.getTime();
+      }
+    }
+    
+    // 1. Filter campaigns active today for the Timer
+    const timerCampaigns = allCampaigns.filter(c => {
+      if (!activeList.includes(c.id)) return false;
+      const dates = campaignDates[c.id];
+      if (dates && dates.start && dates.end) {
+        const startT = new Date(dates.start + 'T00:00:00').getTime();
+        const endT = new Date(dates.end + 'T23:59:59').getTime();
+        return timerTime >= startT && timerTime <= endT;
+      }
+      return true;
+    });
+    
+    // 2. Filter campaigns active on the selected manual log date for the Manual Log
+    const manualCampaigns = allCampaigns.filter(c => {
+      if (!activeList.includes(c.id)) return false;
+      const dates = campaignDates[c.id];
+      if (dates && dates.start && dates.end) {
+        const startT = new Date(dates.start + 'T00:00:00').getTime();
+        const endT = new Date(dates.end + 'T23:59:59').getTime();
+        return manualTime >= startT && manualTime <= endT;
+      }
+      return true;
+    });
+    
+    timerCampaigns.forEach(c => {
       const option = document.createElement('option');
-      option.value = c.id; // Store raw campaign id
+      option.value = c.id;
       option.textContent = c.name;
-      
-      timerCampaignSelect.appendChild(option.cloneNode(true));
-      manualCampaignSelect.appendChild(option.cloneNode(true));
+      timerCampaignSelect.appendChild(option);
+    });
+    
+    manualCampaigns.forEach(c => {
+      const option = document.createElement('option');
+      option.value = c.id;
+      option.textContent = c.name;
+      manualCampaignSelect.appendChild(option);
     });
     
     const activeTargets = state.targets.filter(t => !t.completed);
@@ -2598,30 +2641,54 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
     
-    // 6. Campaign Periods, Ramadan & Vacations in 2026
+    // 6. Campaign Periods (Dynamic)
+    const activeCampaignsList = MockFirebase.db.getActiveCampaigns();
+    const campaignDatesMap = MockFirebase.db.getCampaignDates();
+    const targetDateMidnight = new Date(dateStr + 'T00:00:00').getTime();
+    
+    const campaignsConfig = [
+      { id: 'youth_division', name: "Youth Division" },
+      { id: 'may_3rd', name: "May 3rd" },
+      { id: 'mens_division', name: "Men's Division" },
+      { id: 'womens_division', name: "Women's Division" },
+      { id: 'july_3rd', name: "July 3rd" },
+      { id: 'november_18th', name: "November 18th" }
+    ];
+    
+    let isCampaignPeriod = false;
+    let activeCampaignNames = [];
+    
+    activeCampaignsList.forEach(cid => {
+      const dates = campaignDatesMap[cid];
+      if (dates && dates.start && dates.end) {
+        const startT = new Date(dates.start + 'T00:00:00').getTime();
+        const endT = new Date(dates.end + 'T23:59:59').getTime();
+        if (targetDateMidnight >= startT && targetDateMidnight <= endT) {
+          isCampaignPeriod = true;
+          const meta = campaignsConfig.find(m => m.id === cid);
+          if (meta) {
+            activeCampaignNames.push(meta.name);
+          }
+        }
+      }
+    });
+    
+    if (isCampaignPeriod) {
+      const namesStr = activeCampaignNames.join(" & ");
+      events.push({
+        title: namesStr ? `SGI Campaign (${namesStr})` : "SGI Campaign Period",
+        desc: "Block chanting campaigns are active. Log your hours to help grow our collective garden!",
+        type: "campaign",
+        time: "Ongoing"
+      });
+    }
+    
+    // Ramadan & Vacations in 2026 (Static Holiday Highlights)
     if (year === 2026) {
       const dTime = date.getTime();
-      
-      const jan16 = new Date("2026-01-16T00:00:00").getTime();
-      const mar19 = new Date("2026-03-19T23:59:59").getTime();
-      
-      const apr7 = new Date("2026-04-07T00:00:00").getTime();
-      const may7 = new Date("2026-05-07T23:59:59").getTime();
-      
-      const sep19 = new Date("2026-09-19T00:00:00").getTime();
-      const nov19 = new Date("2026-11-19T23:59:59").getTime();
-      
-      if ((dTime >= jan16 && dTime <= mar19) || (dTime >= apr7 && dTime <= may7) || (dTime >= sep19 && dTime <= nov19)) {
-        events.push({
-          title: "SGI Campaign Period",
-          desc: "Block chanting campaigns are active. Log your hours to help grow our collective garden!",
-          type: "campaign",
-          time: "Ongoing"
-        });
-      }
-      
       // Ramadan: Feb 18 - Mar 19
       const feb18 = new Date("2026-02-18T00:00:00").getTime();
+      const mar19 = new Date("2026-03-19T23:59:59").getTime();
       if (dTime >= feb18 && dTime <= mar19) {
         events.push({
           title: "Ramadan Period",
@@ -2821,14 +2888,32 @@ document.addEventListener('DOMContentLoaded', () => {
     const contributions = MockFirebase.db.getCampaignContributions();
     
     const activeList = MockFirebase.db.getActiveCampaigns();
-    const campaigns = [
-      { id: 'youth_division', name: "Youth Division Campaign", period: "Jan 16 - Mar 19", icon: "fa-child-reaching", start: "2026-01-16", end: "2026-03-19" },
-      { id: 'may_3rd', name: "May 3rd Campaign", period: "Apr 7 - May 7", icon: "fa-sun", start: "2026-04-07", end: "2026-05-07" },
-      { id: 'mens_division', name: "Men's Division Campaign", period: "Jan 16 - Mar 19", icon: "fa-user-tie", start: "2026-01-16", end: "2026-03-19" },
-      { id: 'womens_division', name: "Women's Division Campaign", period: "Apr 7 - May 7", icon: "fa-user-dress", start: "2026-04-07", end: "2026-05-07" },
-      { id: 'july_3rd', name: "July 3rd Campaign", period: "Sep 19 - Nov 19", icon: "fa-users-line", start: "2026-09-19", end: "2026-11-19" },
-      { id: 'november_18th', name: "November 18th Campaign", period: "Sep 19 - Nov 19", icon: "fa-tree", start: "2026-09-19", end: "2026-11-19" }
-    ].filter(c => activeList.includes(c.id));
+    const campaignDates = MockFirebase.db.getCampaignDates();
+    
+    const defaultCampaigns = [
+      { id: 'youth_division', name: "Youth Division Campaign", icon: "fa-child-reaching" },
+      { id: 'may_3rd', name: "May 3rd Campaign", icon: "fa-sun" },
+      { id: 'mens_division', name: "Men's Division Campaign", icon: "fa-user-tie" },
+      { id: 'womens_division', name: "Women's Division Campaign", icon: "fa-user-dress" },
+      { id: 'july_3rd', name: "July 3rd Campaign", icon: "fa-users-line" },
+      { id: 'november_18th', name: "November 18th Campaign", icon: "fa-tree" }
+    ];
+    
+    const campaigns = defaultCampaigns.map(c => {
+      const dates = campaignDates[c.id] || { start: '', end: '' };
+      let periodStr = "No date set";
+      if (dates.start && dates.end) {
+        const startD = new Date(dates.start + 'T00:00:00');
+        const endD = new Date(dates.end + 'T00:00:00');
+        periodStr = `${startD.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} - ${endD.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
+      }
+      return {
+        ...c,
+        start: dates.start,
+        end: dates.end,
+        period: periodStr
+      };
+    }).filter(c => activeList.includes(c.id));
     
     if (campaigns.length === 0) {
       container.innerHTML = `
@@ -3000,6 +3085,17 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  const btnToggleAdminCalendar = document.getElementById('btn-toggle-admin-calendar');
+  const adminCalendarContent = document.getElementById('admin-calendar-content');
+  const adminCalendarCard = document.getElementById('admin-calendar-card');
+  
+  if (btnToggleAdminCalendar && adminCalendarContent && adminCalendarCard) {
+    btnToggleAdminCalendar.addEventListener('click', () => {
+      adminCalendarCard.classList.toggle('open');
+      adminCalendarContent.classList.toggle('collapsed');
+    });
+  }
+
   function renderWhitelist() {
     const container = document.getElementById('whitelist-list-container');
     if (!container) return;
@@ -3100,6 +3196,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const targets = MockFirebase.db.getCampaignTargets();
     const activeCampaigns = MockFirebase.db.getActiveCampaigns();
+    const campaignDates = MockFirebase.db.getCampaignDates();
     container.innerHTML = '';
     
     const campaigns = [
@@ -3114,22 +3211,35 @@ document.addEventListener('DOMContentLoaded', () => {
     campaigns.forEach(c => {
       const div = document.createElement('div');
       div.style.display = 'flex';
-      div.style.justifyContent = 'space-between';
-      div.style.alignItems = 'center';
-      div.style.padding = '8px 0';
+      div.style.flexDirection = 'column';
+      div.style.padding = '10px 0';
       div.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
+      div.style.gap = '6px';
       
       const isActive = activeCampaigns.includes(c.id);
+      const dates = campaignDates[c.id] || { start: '', end: '' };
       
       div.innerHTML = `
-        <span style="font-size:13px; font-weight:500;">${c.name}</span>
-        <div style="display:flex; align-items:center; gap:10px;">
-          <label style="display:flex; align-items:center; gap:4px; font-size:11px; font-weight:600; color:var(--text-muted); cursor:pointer; margin-bottom:0;">
-            <input type="checkbox" class="campaign-active-toggle" data-id="${c.id}" ${isActive ? 'checked' : ''} style="accent-color: var(--primary); width:13px; height:13px; margin:0;">
-            Active
-          </label>
-          <input type="number" class="campaign-target-input" data-id="${c.id}" value="${targets[c.id]}" min="1" max="100000" style="width:60px; padding:6px; border-radius:6px; border:var(--border); background:var(--accent-cream); color:var(--text-main); font-size:12px; text-align:center;">
-          <span style="font-size:11px; color:var(--text-muted);">hours</span>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-size:13px; font-weight:600; color:var(--text-main);">${c.name}</span>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <label style="display:flex; align-items:center; gap:4px; font-size:11px; font-weight:600; color:var(--text-muted); cursor:pointer; margin-bottom:0;">
+              <input type="checkbox" class="campaign-active-toggle" data-id="${c.id}" ${isActive ? 'checked' : ''} style="accent-color: var(--primary); width:13px; height:13px; margin:0;">
+              Active
+            </label>
+            <input type="number" class="campaign-target-input" data-id="${c.id}" value="${targets[c.id]}" min="1" max="100000" style="width:60px; padding:6px; border-radius:6px; border:var(--border); background:var(--accent-cream); color:var(--text-main); font-size:12px; text-align:center; outline:none;">
+            <span style="font-size:11px; color:var(--text-muted);">hours</span>
+          </div>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <div style="flex:1; display:flex; flex-direction:column; gap:2px;">
+            <label style="font-size:10px; font-weight:600; color:var(--text-muted); margin-bottom:0;">Start Date</label>
+            <input type="date" class="campaign-start-input" data-id="${c.id}" value="${dates.start || ''}" style="padding:6px; border-radius:6px; border:var(--border); background:var(--accent-cream); color:var(--text-main); font-size:12px; outline:none; width: 100%;">
+          </div>
+          <div style="flex:1; display:flex; flex-direction:column; gap:2px;">
+            <label style="font-size:10px; font-weight:600; color:var(--text-muted); margin-bottom:0;">End Date</label>
+            <input type="date" class="campaign-end-input" data-id="${c.id}" value="${dates.end || ''}" style="padding:6px; border-radius:6px; border:var(--border); background:var(--accent-cream); color:var(--text-main); font-size:12px; outline:none; width: 100%;">
+          </div>
         </div>
       `;
       
@@ -3141,6 +3251,38 @@ document.addEventListener('DOMContentLoaded', () => {
         allTargets[id] = val;
         MockFirebase.db.saveCampaignTargets(allTargets);
         renderCampaignsList();
+      });
+      
+      div.querySelector('.campaign-start-input').addEventListener('change', (e) => {
+        const val = e.target.value;
+        const id = e.target.getAttribute('data-id');
+        
+        const allDates = MockFirebase.db.getCampaignDates();
+        if (!allDates[id]) allDates[id] = { start: '', end: '' };
+        allDates[id].start = val;
+        MockFirebase.db.saveCampaignDates(allDates);
+        
+        renderCampaignsList();
+        if (document.getElementById('view-calendar').classList.contains('active')) {
+          renderCalendar();
+        }
+        populateTargetDropdowns();
+      });
+      
+      div.querySelector('.campaign-end-input').addEventListener('change', (e) => {
+        const val = e.target.value;
+        const id = e.target.getAttribute('data-id');
+        
+        const allDates = MockFirebase.db.getCampaignDates();
+        if (!allDates[id]) allDates[id] = { start: '', end: '' };
+        allDates[id].end = val;
+        MockFirebase.db.saveCampaignDates(allDates);
+        
+        renderCampaignsList();
+        if (document.getElementById('view-calendar').classList.contains('active')) {
+          renderCalendar();
+        }
+        populateTargetDropdowns();
       });
       
       div.querySelector('.campaign-active-toggle').addEventListener('change', (e) => {
@@ -3425,13 +3567,16 @@ document.addEventListener('DOMContentLoaded', () => {
       hideAuthOverlay();
       
       const adminPanelCard = document.getElementById('admin-panel-card');
+      const adminCalendarCard = document.getElementById('admin-calendar-card');
       if (user.isAdmin) {
         if (adminPanelCard) adminPanelCard.classList.remove('hidden');
+        if (adminCalendarCard) adminCalendarCard.classList.remove('hidden');
         renderWhitelist();
         renderCampaignTargetsEditor();
         renderAdminCalendarSchedule();
       } else {
         if (adminPanelCard) adminPanelCard.classList.add('hidden');
+        if (adminCalendarCard) adminCalendarCard.classList.add('hidden');
       }
       
       updateUI();
@@ -3456,13 +3601,16 @@ document.addEventListener('DOMContentLoaded', () => {
       hideAuthOverlay();
       
       const adminPanelCard = document.getElementById('admin-panel-card');
+      const adminCalendarCard = document.getElementById('admin-calendar-card');
       if (user.isAdmin) {
         if (adminPanelCard) adminPanelCard.classList.remove('hidden');
+        if (adminCalendarCard) adminCalendarCard.classList.remove('hidden');
         renderWhitelist();
         renderCampaignTargetsEditor();
         renderAdminCalendarSchedule();
       } else {
         if (adminPanelCard) adminPanelCard.classList.add('hidden');
+        if (adminCalendarCard) adminCalendarCard.classList.add('hidden');
       }
       
       updateUI();
@@ -3497,13 +3645,16 @@ document.addEventListener('DOMContentLoaded', () => {
       hideAuthOverlay();
       
       const adminPanelCard = document.getElementById('admin-panel-card');
+      const adminCalendarCard = document.getElementById('admin-calendar-card');
       if (user.isAdmin) {
         if (adminPanelCard) adminPanelCard.classList.remove('hidden');
+        if (adminCalendarCard) adminCalendarCard.classList.remove('hidden');
         renderWhitelist();
         renderCampaignTargetsEditor();
         renderAdminCalendarSchedule();
       } else {
         if (adminPanelCard) adminPanelCard.classList.add('hidden');
+        if (adminCalendarCard) adminCalendarCard.classList.add('hidden');
       }
       
       updateUI();
@@ -3607,7 +3758,9 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Hide admin card
         const adminPanelCard = document.getElementById('admin-panel-card');
+        const adminCalendarCard = document.getElementById('admin-calendar-card');
         if (adminPanelCard) adminPanelCard.classList.add('hidden');
+        if (adminCalendarCard) adminCalendarCard.classList.add('hidden');
         
         alert("You have logged out successfully.");
       }
@@ -3630,6 +3783,10 @@ document.addEventListener('DOMContentLoaded', () => {
   renderTargetsList();
   populateTargetDropdowns();
   
+  if (logDateInput) {
+    logDateInput.addEventListener('change', populateTargetDropdowns);
+  }
+  
   // Check session status on boot
   const bootUser = MockFirebase.auth.getCurrentUser();
   if (bootUser) {
@@ -3637,13 +3794,16 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Check admin status
     const adminPanelCard = document.getElementById('admin-panel-card');
+    const adminCalendarCard = document.getElementById('admin-calendar-card');
     if (bootUser.isAdmin) {
       if (adminPanelCard) adminPanelCard.classList.remove('hidden');
+      if (adminCalendarCard) adminCalendarCard.classList.remove('hidden');
       renderWhitelist();
       renderCampaignTargetsEditor();
       renderAdminCalendarSchedule();
     } else {
       if (adminPanelCard) adminPanelCard.classList.add('hidden');
+      if (adminCalendarCard) adminCalendarCard.classList.add('hidden');
     }
   } else {
     showAuthOverlay();

@@ -981,6 +981,13 @@ body.theme-forest-dark .notification-banner.dead {
   letter-spacing: 0.5px;
 }
 
+/* Settings Grid Layout */
+.settings-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 /* Settings styling */
 .settings-card h2 {
   font-family: var(--font-serif);

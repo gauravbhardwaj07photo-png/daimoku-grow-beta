@@ -519,31 +519,38 @@
                   <!-- Dynamically populated campaign target inputs -->
                 </div>
               </div>
+            </div>
+          </div>
+
+          <!-- Calendar Schedule Panel (Collapsible, visible only to admin role) -->
+          <div class="card admin-card collapsible hidden" id="admin-calendar-card">
+            <button class="admin-panel-header" id="btn-toggle-admin-calendar">
+              <span><i class="fa-solid fa-calendar-check"></i> Calendar Schedule Manager</span>
+              <i class="fa-solid fa-chevron-down toggle-arrow"></i>
+            </button>
+            <div id="admin-calendar-content" class="admin-content collapsed">
+              <p class="admin-desc">Create, update, or remove scheduled SGI community activities and anniversaries.</p>
               
-              <!-- Section 3: Calendar Schedule Manager -->
-              <div class="admin-control-group">
-                <h4>Calendar Schedule Manager</h4>
-                <form id="admin-calendar-form" class="admin-subform" style="display:flex; flex-direction:column; gap:8px; margin-bottom: 10px;">
-                  <div class="form-group-row" style="margin-bottom:0; gap:8px;">
-                    <input type="date" id="calendar-event-date" required style="flex:1.2; padding:10px; border-radius:10px; border:var(--border); background:var(--accent-cream); color:var(--text-main); font-size:14px; outline:none;">
-                    <input type="text" id="calendar-event-title" placeholder="Event Title" required style="flex:2; padding:10px; border-radius:10px; border:var(--border); background:var(--accent-cream); color:var(--text-main); font-size:14px; outline:none;">
-                    <select id="calendar-event-type" style="flex:1; padding:10px; border-radius:10px; border:var(--border); background:var(--accent-cream); color:var(--text-main); font-size:14px; outline:none;">
-                      <option value="meeting">Meeting</option>
-                      <option value="anniversary">Anniversary</option>
-                      <option value="other">Other</option>
-                    </select>
-                  </div>
-                  <button type="submit" class="btn btn-primary btn-full" style="padding: 10px 14px; font-size: 13px;"><i class="fa-solid fa-plus"></i> Add / Update Event</button>
-                </form>
-                <div class="admin-event-list-container" style="max-height:180px; overflow-y:auto; border:var(--border); border-radius:10px; padding:8px; background:var(--accent-cream);">
-                  <div id="admin-events-list-container" style="display:flex; flex-direction:column; gap:6px;">
-                    <!-- Dynamically populated list of scheduled events with Edit/Delete options -->
-                  </div>
+              <form id="admin-calendar-form" class="admin-subform" style="display:flex; flex-direction:column; gap:8px; margin-bottom: 10px;">
+                <div class="form-group-row" style="margin-bottom:0; gap:8px;">
+                  <input type="date" id="calendar-event-date" required style="flex:1.2; padding:10px; border-radius:10px; border:var(--border); background:var(--accent-cream); color:var(--text-main); font-size:14px; outline:none;">
+                  <input type="text" id="calendar-event-title" placeholder="Event Title" required style="flex:2; padding:10px; border-radius:10px; border:var(--border); background:var(--accent-cream); color:var(--text-main); font-size:14px; outline:none;">
+                  <select id="calendar-event-type" style="flex:1; padding:10px; border-radius:10px; border:var(--border); background:var(--accent-cream); color:var(--text-main); font-size:14px; outline:none;">
+                    <option value="meeting">Meeting</option>
+                    <option value="anniversary">Anniversary</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <button type="submit" class="btn btn-primary btn-full" style="padding: 10px 14px; font-size: 13px;"><i class="fa-solid fa-plus"></i> Add / Update Event</button>
+              </form>
+              <div class="admin-event-list-container" style="max-height:180px; overflow-y:auto; border:var(--border); border-radius:10px; padding:8px; background:var(--accent-cream);">
+                <div id="admin-events-list-container" style="display:flex; flex-direction:column; gap:6px;">
+                  <!-- Dynamically populated list of scheduled events with Edit/Delete options -->
                 </div>
               </div>
             </div>
           </div>
-
+          
           <!-- Developer Debug Dashboard (Collapsible, critical for verification) -->
           <div class="card debug-card collapsible">
             <button class="debug-header" id="btn-toggle-debug">
