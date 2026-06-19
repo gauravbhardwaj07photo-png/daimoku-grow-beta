@@ -298,7 +298,7 @@ const PlantRenderer = (function() {
     const potWidth = 75;      // Scaled down half-width at the rim top (150px total) for better proportion
     const potHeight = 55;      // Scaled down total body height below the collar for better proportion
     const potX = w / 2;
-    const potY = h - 75; // Position pot slightly lower since it is shorter
+    const potY = h - 85; // Position pot slightly lower since it is shorter
     
     // Pot geometry:
     const rimH = 14;           // collar/rim height
@@ -330,7 +330,7 @@ const PlantRenderer = (function() {
       case 3: stageScale = 0.95; break;  // Seedling
       case 4: stageScale = 1.0; break;   // Young Plant
       case 5: stageScale = 1.15; break;  // Mature Shrub
-      case 6: stageScale = 1.4; break;   // Majestic Tree (Restored to original scale)
+      case 6: stageScale = 2.10; break;  // Majestic Tree (Rescaled to fit perfectly on screen without going out)
     }
     
     const masterScale = stageScale * healthScale;
@@ -533,8 +533,8 @@ const PlantRenderer = (function() {
         ctx.lineCap = 'round';
         ctx.stroke();
         
-        // Draw leaves along the stem
-        const leafPairs = 3;
+        // Draw leaves along the stem - grows dynamically with hours
+        const leafPairs = 3 + Math.min(3, Math.floor((currentHours - 10) / 15));
         for (let i = 1; i <= leafPairs; i++) {
           const ratio = i / leafPairs;
           const yPos = -stemLength * ratio;
@@ -575,8 +575,8 @@ const PlantRenderer = (function() {
           ctx.lineCap = 'round';
           ctx.stroke();
           
-          // Draw leaves on this branch
-          const numLeaves = 4;
+          // Draw leaves on this branch - grows dynamically with hours
+          const numLeaves = 4 + Math.min(4, Math.floor((currentHours - 50) / 25));
           for (let i = 1; i <= numLeaves; i++) {
             const r = i / numLeaves;
             const ly = -length * r;
@@ -623,8 +623,8 @@ const PlantRenderer = (function() {
           ctx.lineCap = 'round';
           ctx.stroke();
           
-          // Leaves
-          const leaves = 5;
+          // Leaves - grows dynamically with hours
+          const leaves = 5 + Math.min(5, Math.floor((currentHours - 150) / 45));
           for (let i = 1; i <= leaves; i++) {
             const r = i / leaves;
             const ly = -length * r;
@@ -680,8 +680,8 @@ const PlantRenderer = (function() {
           
           // If top level branch, render full cluster of peepal leaves
           if (depth === 1) {
-            // Canopy peepal leaves cluster
-            const leafCount = 8;
+            // Canopy peepal leaves cluster - grows dynamically with hours
+            const leafCount = Math.min(16, 8 + Math.floor((currentHours - 332) / 100));
             for (let i = 0; i < leafCount; i++) {
               const leafAngle = (i / leafCount) * Math.PI * 2;
               const dist = 14 * masterScale;
@@ -700,8 +700,8 @@ const PlantRenderer = (function() {
               drawFlower(0, -length - 4, 10 * masterScale, petalColor);
             }
           } else {
-            // Draw peepal leaves along the trunk branches
-            const innerLeaves = 3;
+            // Draw peepal leaves along the trunk branches - grows dynamically with hours
+            const innerLeaves = Math.min(6, 3 + Math.floor((currentHours - 332) / 150));
             for (let i = 1; i <= innerLeaves; i++) {
               const r = i / innerLeaves;
               const ly = -length * r;
@@ -714,8 +714,8 @@ const PlantRenderer = (function() {
           // Recurse wide-spreading branches (Peepal shape)
           if (depth > 1) {
             const nextLength = length * 0.75;
-            drawTreeBranch(0, -length, nextLength, -0.65, depth - 1, branchId * 4 + 1);
-            drawTreeBranch(0, -length, nextLength, 0.65, depth - 1, branchId * 4 + 2);
+            drawTreeBranch(0, -length, nextLength, -0.72, depth - 1, branchId * 4 + 1);
+            drawTreeBranch(0, -length, nextLength, 0.72, depth - 1, branchId * 4 + 2);
             drawTreeBranch(0, -length * 0.55, nextLength * 0.8, -0.2, depth - 1, branchId * 4 + 3);
             drawTreeBranch(0, -length * 0.55, nextLength * 0.8, 0.2, depth - 1, branchId * 4 + 4);
           }
@@ -746,15 +746,17 @@ const PlantRenderer = (function() {
     if (isChanting) {
       ctx.save();
       
-      // Stream of Large Water Drops falling faster
-      ctx.fillStyle = 'rgba(100, 200, 255, 0.7)';
-      const dropSpeed = 150; // Increased speed significantly
-      const dropRadius = 4;
-      const dropSpacing = 80; // Distance between successive drops
+      // Stream of Large Water Drops falling faster (one after another, 4x faster, clearly visible)
+      ctx.fillStyle = 'rgba(60, 170, 255, 0.95)';
+      ctx.strokeStyle = 'rgba(30, 130, 255, 1.0)';
+      ctx.lineWidth = 1.2;
+      const dropSpeed = 1000; // Much faster
+      const dropRadius = 5.5; // Larger and more visible
+      const dropSpacing = 120; // Staggered spacing so they fall one after another
       const dropX = w / 2;
       
       for (let i = 0; i < 3; i++) {
-        // Cycle from top to bottom
+        // Cycle from top to bottom - staggered drops (one after another)
         const baseDropY = (windTime * dropSpeed + i * dropSpacing) % (potY + 20);
         const dropY = baseDropY - 10;
         
@@ -765,24 +767,24 @@ const PlantRenderer = (function() {
           ctx.lineTo(dropX, dropY - dropRadius * 2.5);
           ctx.closePath();
           ctx.fill();
+          ctx.stroke();
           
           // Splash effect right as it hits the soil
           if (dropY > potY - 10) {
-            ctx.fillStyle = 'rgba(100, 200, 255, 0.4)';
+            ctx.fillStyle = 'rgba(60, 170, 255, 0.6)';
             ctx.beginPath();
-            ctx.arc(dropX - 6, dropY, 2, 0, Math.PI * 2);
-            ctx.arc(dropX + 6, dropY, 2, 0, Math.PI * 2);
+            ctx.arc(dropX - 8, dropY, 3, 0, Math.PI * 2);
+            ctx.arc(dropX + 8, dropY, 3, 0, Math.PI * 2);
             ctx.fill();
-            ctx.fillStyle = 'rgba(100, 200, 255, 0.7)'; // Reset for next drop
           }
         }
       }
       
-      // Multiple Butterflies (Blue, Yellow, Red)
+      // Multiple Butterflies (Blue, Yellow, Red) - much faster speeds and flap rates, original styling
       const butterflies = [
-        { color: 'rgba(100, 150, 255, 0.9)', offset: 0, speedX: 0.3, speedY: 0.5, flap: 10, scale: 1.0 }, // Blue
-        { color: 'rgba(255, 220, 100, 0.9)', offset: 2, speedX: 0.4, speedY: 0.3, flap: 12, scale: 1.0 }, // Yellow
-        { color: 'rgba(255, 100, 100, 0.9)', offset: 4, speedX: 0.25, speedY: 0.6, flap: 8, scale: 1.0 }  // Red
+        { color: 'rgba(100, 150, 255, 0.9)', offset: 0, speedX: 2.20, speedY: 3.00, flap: 70.0, scale: 1.0 }, // Blue
+        { color: 'rgba(255, 220, 100, 0.9)', offset: 2.5, speedX: 3.40, speedY: 1.80, flap: 90.0, scale: 1.0 }, // Yellow
+        { color: 'rgba(255, 100, 100, 0.9)', offset: 5.0, speedX: 1.40, speedY: 3.80, flap: 60.0, scale: 1.0 }  // Red
       ];
       
       butterflies.forEach(b => {
@@ -800,7 +802,7 @@ const PlantRenderer = (function() {
         ctx.ellipse(0, 0, 1.5, 4, 0, 0, Math.PI*2);
         ctx.fill();
         
-        // Wings
+        // Wings (original styling - no borders)
         ctx.fillStyle = b.color;
         ctx.beginPath();
         ctx.ellipse(-2 - (wingFlap * 2), -2, 5, 7, -0.5, 0, Math.PI*2);
@@ -924,20 +926,15 @@ const PlantRenderer = (function() {
       }
 
       const isSitting = (lionState === 'sitting');
-      let isRoaring = false;
-      if (isSitting) {
-        // Roar for 3 seconds every 15 seconds
-        const roarCycle = (windTime * 3) % 15;
-        if (roarCycle > 12) {
-          isRoaring = true;
-        }
-      }
+      // Roar for 2.5 seconds every 8 seconds (highly noticeable and robust)
+      const roarTimer = Math.floor(Date.now() / 1000) % 8;
+      const isRoaring = isSitting && (roarTimer < 2.5);
 
-      const lionY = potY + 70 + walkBob; // Stable ground level next to the pot
+      const lionY = baseY - 5 + walkBob; // Stable ground level next to the pot
       
       ctx.save();
       ctx.translate(lionX, lionY);
-      ctx.scale(1.3, 1.3); // Scale slightly for mobile optimization
+      ctx.scale(1.45, 1.45); // Scale proud and a bit bigger
       
       // Draw Lion Cub
       
@@ -958,6 +955,7 @@ const PlantRenderer = (function() {
       ctx.beginPath();
       ctx.arc(-15 + tailWag, isSitting ? 0 : -10, 3, 0, Math.PI*2);
       ctx.fill();
+
       
       if (isSitting) {
         // Sitting Body
@@ -991,18 +989,18 @@ const PlantRenderer = (function() {
         ctx.stroke();
       }
 
-      // Mane (proud fluffy brown mane)
+      // Mane (proud fluffy brown mane - restored to original styling)
       ctx.fillStyle = '#b36b22';
       ctx.beginPath();
-      for(let i=0; i<12; i++) {
-         let angle = (i/12) * Math.PI*2;
-         let mx = headX + Math.cos(angle) * 8.5;
-         let my = headY + Math.sin(angle) * 8.5;
-         ctx.arc(mx, my, 4.5, 0, Math.PI*2);
+      for(let i=0; i<16; i++) {
+         let angle = (i/16) * Math.PI*2;
+         let mx = headX + Math.cos(angle) * 11;
+         let my = headY + Math.sin(angle) * 11;
+         ctx.arc(mx, my, 7.5, 0, Math.PI*2);
       }
       ctx.fill();
 
-      // Ears (tucked slightly in mane)
+      // Ears (tucked slightly in mane - restored to original styling)
       ctx.fillStyle = '#f5c65a';
       ctx.beginPath(); ctx.arc(headX - 8, headY - 6, 3, 0, Math.PI*2); ctx.arc(headX + 8, headY - 6, 3, 0, Math.PI*2); ctx.fill();
       ctx.fillStyle = '#fff4d9';

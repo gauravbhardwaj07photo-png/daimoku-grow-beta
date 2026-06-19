@@ -159,11 +159,11 @@ document.addEventListener('DOMContentLoaded', () => {
   ];
 
   function getRankDetails(hours) {
-    if (hours < 5) return { name: "Seeker (Beginner)", stars: 1 };
-    if (hours < 20) return { name: "Practitioner (Regular)", stars: 2 };
-    if (hours < 100) return { name: "Disciple (Advanced)", stars: 3 };
-    if (hours < 300) return { name: "Bodhisattva (Pro)", stars: 4 };
-    return { name: "Enlightened (Seasoned)", stars: 5 };
+    if (hours < 5) return { name: "Seeker", stars: 1 };
+    if (hours < 20) return { name: "Believer", stars: 2 };
+    if (hours < 100) return { name: "Practitioner", stars: 3 };
+    if (hours < 300) return { name: "Bodhisattva", stars: 4 };
+    return { name: "Buddhahood", stars: 5 };
   }
 
   function renderStars(container, count) {
