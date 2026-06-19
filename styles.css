@@ -1249,6 +1249,35 @@ body.theme-forest-dark .btn-debug-action {
   background: rgba(var(--primary-rgb), 0.01);
 }
 
+.campaign-targets-editor {
+  max-height: 250px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+.whitelist-list {
+  max-height: 180px;
+  overflow-y: auto;
+  padding-right: 6px;
+  margin-top: 8px;
+}
+
+.campaign-targets-editor::-webkit-scrollbar,
+.whitelist-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.campaign-targets-editor::-webkit-scrollbar-track,
+.whitelist-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.campaign-targets-editor::-webkit-scrollbar-thumb,
+.whitelist-list::-webkit-scrollbar-thumb {
+  background: var(--text-muted);
+  border-radius: 4px;
+}
+
 .admin-panel-header {
   background: transparent;
   border: none;
