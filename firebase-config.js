@@ -209,6 +209,26 @@ const MockFirebase = {
       localStorage.setItem('daimoku_db_campaign_targets', JSON.stringify(targets));
     },
     
+    // Shared Campaign Dates (configurable by admin)
+    getCampaignDates() {
+      const saved = localStorage.getItem('daimoku_db_campaign_dates');
+      if (saved) return JSON.parse(saved);
+      
+      const defaults = {
+        youth_division: { start: "2026-01-16", end: "2026-03-19" },
+        may_3rd: { start: "2026-04-07", end: "2026-05-07" },
+        mens_division: { start: "2026-01-16", end: "2026-03-19" },
+        womens_division: { start: "2026-04-07", end: "2026-05-07" },
+        july_3rd: { start: "2026-09-19", end: "2026-11-19" },
+        november_18th: { start: "2026-09-19", end: "2026-11-19" }
+      };
+      localStorage.setItem('daimoku_db_campaign_dates', JSON.stringify(defaults));
+      return defaults;
+    },
+    saveCampaignDates(dates) {
+      localStorage.setItem('daimoku_db_campaign_dates', JSON.stringify(dates));
+    },
+    
     // Shared Campaigns Contributions (synced real-time across block members)
     getCampaignContributions() {
       const saved = localStorage.getItem('daimoku_db_campaign_contributions');
