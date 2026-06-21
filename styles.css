@@ -765,11 +765,16 @@ body.theme-forest-dark .notification-banner.dead {
 }
 
 .btn-icon-gong {
-  flex: 0 0 50px;
+  position: absolute;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
   background: var(--accent-cream);
   color: var(--primary);
   border: var(--border);
-  border-radius: var(--border-radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -777,14 +782,56 @@ body.theme-forest-dark .notification-banner.dead {
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  z-index: 10;
 }
 
 .btn-icon-gong:hover {
   background: var(--primary-light);
+  transform: translateY(-50%) scale(1.05);
 }
 
 .btn-icon-gong:active {
-  transform: scale(0.95);
+  transform: translateY(-50%) scale(0.95);
+}
+
+/* Floating Mini Timer inside Plant Card */
+.dashboard-mini-timer {
+  position: absolute;
+  top: 56px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 15;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  color: var(--text-main);
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
+  animation: pulse-mini-timer 1.5s infinite alternate ease-in-out;
+}
+
+body.theme-forest-dark .dashboard-mini-timer {
+  background: rgba(28, 46, 28, 0.85);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+@keyframes pulse-mini-timer {
+  0% {
+    transform: translateX(-50%) scale(1);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+  }
+  100% {
+    transform: translateX(-50%) scale(1.04);
+    box-shadow: 0 6px 16px rgba(var(--primary-rgb), 0.15);
+  }
 }
 
 .btn-full {
@@ -1252,6 +1299,8 @@ body.theme-forest-dark .btn-debug-action {
 .campaign-targets-editor {
   max-height: 250px;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
   padding-right: 6px;
 }
 

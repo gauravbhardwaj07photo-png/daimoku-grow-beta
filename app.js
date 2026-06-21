@@ -301,6 +301,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const timerStateLabel = document.getElementById('timer-state-label');
   const timerPersonalSelect = document.getElementById('timer-personal-select');
   const timerCampaignSelect = document.getElementById('timer-campaign-select');
+  const dashboardMiniTimer = document.getElementById('dashboard-mini-timer');
+  const dashboardMiniTimerTime = document.getElementById('dashboard-mini-timer-time');
   
   // Timer Controls
   const btnTimerStart = document.getElementById('btn-timer-start');
@@ -566,7 +568,8 @@ document.addEventListener('DOMContentLoaded', () => {
           isDead: state.isDead,
           settings: state.settings,
           sessions: state.sessions.map(s => ({ date: s.date })), // minimized to save cache size
-          dismissedAlerts: state.dismissedAlerts || []
+          dismissedAlerts: state.dismissedAlerts || [],
+          calendarActivities: CALENDAR_ACTIVITIES_2026
         };
         const stateResponse = new Response(JSON.stringify(stateData), {
           headers: { 'Content-Type': 'application/json' }
@@ -608,15 +611,14 @@ document.addEventListener('DOMContentLoaded', () => {
         reg.showNotification("Morning Chant Reminder", {
           body: "It's past 12:00 PM! Don't forget to water your plant with morning chanting. 🌸",
           icon: "icons/icon-192.png",
-          badge: "icons/icon-192.png",
           vibrate: [300, 100, 300],
           tag: "morning-reminder",
           showTrigger: new TimestampTrigger(morningTime.getTime())
         });
         
-        // 2. Evening Chant Reminder (8:00 PM)
+        // 2. Evening Chant Reminder (9:00 PM)
         let eveningTime = new Date();
-        eveningTime.setHours(20, 0, 0, 0);
+        eveningTime.setHours(21, 0, 0, 0);
         if (eveningTime.getTime() <= now) {
           eveningTime.setDate(eveningTime.getDate() + 1);
         }
@@ -624,7 +626,6 @@ document.addEventListener('DOMContentLoaded', () => {
         reg.showNotification("Evening Chant Reminder", {
           body: "It's evening! Water your plant with evening chanting to keep it healthy. 🌙",
           icon: "icons/icon-192.png",
-          badge: "icons/icon-192.png",
           vibrate: [300, 100, 300],
           tag: "evening-reminder",
           showTrigger: new TimestampTrigger(eveningTime.getTime())
@@ -639,7 +640,6 @@ document.addEventListener('DOMContentLoaded', () => {
           reg.showNotification("Water me, please!", {
             body: "It has been 24 hours. My leaves are getting thirsty. I miss the sound of your Daimoku! 🌿",
             icon: "icons/icon-192.png",
-            badge: "icons/icon-192.png",
             vibrate: [300, 100, 300],
             tag: "decay-24h",
             showTrigger: new TimestampTrigger(decay24hTime)
@@ -652,7 +652,6 @@ document.addEventListener('DOMContentLoaded', () => {
           reg.showNotification("Oh no! I am weakening...", {
             body: "It has been 72 hours. I am beginning to droop. Let's chant together and restore my vitality! 💧",
             icon: "icons/icon-192.png",
-            badge: "icons/icon-192.png",
             vibrate: [300, 100, 300],
             tag: "decay-72h",
             showTrigger: new TimestampTrigger(decay72hTime)
@@ -665,25 +664,46 @@ document.addEventListener('DOMContentLoaded', () => {
           reg.showNotification("I am about to die...", {
             body: "A whole week without Daimoku! I am drying up. Please water me with your chanting! 🥀",
             icon: "icons/icon-192.png",
-            badge: "icons/icon-192.png",
             vibrate: [300, 100, 300, 100, 400],
             tag: "decay-7d",
             showTrigger: new TimestampTrigger(decay7dTime)
           });
         }
-
+ 
         // 15d neglect (Withered)
         const decay15dTime = lastChanted + 360 * 60 * 60 * 1000;
         if (decay15dTime > now) {
           reg.showNotification("Save my life!", {
             body: "15 days of silence. I have withered away. Let's bring this garden back! ❤️",
             icon: "icons/icon-192.png",
-            badge: "icons/icon-192.png",
             vibrate: [300, 100, 300, 100, 400],
             tag: "decay-15d",
             showTrigger: new TimestampTrigger(decay15dTime)
           });
         }
+
+        // 4. Calendar Event Reminders (One day prior at 7:00 PM)
+        const eventDates = Object.keys(CALENDAR_ACTIVITIES_2026);
+        eventDates.forEach(dateStr => {
+          const event = CALENDAR_ACTIVITIES_2026[dateStr];
+          if (event && event.type === 'meeting') {
+            const eventDate = new Date(dateStr + 'T00:00:00');
+            const reminderTime = new Date(eventDate.getTime());
+            reminderTime.setDate(reminderTime.getDate() - 1);
+            reminderTime.setHours(19, 0, 0, 0); // 7:00 PM
+            
+            const reminderTimestamp = reminderTime.getTime();
+            if (reminderTimestamp > now) {
+              reg.showNotification(`Meeting Reminder: ${event.title}`, {
+                body: `Reminder: You have a scheduled ${event.title} tomorrow! 📅`,
+                icon: "icons/icon-192.png",
+                vibrate: [300, 100, 300],
+                tag: `event-reminder-${dateStr}`,
+                showTrigger: new TimestampTrigger(reminderTimestamp)
+              });
+            }
+          }
+        });
       } else {
         console.log("Notification Triggers API not supported. Falling back to background cache updates.");
         await saveStateToCacheForServiceWorker();
@@ -806,7 +826,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const options = {
         body: message,
         icon: "icons/icon-192.png",
-        badge: "icons/icon-192.png",
         vibrate: [300, 100, 300, 100, 400],
         tag: "daimoku-reminder",
         renotify: true,
@@ -1377,6 +1396,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   function resumeTimer() {
+    playGong(); // Play gong on start
     timerState = 'running';
     timerStartTime = Date.now();
     
@@ -1392,6 +1412,11 @@ document.addEventListener('DOMContentLoaded', () => {
     
     timerStateLabel.textContent = 'Focus';
     
+    // Show dashboard mini timer
+    if (dashboardMiniTimer) {
+      dashboardMiniTimer.classList.remove('hidden');
+    }
+    
     const totalHours = (state.totalSeconds / 3600).toFixed(1);
     PlantRenderer.updateState(parseFloat(totalHours), state.health, state.isDead, true);
     saveActiveTimer();
@@ -1402,9 +1427,11 @@ document.addEventListener('DOMContentLoaded', () => {
       
       saveActiveTimer(); // Keep active timer updated with the last active tick
       
+      let displayTimeStr = '00:00:00';
       if (timerType === 'stopwatch') {
         timerSecondsElapsed = Math.floor(elapsedMs / 1000);
-        timerTimeDisplay.textContent = formatDuration(timerSecondsElapsed);
+        displayTimeStr = formatDuration(timerSecondsElapsed);
+        timerTimeDisplay.textContent = displayTimeStr;
       } else {
         timerSecondsElapsed = Math.floor(elapsedMs / 1000);
         const remaining = countdownTargetSeconds - timerSecondsElapsed;
@@ -1415,9 +1442,16 @@ document.addEventListener('DOMContentLoaded', () => {
           saveChantSession(countdownTargetSeconds, 'countdown');
           resetTimerControls();
           alert("Congratulations! Your chanting focus session is complete.");
+          return;
         } else {
-          timerTimeDisplay.textContent = formatDuration(remaining);
+          displayTimeStr = formatDuration(remaining);
+          timerTimeDisplay.textContent = displayTimeStr;
         }
+      }
+      
+      // Update dashboard mini timer text
+      if (dashboardMiniTimerTime) {
+        dashboardMiniTimerTime.textContent = displayTimeStr;
       }
     }, 1000);
   }
@@ -1433,6 +1467,12 @@ document.addEventListener('DOMContentLoaded', () => {
     timerStateLabel.textContent = 'Paused';
     btnTimerPause.classList.add('hidden');
     btnTimerStart.classList.remove('hidden');
+    
+    // Hide dashboard mini timer when paused
+    if (dashboardMiniTimer) {
+      dashboardMiniTimer.classList.add('hidden');
+    }
+    
     const totalHours = (state.totalSeconds / 3600).toFixed(1);
     PlantRenderer.updateState(parseFloat(totalHours), state.health, state.isDead, false);
     saveActiveTimer();
@@ -1440,6 +1480,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Stop and record
   btnTimerStop.addEventListener('click', () => {
+    playGong(); // Play gong on stop
     const duration = timerSecondsElapsed;
     if (duration >= 5) { // Only log if at least 5 seconds
       saveChantSession(duration, timerType);
@@ -1466,6 +1507,15 @@ document.addEventListener('DOMContentLoaded', () => {
     btnTimerCountdown.disabled = false;
     presetButtons.forEach(b => b.disabled = false);
     btnApplyCustomTime.disabled = false;
+    
+    // Reset selected target and campaign dropdowns
+    if (timerPersonalSelect) timerPersonalSelect.value = '';
+    if (timerCampaignSelect) timerCampaignSelect.value = '';
+    
+    // Hide dashboard mini timer
+    if (dashboardMiniTimer) {
+      dashboardMiniTimer.classList.add('hidden');
+    }
     
     const totalHours = (state.totalSeconds / 3600).toFixed(1);
     PlantRenderer.updateState(parseFloat(totalHours), state.health, state.isDead, false);
@@ -1860,9 +1910,11 @@ document.addEventListener('DOMContentLoaded', () => {
     saveState();
   });
 
-  btnTestGong.addEventListener('click', () => {
-    playGong();
-  });
+  if (btnTestGong) {
+    btnTestGong.addEventListener('click', () => {
+      playGong();
+    });
+  }
 
   // --- Notification Permission & Setup Manager ---
   if (btnRequestNotifications) {
@@ -1893,7 +1945,6 @@ document.addEventListener('DOMContentLoaded', () => {
           const options = {
             body: "Great! Reminders are now set up to keep your virtual plant healthy.",
             icon: "icons/icon-192.png",
-            badge: "icons/icon-192.png",
             vibrate: [300, 100, 300],
             tag: "daimoku-reminder",
             renotify: true
@@ -2135,7 +2186,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // --- Reminder Check Mechanism (12:00 PM and 8:00 PM Checks) ---
+  // --- Reminder Check Mechanism (12:00 PM and 9:00 PM Checks & Calendar Meeting Checks) ---
   function runNotificationsChecks() {
     const now = new Date();
     const hours = now.getHours();
@@ -2144,7 +2195,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const dateTodayStr = now.toISOString().split('T')[0];
     
     // Check Morning Reminder (12:00 PM / Noon onwards)
-    if (state.settings.morningReminder && hours >= 12 && hours < 20) {
+    if (state.settings.morningReminder && hours >= 12 && hours < 21) {
       // Find if we already checked morning today
       const alreadyChecked = localStorage.getItem(`morning_check_${dateTodayStr}`);
       if (!alreadyChecked) {
@@ -2161,14 +2212,13 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    // Check Evening Reminder (8:00 PM / 20:00 onwards)
-    if (state.settings.eveningReminder && hours >= 20) {
+    // Check Evening Reminder (9:00 PM / 21:00 onwards)
+    if (state.settings.eveningReminder && hours >= 21) {
       const alreadyChecked = localStorage.getItem(`evening_check_${dateTodayStr}`);
       if (!alreadyChecked) {
         // Has user chanted since noon (12:00 PM) today?
         const chantedSinceNoon = state.sessions.some(s => {
           const sDate = new Date(s.date);
-          const sHours = sDate.getHours();
           return sDate.toISOString().split('T')[0] === dateTodayStr && sDate.getHours() >= 12;
         });
         
@@ -2176,6 +2226,20 @@ document.addEventListener('DOMContentLoaded', () => {
           triggerNotification("Evening Chant Reminder", "It's evening! Water your plant with evening chanting to keep it healthy.");
         }
         localStorage.setItem(`evening_check_${dateTodayStr}`, 'done');
+      }
+    }
+
+    // Check Calendar Meeting Reminders (Eve of meeting at 7:00 PM / 19:00 onwards)
+    if (hours >= 19) {
+      const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      const tomorrowStr = tomorrow.toISOString().split('T')[0];
+      const event = CALENDAR_ACTIVITIES_2026[tomorrowStr];
+      if (event && event.type === 'meeting') {
+        const alreadyChecked = localStorage.getItem(`event_check_${tomorrowStr}`);
+        if (!alreadyChecked) {
+          triggerNotification(`Meeting Reminder: ${event.title}`, `Reminder: You have a scheduled ${event.title} tomorrow! 📅`);
+          localStorage.setItem(`event_check_${tomorrowStr}`, 'done');
+        }
       }
     }
   }
@@ -3063,7 +3127,10 @@ document.addEventListener('DOMContentLoaded', () => {
           toggleBtn.addEventListener('click', () => {
             const isHidden = content.style.display === 'none';
             content.style.display = isHidden ? 'flex' : 'none';
-            toggleBtn.querySelector('i.fa-chevron-down').className = isHidden ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down';
+            const chevronIcon = toggleBtn.querySelector('i.fa-chevron-down, i.fa-chevron-up');
+            if (chevronIcon) {
+              chevronIcon.className = isHidden ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down';
+            }
           });
         }
       }

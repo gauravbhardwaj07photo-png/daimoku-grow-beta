@@ -281,6 +281,49 @@ const PlantRenderer = (function() {
   }
 
   /**
+   * Helper: Draw a flying bird with flapping wings
+   */
+  function drawFlyingBird(bx, by, isFirstBird) {
+    ctx.save();
+    ctx.translate(bx, by);
+    ctx.scale(1.8, 1.8); // Scale for flyer
+    
+    // Wing flap angle
+    const flap = Math.sin(windTime * 25);
+    
+    // Bird body
+    ctx.fillStyle = isFirstBird ? '#8ca6cc' : '#f5b041'; // Bird 1 soft blue, Bird 2 warm orange/yellow
+    ctx.beginPath();
+    ctx.arc(0, 0, 5, Math.PI, 0); // half circle body
+    ctx.fill();
+    
+    // Wing
+    ctx.fillStyle = isFirstBird ? '#6b8cbd' : '#d35400';
+    ctx.beginPath();
+    // Ellipse oriented vertically for flapping
+    ctx.ellipse(-1, -1, 4, 3 + flap * 2, -0.2, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Head
+    ctx.beginPath();
+    ctx.arc(3.5, -3.5, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Eye
+    ctx.fillStyle = '#333';
+    ctx.beginPath();
+    ctx.arc(4.5, -4.5, 0.7, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Beak
+    ctx.fillStyle = '#e5ad35';
+    ctx.beginPath();
+    ctx.moveTo(6.5, -3.5); ctx.lineTo(9.5, -2.5); ctx.lineTo(6.5, -1.5); ctx.fill();
+    
+    ctx.restore();
+  }
+
+  /**
    * Main Draw Function
    */
   function draw() {
@@ -291,6 +334,115 @@ const PlantRenderer = (function() {
     
     // Clear canvas
     ctx.clearRect(0, 0, w, h);
+
+    const nowHour = new Date().getHours();
+    const isNight = (nowHour >= 19 || nowHour < 5);
+
+    // If it is night, draw a beautiful dark twilight background and stars
+    if (isNight) {
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
+      skyGrad.addColorStop(0, '#0a0d1a'); // Dark deep midnight
+      skyGrad.addColorStop(1, '#151a30'); // Twilight navy
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, w, h);
+
+      // Draw a few subtle twinkling stars
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+      const starPositions = [
+        { x: w * 0.20, y: h * 0.15, r: 1.2 },
+        { x: w * 0.38, y: h * 0.08, r: 0.8 },
+        { x: w * 0.78, y: h * 0.22, r: 1.5 },
+        { x: w * 0.88, y: h * 0.10, r: 1.0 },
+        { x: w * 0.15, y: h * 0.30, r: 0.9 },
+        { x: w * 0.52, y: h * 0.18, r: 1.1 }
+      ];
+      starPositions.forEach(star => {
+        ctx.save();
+        ctx.beginPath();
+        const twinkle = Math.sin(windTime * 3.5 + star.x) * 0.35;
+        ctx.arc(star.x, star.y, Math.max(0.4, star.r + twinkle), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+    }
+
+    // Draw Sun or Moon based on local hour (7 PM onwards moon)
+    const sunMoonX = 75;
+    const sunMoonY = 75;
+    
+    if (!isNight) {
+      // Draw Sun
+      ctx.save();
+      ctx.translate(sunMoonX, sunMoonY);
+      
+      // Sun glow (Enlarged and made more prominent)
+      const sunGlow = ctx.createRadialGradient(0, 0, 26, 0, 0, 68);
+      sunGlow.addColorStop(0, 'rgba(255, 215, 64, 0.60)');
+      sunGlow.addColorStop(0.5, 'rgba(255, 215, 64, 0.25)');
+      sunGlow.addColorStop(1, 'rgba(255, 215, 64, 0)');
+      ctx.fillStyle = sunGlow;
+      ctx.beginPath();
+      ctx.arc(0, 0, 68, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Sun core (Enlarged)
+      ctx.fillStyle = '#ffca28';
+      ctx.shadowColor = '#ff9800';
+      ctx.shadowBlur = 20;
+      ctx.beginPath();
+      ctx.arc(0, 0, 26, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    } else {
+      // Draw Moon (crescent)
+      ctx.save();
+      ctx.translate(sunMoonX, sunMoonY);
+      ctx.rotate(-Math.PI / 4);
+      
+      // Moon glow (Enlarged and made more prominent)
+      const moonGlow = ctx.createRadialGradient(0, 0, 25, 0, 0, 62);
+      moonGlow.addColorStop(0, 'rgba(236, 239, 241, 0.50)');
+      moonGlow.addColorStop(0.5, 'rgba(236, 239, 241, 0.20)');
+      moonGlow.addColorStop(1, 'rgba(236, 239, 241, 0)');
+      ctx.fillStyle = moonGlow;
+      ctx.beginPath();
+      ctx.arc(0, 0, 62, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Moon crescent shape (Enlarged and thickened)
+      ctx.fillStyle = '#eceff1';
+      ctx.shadowColor = '#b0bec5';
+      ctx.shadowBlur = 18;
+      ctx.beginPath();
+      ctx.arc(0, 0, 25, -Math.PI / 2, Math.PI / 2, false);
+      ctx.quadraticCurveTo(11, 0, 0, -25);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+    
+    // Draw plant spotlight beautifully (warm by day, cool by night)
+    const potY = h - 85;
+    ctx.save();
+    const spotGrad = ctx.createLinearGradient(w / 2, 0, w / 2, potY + 10);
+    if (!isNight) {
+      spotGrad.addColorStop(0, 'rgba(255, 255, 210, 0.18)');
+      spotGrad.addColorStop(0.6, 'rgba(255, 255, 210, 0.08)');
+      spotGrad.addColorStop(1, 'rgba(255, 255, 210, 0)');
+    } else {
+      spotGrad.addColorStop(0, 'rgba(235, 245, 255, 0.28)'); // Enhanced spotlight at night
+      spotGrad.addColorStop(0.6, 'rgba(235, 245, 255, 0.12)');
+      spotGrad.addColorStop(1, 'rgba(235, 245, 255, 0)');
+    }
+    ctx.fillStyle = spotGrad;
+    ctx.beginPath();
+    ctx.moveTo(w / 2 - 25, 0);
+    ctx.lineTo(w / 2 + 25, 0);
+    ctx.lineTo(w / 2 + 105, potY + 10);
+    ctx.lineTo(w / 2 - 105, potY + 10);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
     
     // Determine active pot style color coordinates
     let activePot = potStyles[currentPotStyle] || potStyles.clay;
@@ -298,7 +450,7 @@ const PlantRenderer = (function() {
     const potWidth = 75;      // Scaled down half-width at the rim top (150px total) for better proportion
     const potHeight = 55;      // Scaled down total body height below the collar for better proportion
     const potX = w / 2;
-    const potY = h - 85; // Position pot slightly lower since it is shorter
+    // potY is already declared above (line 396)
     
     // Pot geometry:
     const rimH = 14;           // collar/rim height
@@ -316,6 +468,24 @@ const PlantRenderer = (function() {
 
     // Calculate dynamic scales
     const stageInfo = getGrowthStage(currentHours);
+
+    // Soft radial contrast halo behind the plant structure at night to make the plant pop
+    if (isNight && stageInfo.stage > 1) {
+      ctx.save();
+      const haloY = potY - 80 * masterScale;
+      const haloR = 110 * masterScale;
+      
+      const plantGlow = ctx.createRadialGradient(potX, haloY, 15, potX, haloY, haloR);
+      plantGlow.addColorStop(0, 'rgba(255, 255, 255, 0.20)');  // Soft silver glow
+      plantGlow.addColorStop(0.5, 'rgba(255, 255, 255, 0.08)');
+      plantGlow.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      
+      ctx.fillStyle = plantGlow;
+      ctx.beginPath();
+      ctx.arc(potX, haloY, haloR, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
     
     // Size shrink factor based on health
     const healthScale = isDead ? 0.75 : (0.75 + 0.25 * (currentHealth / 100));
@@ -742,26 +912,24 @@ const PlantRenderer = (function() {
       ctx.restore();
     }
 
-    // 6. Draw Animations during Chanting
+    // 6. Draw Animations
+    ctx.save();
+    
+    // --- TIMER ACTIVE: WATER DROPS (Slower) ---
     if (isChanting) {
-      ctx.save();
-      
-      // Stream of Large Water Drops falling faster (one after another, 4x faster, clearly visible)
       ctx.fillStyle = 'rgba(60, 170, 255, 0.95)';
       ctx.strokeStyle = 'rgba(30, 130, 255, 1.0)';
       ctx.lineWidth = 1.2;
-      const dropSpeed = 1000; // Much faster
-      const dropRadius = 5.5; // Larger and more visible
-      const dropSpacing = 120; // Staggered spacing so they fall one after another
+      const dropSpeed = 180; // Slower drops (set to 180)
+      const dropRadius = 5.5; 
+      const dropSpacing = 120; 
       const dropX = w / 2;
       
       for (let i = 0; i < 3; i++) {
-        // Cycle from top to bottom - staggered drops (one after another)
         const baseDropY = (windTime * dropSpeed + i * dropSpacing) % (potY + 20);
         const dropY = baseDropY - 10;
         
         if (dropY < potY && dropY > -20) {
-          // Draw tear-drop shape
           ctx.beginPath();
           ctx.arc(dropX, dropY, dropRadius, 0, Math.PI, false);
           ctx.lineTo(dropX, dropY - dropRadius * 2.5);
@@ -769,7 +937,6 @@ const PlantRenderer = (function() {
           ctx.fill();
           ctx.stroke();
           
-          // Splash effect right as it hits the soil
           if (dropY > potY - 10) {
             ctx.fillStyle = 'rgba(60, 170, 255, 0.6)';
             ctx.beginPath();
@@ -779,165 +946,157 @@ const PlantRenderer = (function() {
           }
         }
       }
-      
-      // Multiple Butterflies (Blue, Yellow, Red) - much faster speeds and flap rates, original styling
-      const butterflies = [
-        { color: 'rgba(100, 150, 255, 0.9)', offset: 0, speedX: 2.20, speedY: 3.00, flap: 70.0, scale: 1.0 }, // Blue
-        { color: 'rgba(255, 220, 100, 0.9)', offset: 2.5, speedX: 3.40, speedY: 1.80, flap: 90.0, scale: 1.0 }, // Yellow
-        { color: 'rgba(255, 100, 100, 0.9)', offset: 5.0, speedX: 1.40, speedY: 3.80, flap: 60.0, scale: 1.0 }  // Red
-      ];
-      
-      butterflies.forEach(b => {
-        ctx.save();
-        const butterX = potX + Math.sin(windTime * b.speedX + b.offset) * 160;
-        const butterY = potY - 120 + Math.cos(windTime * b.speedY + b.offset) * 40;
-        const wingFlap = Math.sin(windTime * b.flap);
-        
-        ctx.translate(butterX, butterY);
-        ctx.scale(b.scale, b.scale);
-        
-        // Body
-        ctx.fillStyle = '#333';
-        ctx.beginPath();
-        ctx.ellipse(0, 0, 1.5, 4, 0, 0, Math.PI*2);
-        ctx.fill();
-        
-        // Wings (original styling - no borders)
-        ctx.fillStyle = b.color;
-        ctx.beginPath();
-        ctx.ellipse(-2 - (wingFlap * 2), -2, 5, 7, -0.5, 0, Math.PI*2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.ellipse(2 + (wingFlap * 2), -2, 5, 7, 0.5, 0, Math.PI*2);
-        ctx.fill();
-        
-        ctx.restore();
-      });
-      
-      // Bird sitting firmly on rim
-      ctx.save();
-      const birdX = potX - rimTopW + 30;
-      const birdY = potY - 3; // Lowered to sit exactly on the rim
-      ctx.translate(birdX, birdY);
-      ctx.scale(2.5, 2.5); // Make bird significantly bigger
-      
-      // Bird feet
-      ctx.strokeStyle = '#333';
-      ctx.lineWidth = 0.8;
-      ctx.beginPath();
-      // Left foot
-      ctx.moveTo(-2, 0);
-      ctx.lineTo(-2, 2);
-      ctx.lineTo(-3, 3);
-      ctx.moveTo(-2, 2);
-      ctx.lineTo(-1, 3);
-      // Right foot
-      ctx.moveTo(2, 0);
-      ctx.lineTo(2, 2);
-      ctx.lineTo(1, 3);
-      ctx.moveTo(2, 2);
-      ctx.lineTo(3, 3);
-      ctx.stroke();
-      
-      // Bird body
-      ctx.fillStyle = '#8ca6cc'; // Soft blue bird
-      ctx.beginPath();
-      ctx.arc(0, 0, 6, Math.PI, 0); // half circle body
-      ctx.fill();
-      
-      // NEW: Flutter wings if tweeting
-      const isTweeting = (windTime % 60) > 58; // tweet for 2 seconds every minute
-      if (isTweeting) {
-        ctx.fillStyle = '#6b8cbd';
-        ctx.beginPath();
-        const wingFlap = Math.sin(windTime * 20) * 3;
-        ctx.ellipse(-1, -2, 5, 3, -0.2 + wingFlap * 0.1, 0, Math.PI*2);
-        ctx.fill();
-      }
+    }
 
-      // Bird head
-      ctx.beginPath();
-      ctx.arc(4, -4, 4, 0, Math.PI*2);
-      ctx.fill();
-      
-      // Bird eye
-      ctx.fillStyle = '#333';
-      ctx.beginPath();
-      ctx.arc(5, -5, 0.8, 0, Math.PI*2); // small dot eye
-      ctx.fill();
-      
-      // Beak (Silent, closed, OR Tweeting, open)
-      ctx.fillStyle = '#e5ad35';
-      ctx.beginPath();
-      if (isTweeting) {
-        ctx.moveTo(7, -5); ctx.lineTo(12, -6); ctx.lineTo(8, -3); ctx.fill();
-        ctx.beginPath();
-        ctx.moveTo(7, -3); ctx.lineTo(12, -1); ctx.lineTo(8, -1); ctx.fill();
+    // --- TIMER STOPPED: BUTTERFLIES, BIRDS, OR FIREFLIES ---
+    if (!isChanting) {
+      if (!isNight) {
+        // Multiple Butterflies (Blue, Yellow, Red) - Day Only
+        const butterflies = [
+          { color: 'rgba(100, 150, 255, 0.9)', offset: 0, speedX: 2.20, speedY: 3.00, flap: 70.0, scale: 1.0 }, // Blue
+          { color: 'rgba(255, 220, 100, 0.9)', offset: 2.5, speedX: 3.40, speedY: 1.80, flap: 90.0, scale: 1.0 }, // Yellow
+          { color: 'rgba(255, 100, 100, 0.9)', offset: 5.0, speedX: 1.40, speedY: 3.80, flap: 60.0, scale: 1.0 }  // Red
+        ];
         
-        ctx.fillStyle = '#333';
-        ctx.font = '6px sans-serif';
-        const noteBob = Math.sin(windTime * 10) * 2;
-        ctx.fillText('♪', 12, -8 + noteBob);
-      } else {
-        ctx.moveTo(7, -4); ctx.lineTo(11, -3); ctx.lineTo(7, -2); ctx.fill();
-      }
-      
-      ctx.restore();
-
-      // Lion Cub Animation State Machine
-      const targetSittingX = potX - 85; // Positioned beautifully next to the pot on all screen sizes
-      const offscreenLeftX = -35;
-      const offscreenRightX = w + 35;
-
-      if (isChanting) {
-        if (lionState === 'offscreen') {
-          lionState = 'walking-in';
-          lionX = offscreenLeftX;
-        } else if (lionState === 'walking-out') {
-          lionState = 'walking-in';
+        butterflies.forEach(b => {
+          ctx.save();
+          const butterX = potX + Math.sin(windTime * b.speedX + b.offset) * 160;
+          const butterY = potY - 120 + Math.cos(windTime * b.speedY + b.offset) * 40;
+          const wingFlap = Math.sin(windTime * b.flap);
+          
+          ctx.translate(butterX, butterY);
+          ctx.scale(b.scale, b.scale);
+          
+          // Body
+          ctx.fillStyle = '#333';
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 1.5, 4, 0, 0, Math.PI*2);
+          ctx.fill();
+          
+          // Wings
+          ctx.fillStyle = b.color;
+          ctx.beginPath();
+          ctx.ellipse(-2 - (wingFlap * 2), -2, 5, 7, -0.5, 0, Math.PI*2);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.ellipse(2 + (wingFlap * 2), -2, 5, 7, 0.5, 0, Math.PI*2);
+          ctx.fill();
+          
+          ctx.restore();
+        });
+        
+        // 2 Birds Flying (Wavy paths across the sky every 30 seconds) - Day Only
+        const timeSecs = Date.now() / 1000;
+        const flightCycle = 30; // 30 seconds
+        const progress = timeSecs % flightCycle;
+        
+        if (progress < 10) {
+          const ratio = progress / 10;
+          const bird1X = -40 + ratio * (w + 80);
+          const bird2X = bird1X - 35; // Flying 35px behind
+          
+          // Wavy flight paths
+          const bird1Y = 70 + Math.sin(ratio * Math.PI * 4) * 20;
+          const bird2Y = 95 + Math.sin(ratio * Math.PI * 4 - 0.5) * 18;
+          
+          // Draw Bird 1 (Soft Blue)
+          drawFlyingBird(bird1X, bird1Y, true);
+          // Draw Bird 2 (Warm Orange/Yellow)
+          drawFlyingBird(bird2X, bird2Y, false);
         }
+      } else {
+        // Fireflies drifting around the plant - Night Only
+        const fireflies = [
+          { baseX: potX - 80, baseY: potY - 140, rangeX: 40, rangeY: 30, speedX: 1.5, speedY: 2.0, pulseSpeed: 4.0, size: 3.5, offset: 0 },
+          { baseX: potX + 80, baseY: potY - 100, rangeX: 30, rangeY: 40, speedX: 1.2, speedY: 1.7, pulseSpeed: 3.0, size: 2.8, offset: 1.5 },
+          { baseX: potX - 30, baseY: potY - 70,  rangeX: 50, rangeY: 20, speedX: 1.8, speedY: 1.1, pulseSpeed: 5.0, size: 3.2, offset: 3.0 },
+          { baseX: potX + 40, baseY: potY - 160, rangeX: 35, rangeY: 35, speedX: 1.0, speedY: 1.5, pulseSpeed: 2.5, size: 2.5, offset: 4.5 },
+          { baseX: potX - 100, baseY: potY - 60, rangeX: 25, rangeY: 30, speedX: 2.2, speedY: 1.3, pulseSpeed: 6.0, size: 3.0, offset: 6.0 }
+        ];
 
-        if (lionState === 'walking-in') {
-          lionX += 1.2; // Walk speed
-          walkBob = Math.sin(lionX * 0.3) * 2;
-          if (lionX >= targetSittingX) {
-            lionX = targetSittingX;
-            lionState = 'sitting';
-            walkBob = 0;
+        fireflies.forEach(f => {
+          ctx.save();
+          // Slow float
+          const fx = f.baseX + Math.sin(windTime * f.speedX + f.offset) * f.rangeX;
+          const fy = f.baseY + Math.cos(windTime * f.speedY + f.offset) * f.rangeY;
+          // Pulse opacity
+          const fOpacity = 0.3 + Math.sin(windTime * f.pulseSpeed + f.offset) * 0.5;
+          
+          if (fOpacity > 0.05) {
+            // Glow outer
+            const fireflyGlow = ctx.createRadialGradient(fx, fy, 0.5, fx, fy, f.size * 3.5);
+            fireflyGlow.addColorStop(0, `rgba(180, 255, 60, ${fOpacity})`);
+            fireflyGlow.addColorStop(0.4, `rgba(180, 255, 60, ${fOpacity * 0.4})`);
+            fireflyGlow.addColorStop(1, 'rgba(180, 255, 60, 0)');
+            ctx.fillStyle = fireflyGlow;
+            ctx.beginPath();
+            ctx.arc(fx, fy, f.size * 3.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Core
+            ctx.fillStyle = `rgba(255, 255, 200, ${fOpacity * 0.9})`;
+            ctx.beginPath();
+            ctx.arc(fx, fy, f.size * 0.8, 0, Math.PI * 2);
+            ctx.fill();
           }
-        } else if (lionState === 'sitting') {
+          ctx.restore();
+        });
+      }
+    }
+
+    // --- LION ANIMATION STATE MACHINE & RENDERING (Drawn when not offscreen) ---
+    const targetSittingX = potX - 161; // Sit another 0.5cm further left (was 142)
+    const offscreenLeftX = -35;
+    const offscreenRightX = w + 35;
+
+    if (!isChanting) {
+      if (lionState === 'offscreen') {
+        lionState = 'walking-in';
+        lionX = offscreenLeftX;
+      } else if (lionState === 'walking-out') {
+        lionState = 'walking-in';
+      }
+
+      if (lionState === 'walking-in') {
+        lionX += 1.2; 
+        walkBob = Math.sin(lionX * 0.3) * 2;
+        if (lionX >= targetSittingX) {
           lionX = targetSittingX;
+          lionState = 'sitting';
           walkBob = 0;
         }
-      } else {
-        if (lionState === 'sitting' || lionState === 'walking-in') {
-          lionState = 'walking-out';
-        }
-
-        if (lionState === 'walking-out') {
-          lionX += 1.2; // Walk speed
-          walkBob = Math.sin(lionX * 0.3) * 2;
-          if (lionX >= offscreenRightX) {
-            lionX = -1000;
-            lionState = 'offscreen';
-            walkBob = 0;
-          }
-        }
+      } else if (lionState === 'sitting') {
+        lionX = targetSittingX;
+        walkBob = 0;
+      }
+    } else {
+      if (lionState === 'sitting' || lionState === 'walking-in') {
+        lionState = 'walking-out';
       }
 
+      if (lionState === 'walking-out') {
+        lionX += 1.2; 
+        walkBob = Math.sin(lionX * 0.3) * 2;
+        if (lionX >= offscreenRightX) {
+          lionX = -1000;
+          lionState = 'offscreen';
+          walkBob = 0;
+        }
+      }
+    }
+
+    if (lionState !== 'offscreen') {
       const isSitting = (lionState === 'sitting');
-      // Roar for 2.5 seconds every 8 seconds (highly noticeable and robust)
       const roarTimer = Math.floor(Date.now() / 1000) % 8;
       const isRoaring = isSitting && (roarTimer < 2.5);
 
-      const lionY = baseY - 5 + walkBob; // Stable ground level next to the pot
+      const lionY = baseY - 5 + walkBob; 
       
       ctx.save();
       ctx.translate(lionX, lionY);
-      ctx.scale(1.45, 1.45); // Scale proud and a bit bigger
+      ctx.scale(1.45, 1.45); 
       
       // Draw Lion Cub
-      
       const headX = 4;
       const headY = isSitting ? -12 : -10;
 
@@ -950,13 +1109,13 @@ const PlantRenderer = (function() {
       const tailWag = isSitting ? Math.sin(windTime * 5) * 5 : Math.sin(windTime * 8) * 10;
       ctx.quadraticCurveTo(-20, isSitting ? 10 : 0, -15 + tailWag, isSitting ? 0 : -10);
       ctx.stroke();
+      
       // Tail tuft
       ctx.fillStyle = '#b36b22';
       ctx.beginPath();
       ctx.arc(-15 + tailWag, isSitting ? 0 : -10, 3, 0, Math.PI*2);
       ctx.fill();
 
-      
       if (isSitting) {
         // Sitting Body
         ctx.fillStyle = '#f5c65a';
@@ -989,7 +1148,7 @@ const PlantRenderer = (function() {
         ctx.stroke();
       }
 
-      // Mane (proud fluffy brown mane - restored to original styling)
+      // Mane
       ctx.fillStyle = '#b36b22';
       ctx.beginPath();
       for(let i=0; i<16; i++) {
@@ -1000,7 +1159,7 @@ const PlantRenderer = (function() {
       }
       ctx.fill();
 
-      // Ears (tucked slightly in mane - restored to original styling)
+      // Ears
       ctx.fillStyle = '#f5c65a';
       ctx.beginPath(); ctx.arc(headX - 8, headY - 6, 3, 0, Math.PI*2); ctx.arc(headX + 8, headY - 6, 3, 0, Math.PI*2); ctx.fill();
       ctx.fillStyle = '#fff4d9';
@@ -1052,9 +1211,10 @@ const PlantRenderer = (function() {
       ctx.moveTo(headX + 6, headY + 6); ctx.lineTo(headX + 12, headY + 6);
       ctx.stroke();
       
-      ctx.restore(); // lion restore
-      ctx.restore(); // isChanting block restore
+      ctx.restore();
     }
+
+    ctx.restore();
     
     // 7. Special Stage 1 — seed only, nothing above soil
     if (stageInfo.stage === 1) {

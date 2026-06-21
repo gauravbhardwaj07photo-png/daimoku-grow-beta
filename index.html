@@ -93,6 +93,11 @@
               <span id="plant-mood-badge" class="badge mood-badge">Happy</span>
             </div>
 
+            <!-- Dashboard Mini Timer (Hidden by default, shown when chanting is active) -->
+            <div id="dashboard-mini-timer" class="dashboard-mini-timer hidden">
+              <i class="fa-solid fa-clock-rotate-left"></i> <span id="dashboard-mini-timer-time">00:00:00</span>
+            </div>
+
             <div class="canvas-container">
               <canvas id="plant-canvas" width="400" height="420"></canvas>
             </div>
@@ -196,6 +201,7 @@
                 <div class="timer-time" id="timer-time-display">00:00:00</div>
                 <div class="timer-label" id="timer-state-label">Ready</div>
               </div>
+              <button id="btn-manual-gong" class="btn-icon-gong" title="Sound Bell"><i class="fa-solid fa-bell"></i></button>
             </div>
 
             <!-- Target & Campaign Associations Dropdowns -->
@@ -220,7 +226,6 @@
               <button id="btn-timer-pause" class="btn btn-secondary hidden"><i class="fa-solid fa-pause"></i> Pause</button>
               <button id="btn-timer-stop" class="btn btn-success hidden"><i class="fa-solid fa-stop"></i> Stop & Record</button>
               <button id="btn-timer-cancel" class="btn btn-danger hidden"><i class="fa-solid fa-rotate-left"></i> Reset</button>
-              <button id="btn-manual-gong" class="btn btn-icon-gong" title="Sound Bell"><i class="fa-solid fa-bell"></i></button>
             </div>
           </div>
 
@@ -414,7 +419,7 @@
               <div class="setting-toggle-row">
                 <div class="setting-info">
                   <span class="setting-title">Evening Reminder</span>
-                  <span class="setting-subtitle">Alerts at 8:00 PM if not chanted since noon</span>
+                  <span class="setting-subtitle">Alerts at 9:00 PM if not chanted since noon</span>
                 </div>
                 <label class="toggle-switch">
                   <input type="checkbox" id="setting-evening-reminder">
@@ -436,16 +441,7 @@
               </div>
             </div>
 
-            <div class="settings-section">
-              <h3>Sound Settings</h3>
-              <div class="setting-toggle-row">
-                <div class="setting-info">
-                  <span class="setting-title">Focus Gong Sound</span>
-                  <span class="setting-subtitle">Plays a resonant gong when focus timer ends</span>
-                </div>
-                <button id="btn-test-gong" class="btn-icon-test" title="Test sound"><i class="fa-solid fa-volume-high"></i> Test</button>
-              </div>
-            </div>
+
 
             <div class="settings-section">
               <h3>Theme Customizer</h3>
@@ -615,7 +611,7 @@
         <div class="campaign-grid">
           <div class="card campaign-header-card">
             <h2>Block Campaigns</h2>
-            <p class="section-desc">Chant together with your block members to grow the collective tree for each campaign.</p>
+            <p class="section-desc">Chant together with your block members to fill the collective bucket for each campaign.</p>
           </div>
           
           <div class="campaigns-list" id="campaigns-list-container">

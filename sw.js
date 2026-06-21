@@ -1,4 +1,4 @@
-const CACHE_NAME = 'daimoku-grow-v7';
+const CACHE_NAME = 'daimoku-grow-v8';
 const ASSETS = [
   './',
   './index.html',
@@ -138,7 +138,6 @@ async function checkDecayAndShowNotification() {
         await self.registration.showNotification(title, {
           body: message,
           icon: "icons/icon-192.png",
-          badge: "icons/icon-192.png",
           vibrate: [300, 100, 300],
           tag: tag,
           renotify: true
@@ -150,19 +149,18 @@ async function checkDecayAndShowNotification() {
     const hours = now.getHours();
     const dateTodayStr = now.toISOString().split('T')[0];
     
-    if (data.settings && data.settings.morningReminder && hours >= 12 && hours < 20) {
+    if (data.settings && data.settings.morningReminder && hours >= 12 && hours < 21) {
       const chantedToday = data.sessions && data.sessions.some(s => s.date.split('T')[0] === dateTodayStr);
       if (!chantedToday) {
         await self.registration.showNotification("Morning Chant Reminder", {
           body: "It's past 12:00 PM! Don't forget to water your plant with morning chanting. 🌸",
           icon: "icons/icon-192.png",
-          badge: "icons/icon-192.png",
           vibrate: [300, 100, 300],
           tag: `morning-reminder-${dateTodayStr}`,
           renotify: true
         });
       }
-    } else if (data.settings && data.settings.eveningReminder && hours >= 20) {
+    } else if (data.settings && data.settings.eveningReminder && hours >= 21) {
       const chantedSinceNoon = data.sessions && data.sessions.some(s => {
         const sDate = new Date(s.date);
         return sDate.toISOString().split('T')[0] === dateTodayStr && sDate.getHours() >= 12;
@@ -171,11 +169,30 @@ async function checkDecayAndShowNotification() {
         await self.registration.showNotification("Evening Chant Reminder", {
           body: "It's evening! Water your plant with evening chanting to keep it healthy. 🌙",
           icon: "icons/icon-192.png",
-          badge: "icons/icon-192.png",
           vibrate: [300, 100, 300],
           tag: `evening-reminder-${dateTodayStr}`,
           renotify: true
         });
+      }
+    }
+
+    // 3. Check Calendar Event Reminders (Eve of meeting at 7:00 PM / 19:00 onwards)
+    if (hours >= 19 && data.calendarActivities) {
+      const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      const tomorrowStr = tomorrow.toISOString().split('T')[0];
+      const event = data.calendarActivities[tomorrowStr];
+      if (event && event.type === 'meeting') {
+        const tag = `event-reminder-${tomorrowStr}`;
+        const isDismissed = data.dismissedAlerts && data.dismissedAlerts.includes(tag);
+        if (!isDismissed) {
+          await self.registration.showNotification(`Meeting Reminder: ${event.title}`, {
+            body: `Reminder: You have a scheduled ${event.title} tomorrow! 📅`,
+            icon: "icons/icon-192.png",
+            vibrate: [300, 100, 300],
+            tag: tag,
+            renotify: true
+          });
+        }
       }
     }
   } catch (e) {
