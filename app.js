@@ -808,18 +808,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function triggerNotification(title, message, type = '') {
     // 1. Show in-app banner
-    notificationBannerText.textContent = message;
-    notificationBanner.className = 'notification-banner'; // reset classes
-    if (type) {
-      notificationBanner.classList.add(type);
-    } else if (state.isDead) {
-      notificationBanner.classList.add('dead');
-    } else if (state.health <= 40) {
-      notificationBanner.classList.add('dying');
-    } else {
-      notificationBanner.classList.add('thirsty');
+    if (notificationBanner && notificationBannerText) {
+      notificationBannerText.textContent = message;
+      notificationBanner.className = 'notification-banner'; // reset classes
+      if (type) {
+        notificationBanner.classList.add(type);
+      } else if (state.isDead) {
+        notificationBanner.classList.add('dead');
+      } else if (state.health <= 40) {
+        notificationBanner.classList.add('dying');
+      } else {
+        notificationBanner.classList.add('thirsty');
+      }
+      notificationBanner.classList.remove('hidden');
     }
-    notificationBanner.classList.remove('hidden');
 
     // 2. Fire OS-level Push Notification if permission granted (plays default system tone on phone)
     if ('Notification' in window && Notification.permission === 'granted') {
@@ -1292,52 +1294,64 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // Render the banner
-    if (activeAlert) {
-      if (state.dismissedAlerts.includes(activeAlert.id)) {
-        notificationBanner.className = 'notification-banner hidden';
+    if (notificationBanner) {
+      if (activeAlert) {
+        if (state.dismissedAlerts.includes(activeAlert.id)) {
+          notificationBanner.className = 'notification-banner hidden';
+        } else {
+          if (notificationBannerText) {
+            notificationBannerText.textContent = activeAlert.message;
+          }
+          notificationBanner.className = 'notification-banner';
+          notificationBanner.classList.add(activeAlert.type);
+          notificationBanner.setAttribute('data-active-alert-id', activeAlert.id);
+          notificationBanner.classList.remove('hidden');
+        }
       } else {
-        notificationBannerText.textContent = activeAlert.message;
-        notificationBanner.className = 'notification-banner';
-        notificationBanner.classList.add(activeAlert.type);
-        notificationBanner.setAttribute('data-active-alert-id', activeAlert.id);
-        notificationBanner.classList.remove('hidden');
+        notificationBanner.className = 'notification-banner hidden';
       }
-    } else {
-      notificationBanner.className = 'notification-banner hidden';
     }
   }
 
-  notificationBannerClose.addEventListener('click', () => {
-    const alertId = notificationBanner.getAttribute('data-active-alert-id');
-    if (alertId) {
-      if (!state.dismissedAlerts) state.dismissedAlerts = [];
-      if (!state.dismissedAlerts.includes(alertId)) {
-        state.dismissedAlerts.push(alertId);
+  if (notificationBannerClose) {
+    notificationBannerClose.addEventListener('click', () => {
+      const alertId = notificationBanner ? notificationBanner.getAttribute('data-active-alert-id') : null;
+      if (alertId) {
+        if (!state.dismissedAlerts) state.dismissedAlerts = [];
+        if (!state.dismissedAlerts.includes(alertId)) {
+          state.dismissedAlerts.push(alertId);
+        }
+        saveState();
       }
-      saveState();
-    }
-    notificationBanner.classList.add('hidden');
-  });
+      if (notificationBanner) {
+        notificationBanner.classList.add('hidden');
+      }
+    });
+  }
 
   // --- Timer Operations (Stopwatch & Countdown) ---
-  btnTimerStopwatch.addEventListener('click', () => {
-    if (timerState !== 'idle') return;
-    timerType = 'stopwatch';
-    btnTimerStopwatch.classList.add('active');
-    btnTimerCountdown.classList.remove('active');
-    countdownPresets.classList.add('hidden');
-    customMinutesInputContainer.classList.add('hidden');
-    resetTimerDisplay();
-  });
+  if (btnTimerStopwatch) {
+    btnTimerStopwatch.addEventListener('click', () => {
+      if (timerState !== 'idle') return;
+      timerType = 'stopwatch';
+      btnTimerStopwatch.classList.add('active');
+      if (btnTimerCountdown) btnTimerCountdown.classList.remove('active');
+      if (countdownPresets) countdownPresets.classList.add('hidden');
+      if (customMinutesInputContainer) customMinutesInputContainer.classList.add('hidden');
+      resetTimerDisplay();
+    });
+  }
 
-  btnTimerCountdown.addEventListener('click', () => {
-    if (timerState !== 'idle') return;
-    timerType = 'countdown';
-    btnTimerCountdown.classList.add('active');
-    btnTimerStopwatch.classList.remove('active');
-    countdownPresets.classList.remove('hidden');
-    resetTimerDisplay();
-  });
+  if (btnTimerCountdown) {
+    btnTimerCountdown.addEventListener('click', () => {
+      if (timerState !== 'idle') return;
+      timerType = 'countdown';
+      btnTimerCountdown.classList.add('active');
+      if (btnTimerStopwatch) btnTimerStopwatch.classList.remove('active');
+      if (countdownPresets) countdownPresets.classList.remove('hidden');
+      resetTimerDisplay();
+    });
+  }
 
   // Preset time selections
   presetButtons.forEach(btn => {
@@ -1359,13 +1373,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  btnApplyCustomTime.addEventListener('click', () => {
-    if (timerState !== 'idle') return;
-    const mins = Math.max(1, Math.min(1440, parseInt(customMinutesInput.value || 30)));
-    customMinutesInput.value = mins;
-    countdownTargetSeconds = mins * 60;
-    resetTimerDisplay();
-  });
+  if (btnApplyCustomTime) {
+    btnApplyCustomTime.addEventListener('click', () => {
+      if (timerState !== 'idle') return;
+      const mins = Math.max(1, Math.min(1440, parseInt(customMinutesInput.value || 30)));
+      customMinutesInput.value = mins;
+      countdownTargetSeconds = mins * 60;
+      resetTimerDisplay();
+    });
+  }
 
   function resetTimerDisplay() {
     if (timerType === 'stopwatch') {
@@ -1391,9 +1407,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Start Chanting Timer
-  btnTimerStart.addEventListener('click', () => {
-    resumeTimer();
-  });
+  if (btnTimerStart) {
+    btnTimerStart.addEventListener('click', () => {
+      resumeTimer();
+    });
+  }
 
   function resumeTimer() {
     playGong(); // Play gong on start
@@ -1457,7 +1475,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Pause Timer
-  btnTimerPause.addEventListener('click', pauseTimer);
+  if (btnTimerPause) {
+    btnTimerPause.addEventListener('click', pauseTimer);
+  }
   
   function pauseTimer() {
     if (timerState !== 'running') return;
@@ -1479,19 +1499,23 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Stop and record
-  btnTimerStop.addEventListener('click', () => {
-    playGong(); // Play gong on stop
-    const duration = timerSecondsElapsed;
-    if (duration >= 5) { // Only log if at least 5 seconds
-      saveChantSession(duration, timerType);
-    }
-    resetTimerControls();
-  });
+  if (btnTimerStop) {
+    btnTimerStop.addEventListener('click', () => {
+      playGong(); // Play gong on stop
+      const duration = timerSecondsElapsed;
+      if (duration >= 5) { // Only log if at least 5 seconds
+        saveChantSession(duration, timerType);
+      }
+      resetTimerControls();
+    });
+  }
 
   // Reset controls
-  btnTimerCancel.addEventListener('click', () => {
-    resetTimerControls();
-  });
+  if (btnTimerCancel) {
+    btnTimerCancel.addEventListener('click', () => {
+      resetTimerControls();
+    });
+  }
 
   function resetTimerControls() {
     timerState = 'idle';
@@ -1623,29 +1647,38 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- 24-hour entry restriction: if hours = 24, disable minutes ---
-  logHours.addEventListener('input', () => {
-    const val = parseInt(logHours.value || 0);
-    if (val >= 24) {
-      logHours.value = 24;
-      logMinutes.value = 0;
-      logMinutes.disabled = true;
-      logMinutes.title = 'Minutes are disabled when hours is 24';
-    } else {
-      logMinutes.disabled = false;
-      logMinutes.title = '';
-    }
-  });
+  if (logHours) {
+    logHours.addEventListener('input', () => {
+      const val = parseInt(logHours.value || 0);
+      if (val >= 24) {
+        logHours.value = 24;
+        if (logMinutes) {
+          logMinutes.value = 0;
+          logMinutes.disabled = true;
+          logMinutes.title = 'Minutes are disabled when hours is 24';
+        }
+      } else {
+        if (logMinutes) {
+          logMinutes.disabled = false;
+          logMinutes.title = '';
+        }
+      }
+    });
+  }
 
   // Cap minutes input to 60 manually
-  logMinutes.addEventListener('input', () => {
-    const val = parseInt(logMinutes.value || 0);
-    if (val > 60) {
-      logMinutes.value = 60;
-    }
-  });
+  if (logMinutes) {
+    logMinutes.addEventListener('input', () => {
+      const val = parseInt(logMinutes.value || 0);
+      if (val > 60) {
+        logMinutes.value = 60;
+      }
+    });
+  }
 
   // --- Manual Log Submission ---
-  manualLogForm.addEventListener('submit', (e) => {
+  if (manualLogForm) {
+    manualLogForm.addEventListener('submit', (e) => {
     e.preventDefault();
     
     let hrs = parseInt(logHours.value || 0);
@@ -1738,8 +1771,10 @@ document.addEventListener('DOMContentLoaded', () => {
     alert(`Successfully logged ${hrs}h ${mins}m!`);
     
     // Auto redirect to dashboard
-    document.getElementById('nav-dashboard').click();
+    const navDashboard = document.getElementById('nav-dashboard');
+    if (navDashboard) navDashboard.click();
   });
+}
 
   // --- History Log Views Render ---
   function renderHistoryLogs() {
@@ -1863,27 +1898,29 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Clear all history
-  btnClearHistory.addEventListener('click', () => {
-    if (confirm("WARNING: This will delete ALL your chanting history and reset your plant to a seed. Proceed?")) {
-      state.totalSeconds = 0;
-      state.health = 100;
-      state.isDead = false;
-      state.revivalSeconds = 0;
-      state.lastChantedDate = new Date().toISOString();
-      state.sessions = [];
-      state.streak = 0;
-      state.dismissedAlerts = [];
-      
-      // Reset target progress as well
-      state.targets.forEach(t => {
-        t.accumulatedSeconds = 0;
-        t.completed = false;
-      });
-      
-      saveState();
-      renderHistoryLogs();
-    }
-  });
+  if (btnClearHistory) {
+    btnClearHistory.addEventListener('click', () => {
+      if (confirm("WARNING: This will delete ALL your chanting history and reset your plant to a seed. Proceed?")) {
+        state.totalSeconds = 0;
+        state.health = 100;
+        state.isDead = false;
+        state.revivalSeconds = 0;
+        state.lastChantedDate = new Date().toISOString();
+        state.sessions = [];
+        state.streak = 0;
+        state.dismissedAlerts = [];
+        
+        // Reset target progress as well
+        state.targets.forEach(t => {
+          t.accumulatedSeconds = 0;
+          t.completed = false;
+        });
+        
+        saveState();
+        renderHistoryLogs();
+      }
+    });
+  }
 
   function updateHistoryAnalytics() {
     analyticSessions.textContent = state.sessions.length;
@@ -1900,15 +1937,19 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- Setting Configurations ---
-  settingMorningReminder.addEventListener('change', (e) => {
-    state.settings.morningReminder = e.target.checked;
-    saveState();
-  });
+  if (settingMorningReminder) {
+    settingMorningReminder.addEventListener('change', (e) => {
+      state.settings.morningReminder = e.target.checked;
+      saveState();
+    });
+  }
 
-  settingEveningReminder.addEventListener('change', (e) => {
-    state.settings.eveningReminder = e.target.checked;
-    saveState();
-  });
+  if (settingEveningReminder) {
+    settingEveningReminder.addEventListener('change', (e) => {
+      state.settings.eveningReminder = e.target.checked;
+      saveState();
+    });
+  }
 
   if (btnTestGong) {
     btnTestGong.addEventListener('click', () => {
@@ -2247,10 +2288,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // (triggerNotification is defined in the upper scope)
 
   // --- Developer Debug Panel Toggle & Functions ---
-  btnToggleDebug.addEventListener('click', () => {
-    debugCard.classList.toggle('open');
-    debugContent.classList.toggle('collapsed');
-  });
+  if (btnToggleDebug) {
+    btnToggleDebug.addEventListener('click', () => {
+      if (debugCard) debugCard.classList.toggle('open');
+      if (debugContent) debugContent.classList.toggle('collapsed');
+    });
+  }
 
   btnDebugHours.forEach(btn => {
     btn.addEventListener('click', () => {
@@ -2353,16 +2396,19 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- Targets & Determinations Manager ---
   
   // Toggle form input hours visibility
-  targetTypeSelect.addEventListener('change', (e) => {
-    if (e.target.value === 'hours') {
-      targetHoursInputGroup.classList.remove('hidden');
-    } else {
-      targetHoursInputGroup.classList.add('hidden');
-    }
-  });
+  if (targetTypeSelect) {
+    targetTypeSelect.addEventListener('change', (e) => {
+      if (e.target.value === 'hours') {
+        if (targetHoursInputGroup) targetHoursInputGroup.classList.remove('hidden');
+      } else {
+        if (targetHoursInputGroup) targetHoursInputGroup.classList.add('hidden');
+      }
+    });
+  }
 
   // Submit target form
-  addTargetForm.addEventListener('submit', (e) => {
+  if (addTargetForm) {
+    addTargetForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const text = targetText.value.trim();
     const type = targetTypeSelect.value;
@@ -2390,6 +2436,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderTargetsList();
     alert("New determination created successfully!");
   });
+  }
 
   // Accumulate time to target
   function accumulateTimeToTarget(targetId, seconds) {
@@ -2549,13 +2596,19 @@ document.addEventListener('DOMContentLoaded', () => {
           <button class="btn-delete-target" data-id="${t.id}" title="Delete Target"><i class="fa-regular fa-trash-can"></i></button>
         `;
         
-        item.querySelector('.target-checkbox').addEventListener('click', () => {
-          toggleTargetCompleted(t.id);
-        });
+        const checkbox = item.querySelector('.target-checkbox');
+        if (checkbox) {
+          checkbox.addEventListener('click', () => {
+            toggleTargetCompleted(t.id);
+          });
+        }
         
-        item.querySelector('.btn-delete-target').addEventListener('click', () => {
-          deleteTarget(t.id);
-        });
+        const deleteBtn = item.querySelector('.btn-delete-target');
+        if (deleteBtn) {
+          deleteBtn.addEventListener('click', () => {
+            deleteTarget(t.id);
+          });
+        }
         
         activeTargetsList.appendChild(item);
       });
@@ -2593,13 +2646,19 @@ document.addEventListener('DOMContentLoaded', () => {
           <button class="btn-delete-target" data-id="${t.id}" title="Delete Target"><i class="fa-regular fa-trash-can"></i></button>
         `;
         
-        item.querySelector('.target-checkbox').addEventListener('click', () => {
-          toggleTargetCompleted(t.id);
-        });
+        const checkbox = item.querySelector('.target-checkbox');
+        if (checkbox) {
+          checkbox.addEventListener('click', () => {
+            toggleTargetCompleted(t.id);
+          });
+        }
         
-        item.querySelector('.btn-delete-target').addEventListener('click', () => {
-          deleteTarget(t.id);
-        });
+        const deleteBtn = item.querySelector('.btn-delete-target');
+        if (deleteBtn) {
+          deleteBtn.addEventListener('click', () => {
+            deleteTarget(t.id);
+          });
+        }
         
         completedTargetsList.appendChild(item);
       });
@@ -2624,10 +2683,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Toggle completed targets list collapse
-  btnToggleCompletedTargets.addEventListener('click', () => {
-    completedTargetsCard.classList.toggle('open');
-    completedTargetsList.classList.toggle('collapsed');
-  });
+  if (btnToggleCompletedTargets) {
+    btnToggleCompletedTargets.addEventListener('click', () => {
+      if (completedTargetsCard) completedTargetsCard.classList.toggle('open');
+      if (completedTargetsList) completedTargetsList.classList.toggle('collapsed');
+    });
+  }
 
 
   // --- Event Calendar Renderer ---
@@ -3194,34 +3255,37 @@ document.addEventListener('DOMContentLoaded', () => {
         <button class="btn-delete-whitelist" data-email="${item.email}" style="background:transparent; border:none; color:var(--accent-danger); cursor:pointer; padding:4px;"><i class="fa-regular fa-trash-can"></i></button>
       `;
       
-      div.querySelector('.btn-delete-whitelist').addEventListener('click', (e) => {
-        const emailToDelete = e.currentTarget.getAttribute('data-email');
-        const adminEmails = [
-          'admin@email.com',
-          'admin1@email.com',
-          'admin2@email.com',
-          'admin3@email.com',
-          'admin4@email.com',
-          'admin5@email.com'
-        ];
-        if (adminEmails.includes(emailToDelete)) {
-          alert("Cannot remove a default administrator email from the whitelist!");
-          return;
-        }
-        
-        const currentUser = MockFirebase.auth.getCurrentUser();
-        if (currentUser && currentUser.email.toLowerCase() === emailToDelete.toLowerCase()) {
-          alert("Cannot remove yourself from the whitelist!");
-          return;
-        }
-        
-        if (confirm(`Are you sure you want to remove ${emailToDelete} from the whitelist? This will revoke their access.`)) {
-          let list = MockFirebase.db.getWhitelist();
-          list = list.filter(w => w.email.toLowerCase() !== emailToDelete.toLowerCase());
-          MockFirebase.db.saveWhitelist(list);
-          renderWhitelist();
-        }
-      });
+      const deleteBtn = div.querySelector('.btn-delete-whitelist');
+      if (deleteBtn) {
+        deleteBtn.addEventListener('click', (e) => {
+          const emailToDelete = e.currentTarget.getAttribute('data-email');
+          const adminEmails = [
+            'admin@email.com',
+            'admin1@email.com',
+            'admin2@email.com',
+            'admin3@email.com',
+            'admin4@email.com',
+            'admin5@email.com'
+          ];
+          if (adminEmails.includes(emailToDelete)) {
+            alert("Cannot remove a default administrator email from the whitelist!");
+            return;
+          }
+          
+          const currentUser = MockFirebase.auth.getCurrentUser();
+          if (currentUser && currentUser.email.toLowerCase() === emailToDelete.toLowerCase()) {
+            alert("Cannot remove yourself from the whitelist!");
+            return;
+          }
+          
+          if (confirm(`Are you sure you want to remove ${emailToDelete} from the whitelist? This will revoke their access.`)) {
+            let list = MockFirebase.db.getWhitelist();
+            list = list.filter(w => w.email.toLowerCase() !== emailToDelete.toLowerCase());
+            MockFirebase.db.saveWhitelist(list);
+            renderWhitelist();
+          }
+        });
+      }
       
       container.appendChild(div);
     });
@@ -3310,7 +3374,8 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
       `;
       
-      div.querySelector('.campaign-target-input').addEventListener('change', (e) => {
+      const targetInput = div.querySelector('.campaign-target-input');
+      if (targetInput) targetInput.addEventListener('change', (e) => {
         const val = parseInt(e.target.value || 100);
         const id = e.target.getAttribute('data-id');
         
@@ -3320,7 +3385,8 @@ document.addEventListener('DOMContentLoaded', () => {
         renderCampaignsList();
       });
       
-      div.querySelector('.campaign-start-input').addEventListener('change', (e) => {
+      const startInput = div.querySelector('.campaign-start-input');
+      if (startInput) startInput.addEventListener('change', (e) => {
         const val = e.target.value;
         const id = e.target.getAttribute('data-id');
         
@@ -3330,13 +3396,15 @@ document.addEventListener('DOMContentLoaded', () => {
         MockFirebase.db.saveCampaignDates(allDates);
         
         renderCampaignsList();
-        if (document.getElementById('view-calendar').classList.contains('active')) {
+        const calView = document.getElementById('view-calendar');
+        if (calView && calView.classList.contains('active')) {
           renderCalendar();
         }
         populateTargetDropdowns();
       });
       
-      div.querySelector('.campaign-end-input').addEventListener('change', (e) => {
+      const endInput = div.querySelector('.campaign-end-input');
+      if (endInput) endInput.addEventListener('change', (e) => {
         const val = e.target.value;
         const id = e.target.getAttribute('data-id');
         
@@ -3346,13 +3414,15 @@ document.addEventListener('DOMContentLoaded', () => {
         MockFirebase.db.saveCampaignDates(allDates);
         
         renderCampaignsList();
-        if (document.getElementById('view-calendar').classList.contains('active')) {
+        const calView = document.getElementById('view-calendar');
+        if (calView && calView.classList.contains('active')) {
           renderCalendar();
         }
         populateTargetDropdowns();
       });
       
-      div.querySelector('.campaign-active-toggle').addEventListener('change', (e) => {
+      const activeToggle = div.querySelector('.campaign-active-toggle');
+      if (activeToggle) activeToggle.addEventListener('change', (e) => {
         const id = e.target.getAttribute('data-id');
         const checked = e.target.checked;
         
@@ -3418,33 +3488,40 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
       
       // Bind Edit Button
-      div.querySelector('.btn-edit-event').addEventListener('click', (e) => {
-        const d = e.currentTarget.getAttribute('data-date');
-        const ev = CALENDAR_ACTIVITIES_2026[d];
-        const dateInput = document.getElementById('calendar-event-date');
-        const titleInput = document.getElementById('calendar-event-title');
-        const typeInput = document.getElementById('calendar-event-type');
-        if (dateInput) dateInput.value = d;
-        if (titleInput) titleInput.value = ev.title;
-        if (typeInput) typeInput.value = ev.type || 'meeting';
-        
-        // Scroll the form into view smoothly
-        const form = document.getElementById('admin-calendar-form');
-        if (form) form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      });
+      const editBtn = div.querySelector('.btn-edit-event');
+      if (editBtn) {
+        editBtn.addEventListener('click', (e) => {
+          const d = e.currentTarget.getAttribute('data-date');
+          const ev = CALENDAR_ACTIVITIES_2026[d];
+          const dateInput = document.getElementById('calendar-event-date');
+          const titleInput = document.getElementById('calendar-event-title');
+          const typeInput = document.getElementById('calendar-event-type');
+          if (dateInput) dateInput.value = d;
+          if (titleInput) titleInput.value = ev.title;
+          if (typeInput) typeInput.value = ev.type || 'meeting';
+          
+          // Scroll the form into view smoothly
+          const form = document.getElementById('admin-calendar-form');
+          if (form) form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        });
+      }
       
       // Bind Delete Button
-      div.querySelector('.btn-delete-event').addEventListener('click', (e) => {
-        const d = e.currentTarget.getAttribute('data-date');
-        if (confirm(`Remove event on ${d} ("${CALENDAR_ACTIVITIES_2026[d].title}")?`)) {
-          delete CALENDAR_ACTIVITIES_2026[d];
-          localStorage.setItem('daimoku_calendar_activities', JSON.stringify(CALENDAR_ACTIVITIES_2026));
-          renderAdminCalendarSchedule();
-          if (document.getElementById('view-calendar').classList.contains('active')) {
-            renderCalendar();
+      const deleteBtn = div.querySelector('.btn-delete-event');
+      if (deleteBtn) {
+        deleteBtn.addEventListener('click', (e) => {
+          const d = e.currentTarget.getAttribute('data-date');
+          if (confirm(`Remove event on ${d} ("${CALENDAR_ACTIVITIES_2026[d].title}")?`)) {
+            delete CALENDAR_ACTIVITIES_2026[d];
+            localStorage.setItem('daimoku_calendar_activities', JSON.stringify(CALENDAR_ACTIVITIES_2026));
+            renderAdminCalendarSchedule();
+            const calView = document.getElementById('view-calendar');
+            if (calView && calView.classList.contains('active')) {
+              renderCalendar();
+            }
           }
-        }
-      });
+        });
+      }
       
       container.appendChild(div);
     });
@@ -3475,7 +3552,8 @@ document.addEventListener('DOMContentLoaded', () => {
       titleInput.value = '';
       
       renderAdminCalendarSchedule();
-      if (document.getElementById('view-calendar').classList.contains('active')) {
+      const calView = document.getElementById('view-calendar');
+      if (calView && calView.classList.contains('active')) {
         renderCalendar();
       }
       
@@ -3657,125 +3735,145 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Form Submissions Listeners
-  loginForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const email = document.getElementById('login-email').value;
-    const password = document.getElementById('login-password').value;
-    
-    try {
-      const user = MockFirebase.auth.signIn(email, password);
-      loadUserStateForLoggedInUser(user);
-      hideAuthOverlay();
+  if (loginForm) {
+    loginForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
       
-      const adminPanelCard = document.getElementById('admin-panel-card');
-      const adminCalendarCard = document.getElementById('admin-calendar-card');
-      if (user.isAdmin) {
-        if (adminPanelCard) adminPanelCard.classList.remove('hidden');
-        if (adminCalendarCard) adminCalendarCard.classList.remove('hidden');
-        renderWhitelist();
-        renderCampaignTargetsEditor();
-        renderAdminCalendarSchedule();
-      } else {
-        if (adminPanelCard) adminPanelCard.classList.add('hidden');
-        if (adminCalendarCard) adminCalendarCard.classList.add('hidden');
+      try {
+        const user = MockFirebase.auth.signIn(email, password);
+        loadUserStateForLoggedInUser(user);
+        hideAuthOverlay();
+        
+        const adminPanelCard = document.getElementById('admin-panel-card');
+        const adminCalendarCard = document.getElementById('admin-calendar-card');
+        if (user.isAdmin) {
+          if (adminPanelCard) adminPanelCard.classList.remove('hidden');
+          if (adminCalendarCard) adminCalendarCard.classList.remove('hidden');
+          renderWhitelist();
+          renderCampaignTargetsEditor();
+          renderAdminCalendarSchedule();
+        } else {
+          if (adminPanelCard) adminPanelCard.classList.add('hidden');
+          if (adminCalendarCard) adminCalendarCard.classList.add('hidden');
+        }
+        
+        updateUI();
+        renderTargetsList();
+        populateTargetDropdowns();
+        
+        // Auto redirect to dashboard
+        const navDashboard = document.getElementById('nav-dashboard');
+        if (navDashboard) navDashboard.click();
+        
+        alert(`Welcome back, ${user.username}! 🙏`);
+      } catch(err) {
+        alert("Login failed: " + err.message);
+      }
+    });
+  }
+
+  if (registerForm) {
+    registerForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const username = document.getElementById('register-username').value.trim();
+      const email = document.getElementById('register-email').value.trim();
+      const password = document.getElementById('register-password').value;
+      const block = document.getElementById('register-block').value;
+      const code = document.getElementById('register-code').value.trim();
+      
+      if (password.length < 6) {
+        alert("Password must be at least 6 characters.");
+        return;
       }
       
-      updateUI();
-      renderTargetsList();
-      populateTargetDropdowns();
-      
-      // Auto redirect to dashboard
-      document.getElementById('nav-dashboard').click();
-      
-      alert(`Welcome back, ${user.username}! 🙏`);
-    } catch(err) {
-      alert("Login failed: " + err.message);
-    }
-  });
+      try {
+        const user = MockFirebase.auth.signUp(username, email, password, block, code);
+        loadUserStateForLoggedInUser(user);
+        hideAuthOverlay();
+        
+        const adminPanelCard = document.getElementById('admin-panel-card');
+        const adminCalendarCard = document.getElementById('admin-calendar-card');
+        if (user.isAdmin) {
+          if (adminPanelCard) adminPanelCard.classList.remove('hidden');
+          if (adminCalendarCard) adminCalendarCard.classList.remove('hidden');
+          renderWhitelist();
+          renderCampaignTargetsEditor();
+          renderAdminCalendarSchedule();
+        } else {
+          if (adminPanelCard) adminPanelCard.classList.add('hidden');
+          if (adminCalendarCard) adminCalendarCard.classList.add('hidden');
+        }
+        
+        updateUI();
+        renderTargetsList();
+        populateTargetDropdowns();
+        
+        // Auto redirect to dashboard
+        const navDashboard = document.getElementById('nav-dashboard');
+        if (navDashboard) navDashboard.click();
+        
+        alert(`Account created successfully! Welcome to the ${block} Block, ${username}! 🌸`);
+      } catch(err) {
+        alert("Registration failed: " + err.message);
+      }
+    });
+  }
 
-  registerForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const username = document.getElementById('register-username').value.trim();
-    const email = document.getElementById('register-email').value.trim();
-    const password = document.getElementById('register-password').value;
-    const block = document.getElementById('register-block').value;
-    const code = document.getElementById('register-code').value.trim();
-    
-    if (password.length < 6) {
-      alert("Password must be at least 6 characters.");
-      return;
-    }
-    
-    try {
-      const user = MockFirebase.auth.signUp(username, email, password, block, code);
-      loadUserStateForLoggedInUser(user);
-      hideAuthOverlay();
+  if (forgotPasswordForm) {
+    forgotPasswordForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const email = document.getElementById('recovery-email').value;
+      const newPassword = document.getElementById('recovery-new-password').value;
       
-      const adminPanelCard = document.getElementById('admin-panel-card');
-      const adminCalendarCard = document.getElementById('admin-calendar-card');
-      if (user.isAdmin) {
-        if (adminPanelCard) adminPanelCard.classList.remove('hidden');
-        if (adminCalendarCard) adminCalendarCard.classList.remove('hidden');
-        renderWhitelist();
-        renderCampaignTargetsEditor();
-        renderAdminCalendarSchedule();
-      } else {
-        if (adminPanelCard) adminPanelCard.classList.add('hidden');
-        if (adminCalendarCard) adminCalendarCard.classList.add('hidden');
+      if (newPassword.length < 6) {
+        alert("Password must be at least 6 characters.");
+        return;
       }
       
-      updateUI();
-      renderTargetsList();
-      populateTargetDropdowns();
-      
-      // Auto redirect to dashboard
-      document.getElementById('nav-dashboard').click();
-      
-      alert(`Account created successfully! Welcome to the ${block} Block, ${username}! 🌸`);
-    } catch(err) {
-      alert("Registration failed: " + err.message);
-    }
-  });
-
-  forgotPasswordForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const email = document.getElementById('recovery-email').value;
-    const newPassword = document.getElementById('recovery-new-password').value;
-    
-    if (newPassword.length < 6) {
-      alert("Password must be at least 6 characters.");
-      return;
-    }
-    
-    try {
-      MockFirebase.auth.resetPassword(email, newPassword);
-      alert("Password updated successfully! Please log in with your new credentials.");
-      showAuthForm(loginForm);
-    } catch(err) {
-      alert("Error: " + err.message);
-    }
-  });
+      try {
+        MockFirebase.auth.resetPassword(email, newPassword);
+        alert("Password updated successfully! Please log in with your new credentials.");
+        showAuthForm(loginForm);
+      } catch(err) {
+        alert("Error: " + err.message);
+      }
+    });
+  }
 
   // Auth Screen Links toggles
-  document.getElementById('link-to-register').addEventListener('click', (e) => {
-    e.preventDefault();
-    showAuthForm(registerForm);
-  });
+  const linkToRegister = document.getElementById('link-to-register');
+  if (linkToRegister) {
+    linkToRegister.addEventListener('click', (e) => {
+      e.preventDefault();
+      showAuthForm(registerForm);
+    });
+  }
   
-  document.getElementById('link-to-login').addEventListener('click', (e) => {
-    e.preventDefault();
-    showAuthForm(loginForm);
-  });
+  const linkToLogin = document.getElementById('link-to-login');
+  if (linkToLogin) {
+    linkToLogin.addEventListener('click', (e) => {
+      e.preventDefault();
+      showAuthForm(loginForm);
+    });
+  }
   
-  document.getElementById('link-to-forgot').addEventListener('click', (e) => {
-    e.preventDefault();
-    showAuthForm(forgotPasswordForm);
-  });
+  const linkToForgot = document.getElementById('link-to-forgot');
+  if (linkToForgot) {
+    linkToForgot.addEventListener('click', (e) => {
+      e.preventDefault();
+      showAuthForm(forgotPasswordForm);
+    });
+  }
   
-  document.getElementById('link-to-login-from-recovery').addEventListener('click', (e) => {
-    e.preventDefault();
-    showAuthForm(loginForm);
-  });
+  const linkToLoginFromRecovery = document.getElementById('link-to-login-from-recovery');
+  if (linkToLoginFromRecovery) {
+    linkToLoginFromRecovery.addEventListener('click', (e) => {
+      e.preventDefault();
+      showAuthForm(loginForm);
+    });
+  }
   
   const btnBiometricLogin = document.getElementById('btn-biometric-login');
   if (btnBiometricLogin) {
