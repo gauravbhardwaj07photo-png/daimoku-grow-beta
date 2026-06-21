@@ -468,24 +468,6 @@ const PlantRenderer = (function() {
 
     // Calculate dynamic scales
     const stageInfo = getGrowthStage(currentHours);
-
-    // Soft radial contrast halo behind the plant structure at night to make the plant pop
-    if (isNight && stageInfo.stage > 1) {
-      ctx.save();
-      const haloY = potY - 80 * masterScale;
-      const haloR = 110 * masterScale;
-      
-      const plantGlow = ctx.createRadialGradient(potX, haloY, 15, potX, haloY, haloR);
-      plantGlow.addColorStop(0, 'rgba(255, 255, 255, 0.20)');  // Soft silver glow
-      plantGlow.addColorStop(0.5, 'rgba(255, 255, 255, 0.08)');
-      plantGlow.addColorStop(1, 'rgba(255, 255, 255, 0)');
-      
-      ctx.fillStyle = plantGlow;
-      ctx.beginPath();
-      ctx.arc(potX, haloY, haloR, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    }
     
     // Size shrink factor based on health
     const healthScale = isDead ? 0.75 : (0.75 + 0.25 * (currentHealth / 100));
@@ -504,6 +486,24 @@ const PlantRenderer = (function() {
     }
     
     const masterScale = stageScale * healthScale;
+
+    // Soft radial contrast halo behind the plant structure at night to make the plant pop
+    if (isNight && stageInfo.stage > 1) {
+      ctx.save();
+      const haloY = potY - 80 * masterScale;
+      const haloR = 110 * masterScale;
+      
+      const plantGlow = ctx.createRadialGradient(potX, haloY, 15, potX, haloY, haloR);
+      plantGlow.addColorStop(0, 'rgba(255, 255, 255, 0.20)');  // Soft silver glow
+      plantGlow.addColorStop(0.5, 'rgba(255, 255, 255, 0.08)');
+      plantGlow.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      
+      ctx.fillStyle = plantGlow;
+      ctx.beginPath();
+      ctx.arc(potX, haloY, haloR, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
     
     // 2. Draw Soil in Pot (Inside Rim)
     ctx.save();
