@@ -1045,7 +1045,7 @@ const PlantRenderer = (function() {
     }
 
     // --- LION ANIMATION STATE MACHINE & RENDERING (Drawn when not offscreen) ---
-    const targetSittingX = potX - 161; // Sit another 0.5cm further left (was 142)
+    const targetSittingX = potX - 142; // Sit close to the pot so it is fully visible on mobile
     const offscreenLeftX = -35;
     const offscreenRightX = w + 35;
 

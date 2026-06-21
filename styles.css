@@ -2854,12 +2854,22 @@ body.theme-forest-dark select {
 /* Expand plant canvas area & card styles */
 .plant-card {
   min-height: 335px !important;
+  padding: 0 0 20px 0 !important; /* Zero padding on top, left, right to let canvas touch borders */
 }
 
 .canvas-container {
   max-width: 100% !important;
   aspect-ratio: 1 / 1.08;
-  margin-top: 20px;
+  margin-top: 0 !important; /* Make canvas touch the top edge of the card */
+  width: 100% !important;
+}
+
+.plant-card .stats-horizontal-row,
+.plant-card .bottom-progress,
+.plant-card .revival-box {
+  padding-left: 20px !important;
+  padding-right: 20px !important;
+  box-sizing: border-box !important;
 }
 
 /* Merged bottom progress slider */
@@ -2982,6 +2992,14 @@ body.theme-forest-dark select {
   background: var(--primary);
   color: white;
   transform: translateY(-1px);
+}
+
+/* Mobile full-width adjustments */
+@media (max-width: 480px) {
+  .app-content {
+    padding: 10px !important;
+    padding-bottom: 76px !important; /* Keep bottom nav padding */
+  }
 }
 
 
