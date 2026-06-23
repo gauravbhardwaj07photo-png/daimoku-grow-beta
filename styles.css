@@ -915,9 +915,6 @@ body.theme-forest-dark .dashboard-mini-timer {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  max-height: 380px;
-  overflow-y: auto;
-  scrollbar-width: thin;
 }
 
 .log-item {

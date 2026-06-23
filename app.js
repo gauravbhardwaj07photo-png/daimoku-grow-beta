@@ -1121,8 +1121,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- Rendering UI States ---
   function updateUI() {
     rebuildRevivalDates();
-    const totalHours = (state.totalSeconds / 3600).toFixed(1);
-    const progressPercent = Math.min(100, Math.round((parseFloat(totalHours) / GOAL_HOURS) * 100));
+    const decimalHours = state.totalSeconds / 3600;
+    const progressPercent = Math.min(100, Math.round((decimalHours / GOAL_HOURS) * 100));
     
     // Header & Vitality
     headerHealthValue.textContent = `${state.health}%`;
@@ -1138,7 +1138,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // Plant badges
-    const stageInfo = PlantRenderer.getGrowthStage(parseFloat(totalHours));
+    const stageInfo = PlantRenderer.getGrowthStage(decimalHours);
     const moodInfo = PlantRenderer.getPlantMood(state.health, state.isDead);
     
     plantStageBadge.textContent = stageInfo.name;
@@ -1153,12 +1153,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // Progress Card / Flanking Stats
-    statTotalHours.textContent = totalHours;
+    const hours = Math.floor(state.totalSeconds / 3600);
+    const mins = Math.round((state.totalSeconds % 3600) / 60);
+    statTotalHours.textContent = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
     if (journeyPercentValue) {
       journeyPercentValue.textContent = `${progressPercent}%`;
     }
     progressPercentLabel.textContent = `${progressPercent}% of Journey`;
-    const remaining = Math.max(0, GOAL_HOURS - parseFloat(totalHours)).toFixed(1);
+    const remaining = Math.max(0, GOAL_HOURS - decimalHours).toFixed(1);
     progressRemainingLabel.textContent = `${remaining}h remaining`;
     journeyProgressFill.style.width = `${progressPercent}%`;
     
@@ -2015,7 +2017,13 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const sum = state.sessions.reduce((acc, s) => acc + s.durationSeconds, 0);
     const avgMins = Math.round((sum / state.sessions.length) / 60);
-    analyticAvgSession.textContent = `${avgMins}m`;
+    if (avgMins >= 60) {
+      const h = Math.floor(avgMins / 60);
+      const m = avgMins % 60;
+      analyticAvgSession.textContent = `${h}h ${m}m`;
+    } else {
+      analyticAvgSession.textContent = `${avgMins}m`;
+    }
   }
 
   // --- Setting Configurations ---
@@ -4145,6 +4153,13 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function rebuildRevivalDates() {
+    // Recompute totalSeconds from sessions to ensure they are always in sync!
+    if (state.sessions) {
+      state.totalSeconds = state.sessions.reduce((acc, s) => acc + s.durationSeconds, 0);
+    } else {
+      state.totalSeconds = 0;
+    }
+
     if (!state.sessions || state.sessions.length === 0) {
       state.revivalDates = [];
       return;
