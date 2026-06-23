@@ -37,8 +37,8 @@ const PlantRenderer = (function() {
       healthy: ['#6b8e6b', '#7fa87f', '#557255', '#8bb48b'],
       thirsty: ['#8bb582', '#a2cc97', '#739e6a', '#b7dfad'], // Pale green
       sad: ['#8fa87a', '#a6bf90', '#748c60', '#b9d4a3'],     // Dry sage green
-      dying: ['#7c8c6c', '#92a382', '#627052', '#a6b895'],   // Grayish olive green
-      dead: ['#5b6b4e', '#6e805f', '#46543b', '#809470']     // Withered olive green
+      dying: ['#bca88a', '#d4c5a3', '#9c8c72', '#c2b595'],   // Faded dry parched yellow-brown
+      dead: ['#8e7a68', '#967d64', '#7a624e', '#a68d75']     // Parched dry brown/tan
     },
     wood: {
       healthy: '#70543e',
@@ -422,7 +422,7 @@ const PlantRenderer = (function() {
     }
     
     // Draw plant spotlight beautifully (warm by day, cool by night)
-    const potY = h - 85;
+    const potY = h - 98;
     ctx.save();
     const spotGrad = ctx.createLinearGradient(w / 2, 0, w / 2, potY + 10);
     if (!isNight) {
@@ -667,7 +667,13 @@ const PlantRenderer = (function() {
         // Draw stem
         ctx.beginPath();
         ctx.moveTo(0, 0);
-        ctx.quadraticCurveTo(-10 * droopFactor, -stemLength / 2, 0, -stemLength);
+        // If dead, droop stem extremely
+        const endX = isDead ? -35 * masterScale : -25 * droopFactor;
+        const endY = isDead ? -stemLength * 0.25 : -stemLength + 15 * droopFactor;
+        const ctrlX = isDead ? -40 * masterScale : -15 * droopFactor;
+        const ctrlY = isDead ? -stemLength * 0.7 : -stemLength / 2;
+        
+        ctx.quadraticCurveTo(ctrlX, ctrlY, endX, endY);
         ctx.strokeStyle = leafColors[2];
         ctx.lineWidth = 5 * masterScale;
         ctx.lineCap = 'round';
@@ -677,8 +683,12 @@ const PlantRenderer = (function() {
         const leafSize = 22 * masterScale;
         const leafAngleOffset = 0.4 + (0.5 * droopFactor); // Droop leaves down
         
-        drawLeaf(0, -stemLength, leafSize, leafSize * 0.6, -Math.PI/4 + leafAngleOffset, leafColors[0]);
-        drawLeaf(0, -stemLength, leafSize, leafSize * 0.6, -Math.PI*3/4 - leafAngleOffset, leafColors[1]);
+        // If dead, point leaves straight down
+        const leafAngle1 = isDead ? (Math.PI / 2 - 0.1) : (-Math.PI/4 + leafAngleOffset);
+        const leafAngle2 = isDead ? (Math.PI / 2 + 0.1) : (-Math.PI*3/4 - leafAngleOffset);
+        
+        drawLeaf(endX, endY, leafSize, leafSize * 0.6, leafAngle1, leafColors[0]);
+        drawLeaf(endX, endY, leafSize, leafSize * 0.6, leafAngle2, leafColors[1]);
         
       } else if (stageInfo.stage === 3) {
         // --- STAGE 3: SEEDLING ---
@@ -696,8 +706,13 @@ const PlantRenderer = (function() {
         // Draw central stem curve
         ctx.beginPath();
         ctx.moveTo(0, 0);
-        const curveOffset = -15 * droopFactor + Math.sin(windTime * 0.7) * 4;
-        ctx.quadraticCurveTo(curveOffset, -stemLength / 2, 0, -stemLength);
+        // If dead, droop stem extremely
+        const endX = isDead ? -50 * masterScale : -35 * droopFactor;
+        const endY = isDead ? -stemLength * 0.2 : -stemLength + 20 * droopFactor;
+        const cx = isDead ? -55 * masterScale : (-15 * droopFactor + Math.sin(windTime * 0.7) * 4);
+        const cy = isDead ? -stemLength * 0.65 : -stemLength / 2;
+        
+        ctx.quadraticCurveTo(cx, cy, endX, endY);
         ctx.strokeStyle = woodColor;
         ctx.lineWidth = 6 * masterScale;
         ctx.lineCap = 'round';
@@ -707,13 +722,22 @@ const PlantRenderer = (function() {
         const leafPairs = 3 + Math.min(3, Math.floor((currentHours - 10) / 15));
         for (let i = 1; i <= leafPairs; i++) {
           const ratio = i / leafPairs;
-          const yPos = -stemLength * ratio;
+          
+          // Interpolate point along the Bezier curve
+          const t = ratio;
+          const lx = 2 * (1 - t) * t * cx + t * t * endX;
+          const ly = 2 * (1 - t) * t * cy + t * t * endY;
+          
           const currentLeafSize = (25 + (1 - ratio) * 10) * masterScale;
           const droop = 0.2 + (0.6 * droopFactor);
           
+          // If dead, point leaves straight down
+          const leafAngle1 = isDead ? (Math.PI / 2 - 0.2) : (-Math.PI/6 + droop);
+          const leafAngle2 = isDead ? (Math.PI / 2 + 0.2) : (-Math.PI*5/6 - droop);
+          
           // Draw left and right leaf
-          drawLeaf(0, yPos, currentLeafSize, currentLeafSize * 0.5, -Math.PI/6 + droop, leafColors[i % leafColors.length]);
-          drawLeaf(0, yPos, currentLeafSize, currentLeafSize * 0.5, -Math.PI*5/6 - droop, leafColors[(i+1) % leafColors.length]);
+          drawLeaf(lx, ly, currentLeafSize, currentLeafSize * 0.5, leafAngle1, leafColors[i % leafColors.length]);
+          drawLeaf(lx, ly, currentLeafSize, currentLeafSize * 0.5, leafAngle2, leafColors[(i+1) % leafColors.length]);
         }
         
       } else if (stageInfo.stage === 4) {

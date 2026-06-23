@@ -365,7 +365,7 @@ body.theme-forest-dark .notification-banner.dead {
 .canvas-container {
   width: 100%;
   max-width: 100%;
-  aspect-ratio: 1 / 1.08;
+  aspect-ratio: 1 / 1.18;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -2859,7 +2859,7 @@ body.theme-forest-dark select {
 
 .canvas-container {
   max-width: 100% !important;
-  aspect-ratio: 1 / 1.08;
+  aspect-ratio: 1 / 1.18;
   margin-top: 0 !important; /* Make canvas touch the top edge of the card */
   width: 100% !important;
 }
@@ -2870,6 +2870,10 @@ body.theme-forest-dark select {
   padding-left: 20px !important;
   padding-right: 20px !important;
   box-sizing: border-box !important;
+}
+
+.plant-card .stats-horizontal-row {
+  margin-top: 22px !important;
 }
 
 /* Merged bottom progress slider */
@@ -3002,6 +3006,76 @@ body.theme-forest-dark select {
   }
 }
 
+/* Monthwise collapsible history */
+.history-month-section {
+  margin-bottom: 12px;
+  background: var(--bg-card);
+  border-radius: var(--border-radius-md);
+  border: var(--border);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  transition: all var(--transition-speed) ease;
+}
 
+.history-month-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px;
+  background: var(--primary-light);
+  cursor: pointer;
+  user-select: none;
+  font-weight: 600;
+  border-bottom: var(--border);
+  transition: background var(--transition-speed) ease;
+}
 
+.history-month-header:hover {
+  background: var(--bg-card-hover);
+}
 
+.month-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-main);
+  font-size: 15px;
+}
+
+.toggle-arrow {
+  display: inline-block;
+  transition: transform var(--transition-speed) ease;
+  color: var(--accent-wood);
+  font-size: 13px;
+}
+
+.month-total {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-wood);
+  background: var(--bg-card);
+  padding: 3px 9px;
+  border-radius: 12px;
+  border: var(--border);
+}
+
+.history-month-body {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: all var(--transition-speed) ease;
+}
+
+/* Collapsed state */
+.history-month-section.collapsed .history-month-body {
+  display: none;
+}
+
+.history-month-section.collapsed .toggle-arrow {
+  transform: rotate(-90deg);
+}
+
+.history-month-section.collapsed .history-month-header {
+  border-bottom: none;
+}

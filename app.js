@@ -538,6 +538,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     state = userState;
     
+    // Ensure all standard properties exist in state
+    if (state.streak === undefined) state.streak = 0;
+    if (state.revivalSeconds === undefined) state.revivalSeconds = 0;
+    if (state.isDead === undefined) state.isDead = false;
+    if (state.targets === undefined) state.targets = [];
+    if (state.lastNotifiedThreshold === undefined) state.lastNotifiedThreshold = 0;
+    if (state.dismissedAlerts === undefined) state.dismissedAlerts = [];
+    if (state.revivalDates === undefined) state.revivalDates = [];
+    if (state.theme === undefined) state.theme = 'theme-sage-light';
+    if (state.settings === undefined) state.settings = { morningReminder: true, eveningReminder: true, potStyle: 'clay' };
+    
+    // Rebuild revival dates (self-healing)
+    rebuildRevivalDates();
+    
     // Save to active local state cache
     localStorage.setItem('daimoku_grow_state', JSON.stringify(state));
     
@@ -742,6 +756,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Set manual form default date to today
     const today = new Date().toISOString().split('T')[0];
     logDateInput.value = today;
+    
+    // Rebuild revival dates (self-healing)
+    rebuildRevivalDates();
     
     // Calculate decay on start
     applyTimeDecay();
@@ -1103,6 +1120,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- Rendering UI States ---
   function updateUI() {
+    rebuildRevivalDates();
     const totalHours = (state.totalSeconds / 3600).toFixed(1);
     const progressPercent = Math.min(100, Math.round((parseFloat(totalHours) / GOAL_HOURS) * 100));
     
@@ -1790,50 +1808,114 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     
+    // Group sessions by month (key: YYYY-MM)
+    const groups = {};
+    const groupOrder = []; // To keep track of month order (newest first)
+    
     state.sessions.forEach(session => {
-      const item = document.createElement('div');
-      item.className = 'log-item';
+      const date = new Date(session.date);
+      if (isNaN(date.getTime())) return;
       
-      const sessionDate = new Date(session.date);
-      const dateString = sessionDate.toLocaleDateString(undefined, { 
-        weekday: 'short', 
-        month: 'short', 
-        day: 'numeric', 
-        hour: '2-digit', 
-        minute: '2-digit' 
-      });
+      const year = date.getFullYear();
+      const month = date.getMonth(); // 0-11
+      const key = `${year}-${String(month + 1).padStart(2, '0')}`;
       
-      const durationMins = (session.durationSeconds / 60).toFixed(0);
-      const hoursText = session.durationSeconds >= 3600 ? `${Math.floor(session.durationSeconds / 3600)}h ` : '';
-      const minsText = `${durationMins % 60}m`;
-      const durationText = `${hoursText}${minsText}`;
-      
-      let methodIcon = '<i class="fa-regular fa-clock" title="Stopwatch"></i>';
-      if (session.method === 'countdown') {
-        methodIcon = '<i class="fa-solid fa-hourglass-half" title="Focus Timer"></i>';
-      } else if (session.method === 'manual') {
-        methodIcon = '<i class="fa-solid fa-pen-to-square" title="Manual Log"></i>';
+      if (!groups[key]) {
+        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        groups[key] = {
+          label: `${monthNames[month]} ${year}`,
+          sessions: [],
+          totalDuration: 0
+        };
+        groupOrder.push(key);
       }
       
-      item.innerHTML = `
-        <div class="log-info">
-          <div class="log-time-amount">${methodIcon} ${durationText} chanted</div>
-          <div class="log-date-label">${dateString}</div>
+      groups[key].sessions.push(session);
+      groups[key].totalDuration += session.durationSeconds;
+    });
+    
+    // Sort group keys in descending order (newest first)
+    groupOrder.sort((a, b) => b.localeCompare(a));
+    
+    groupOrder.forEach((key, index) => {
+      const group = groups[key];
+      const section = document.createElement('div');
+      section.className = 'history-month-section';
+      
+      // First month expanded by default, others collapsed
+      if (index > 0) {
+        section.classList.add('collapsed');
+      }
+      
+      const totalHours = group.totalDuration >= 3600 ? `${Math.floor(group.totalDuration / 3600)}h ` : '';
+      const totalMins = `${Math.round((group.totalDuration % 3600) / 60)}m`;
+      const totalText = `Total: ${totalHours}${totalMins}`;
+      
+      section.innerHTML = `
+        <div class="history-month-header">
+          <div class="month-title">
+            <span class="toggle-arrow"><i class="fa-solid fa-chevron-down"></i></span>
+            <span class="month-name">${group.label}</span>
+          </div>
+          <div class="month-total">${totalText}</div>
         </div>
-        <div class="log-actions">
-          <button class="btn-delete-log" data-id="${session.id}"><i class="fa-regular fa-trash-can"></i></button>
-        </div>
+        <div class="history-month-body"></div>
       `;
       
-      // Delete Log event handler
-      item.querySelector('.btn-delete-log').addEventListener('click', (e) => {
-        const id = e.currentTarget.getAttribute('data-id');
-        if (confirm("Are you sure you want to delete this session? This will adjust your total chanting progress.")) {
-          deleteChantSession(id);
-        }
+      const header = section.querySelector('.history-month-header');
+      header.addEventListener('click', () => {
+        section.classList.toggle('collapsed');
       });
       
-      logsListContainer.appendChild(item);
+      const body = section.querySelector('.history-month-body');
+      
+      group.sessions.forEach(session => {
+        const item = document.createElement('div');
+        item.className = 'log-item';
+        
+        const sessionDate = new Date(session.date);
+        const dateString = sessionDate.toLocaleDateString(undefined, { 
+          weekday: 'short', 
+          month: 'short', 
+          day: 'numeric', 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        });
+        
+        const durationMins = (session.durationSeconds / 60).toFixed(0);
+        const hoursText = session.durationSeconds >= 3600 ? `${Math.floor(session.durationSeconds / 3600)}h ` : '';
+        const minsText = `${durationMins % 60}m`;
+        const durationText = `${hoursText}${minsText}`;
+        
+        let methodIcon = '<i class="fa-regular fa-clock" title="Stopwatch"></i>';
+        if (session.method === 'countdown') {
+          methodIcon = '<i class="fa-solid fa-hourglass-half" title="Focus Timer"></i>';
+        } else if (session.method === 'manual') {
+          methodIcon = '<i class="fa-solid fa-pen-to-square" title="Manual Log"></i>';
+        }
+        
+        item.innerHTML = `
+          <div class="log-info">
+            <div class="log-time-amount">${methodIcon} ${durationText} chanted</div>
+            <div class="log-date-label">${dateString}</div>
+          </div>
+          <div class="log-actions">
+            <button class="btn-delete-log" data-id="${session.id}"><i class="fa-regular fa-trash-can"></i></button>
+          </div>
+        `;
+        
+        // Delete Log event handler
+        item.querySelector('.btn-delete-log').addEventListener('click', (e) => {
+          const id = e.currentTarget.getAttribute('data-id');
+          if (confirm("Are you sure you want to delete this session? This will adjust your total chanting progress.")) {
+            deleteChantSession(id);
+          }
+        });
+        
+        body.appendChild(item);
+      });
+      
+      logsListContainer.appendChild(section);
     });
   }
 
@@ -4062,16 +4144,82 @@ document.addEventListener('DOMContentLoaded', () => {
     return false;
   }
 
+  function rebuildRevivalDates() {
+    if (!state.sessions || state.sessions.length === 0) {
+      state.revivalDates = [];
+      return;
+    }
+
+    // 1. Group sessions by date (YYYY-MM-DD)
+    const dateMap = {};
+    state.sessions.forEach(s => {
+      if (!s.date) return;
+      const dateKey = s.date.split('T')[0];
+      dateMap[dateKey] = (dateMap[dateKey] || 0) + s.durationSeconds;
+    });
+
+    // 2. Find all dates with at least 15 minutes (900 seconds)
+    const validDates = Object.keys(dateMap).filter(dateKey => dateMap[dateKey] >= 900);
+    validDates.sort(); // Sort chronologically
+
+    // 3. Check if there are 3 consecutive days in the history
+    const consecutiveFound = checkThreeConsecutiveDays(validDates);
+
+    if (consecutiveFound) {
+      if (state.isDead) {
+        state.isDead = false;
+        state.health = 100;
+        state.revivalDates = [];
+        state.lastNotifiedThreshold = 0; // Reset notification threshold
+        
+        // Reset lastChantedDate to the most recent session's date, or current time if none
+        if (state.sessions && state.sessions.length > 0) {
+          const sorted = [...state.sessions].sort((a, b) => new Date(b.date) - new Date(a.date));
+          state.lastChantedDate = sorted[0].date;
+        } else {
+          state.lastChantedDate = new Date().toISOString();
+        }
+        
+        localStorage.setItem('daimoku_grow_state', JSON.stringify(state));
+        const user = MockFirebase.auth.getCurrentUser();
+        if (user) {
+          MockFirebase.db.saveUserState(user.email, state);
+        }
+        console.log("Self-healing: Plant revived based on history logs.");
+      }
+      return;
+    }
+
+    // 4. If the plant is dead, populate revivalDates with the most recent consecutive/active dates
+    if (state.isDead) {
+      const recentDates = [];
+      const nowMs = Date.now();
+      const fifteenDaysAgoStr = new Date(nowMs - 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      
+      validDates.forEach(d => {
+        if (d >= fifteenDaysAgoStr && !recentDates.includes(d)) {
+          recentDates.push(d);
+        }
+      });
+      state.revivalDates = recentDates;
+    } else {
+      state.revivalDates = [];
+    }
+  }
+
   function updateRevivalProgress(sessionDateStr, durationSeconds) {
     if (!state.isDead) return;
     if (!state.revivalDates) state.revivalDates = [];
     
-    const dateSessions = state.sessions.filter(s => s.date.split('T')[0] === sessionDateStr);
+    // Normalize date string to ignore any time component
+    const normalizedDateStr = sessionDateStr.split('T')[0];
+    
+    const dateSessions = state.sessions.filter(s => s.date.split('T')[0] === normalizedDateStr);
     const totalSecsForDate = dateSessions.reduce((acc, s) => acc + s.durationSeconds, 0);
     
     if (totalSecsForDate >= 900) { // 900 seconds = 15 minutes
-      if (!state.revivalDates.includes(sessionDateStr)) {
-        state.revivalDates.push(sessionDateStr);
+      if (!state.revivalDates.includes(normalizedDateStr)) {
+        state.revivalDates.push(normalizedDateStr);
         state.revivalDates.sort();
       }
     }
@@ -4080,6 +4228,21 @@ document.addEventListener('DOMContentLoaded', () => {
       state.isDead = false;
       state.health = 100;
       state.revivalDates = [];
+      state.lastNotifiedThreshold = 0; // Reset notification threshold
+      
+      // Reset lastChantedDate to the most recent session's date, or current time if none
+      if (state.sessions && state.sessions.length > 0) {
+        const sorted = [...state.sessions].sort((a, b) => new Date(b.date) - new Date(a.date));
+        state.lastChantedDate = sorted[0].date;
+      } else {
+        state.lastChantedDate = new Date().toISOString();
+      }
+      
+      localStorage.setItem('daimoku_grow_state', JSON.stringify(state));
+      const user = MockFirebase.auth.getCurrentUser();
+      if (user) {
+        MockFirebase.db.saveUserState(user.email, state);
+      }
       
       showEncouragementPopUp("Wonderful! Your plant has been successfully revived through 3 days of consecutive Daimoku! Keep the rhythm strong! 🪷🌸");
     }
