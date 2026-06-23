@@ -3388,9 +3388,14 @@ document.addEventListener('DOMContentLoaded', () => {
       
       htmlContent += `
         <div class="card campaign-view-card active-campaign-container" style="margin-bottom: 24px; padding: 20px; border: var(--border); border-radius: 16px; background: var(--bg-card);">
-          <div class="campaign-title-row" style="display:flex; align-items:center; gap:10px; margin-bottom: 16px; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 10px;">
-            <span class="campaign-header-icon" style="font-size:20px; color:var(--primary);"><i class="fa-solid ${campaign.icon || 'fa-bullhorn'}"></i></span>
-            <h3 style="margin:0; font-family:var(--font-serif); font-size:20px; color:var(--text-main);">${campaign.name}</h3>
+          <div class="campaign-title-row" style="display:flex; flex-direction:column; gap:4px; margin-bottom: 16px; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 10px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span class="campaign-header-icon" style="font-size:20px; color:var(--primary);"><i class="fa-solid ${campaign.icon || 'fa-bullhorn'}"></i></span>
+              <h3 style="margin:0; font-family:var(--font-serif); font-size:20px; color:var(--text-main);">${campaign.name}</h3>
+            </div>
+            <div class="campaign-period-badge" style="font-size: 11.5px; color: var(--text-muted); font-weight: 500; margin-left: 30px; margin-top: 2px;">
+              <i class="fa-regular fa-calendar-days" style="margin-right: 4px;"></i> <strong>Period:</strong> ${periodStr}
+            </div>
           </div>
           
           <!-- Grand Glass Bucket Visual Card -->
@@ -3431,9 +3436,8 @@ document.addEventListener('DOMContentLoaded', () => {
             <canvas id="fireworks-canvas-${selectedCampaignId}" class="fireworks-canvas"></canvas>
           </div>
           
-          <div class="campaign-dates-desc">
-            <strong>Campaign Period:</strong> ${periodStr}<br>
-            <span style="font-size:12px; color:var(--text-main); font-weight:600;">Total Chanted: ${globalHours.toFixed(1)} / ${targetHours} hours</span>
+          <div class="campaign-dates-desc" style="text-align: center; margin-top: 14px; margin-bottom: 10px;">
+            <span style="font-size:13.5px; color:var(--text-main); font-weight:700;"><i class="fa-solid fa-calculator" style="color:var(--primary); margin-right:4px;"></i> Total Chanted: ${globalHours.toFixed(1)} / ${targetHours} hours</span>
           </div>
 
           <!-- SGI Blocks Contribution Leaderboard -->
@@ -3459,13 +3463,21 @@ document.addEventListener('DOMContentLoaded', () => {
               }).join('')}
             </div>
             
-            <!-- Personal Campaign Contribution Info Box -->
-            <div class="personal-campaign-contribution">
-              <span class="personal-contrib-label">
-                <i class="fa-solid fa-hands-praying" style="color:var(--primary);"></i>
-                Your campaign contribution:
-              </span>
-              <span class="personal-contrib-value">${personalHours.toFixed(1)} hrs</span>
+            <!-- Personal Campaign Contribution Info Box with Fills left to right -->
+            <div class="personal-campaign-contribution" style="margin-top: 16px; padding: 12px 14px; border: 1px dashed rgba(var(--primary-rgb), 0.25); border-radius: 12px; background: rgba(var(--primary-rgb), 0.02); display: flex; flex-direction: column; gap: 6px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; font-size:13px; font-weight:600; color:var(--text-main);">
+                <span class="personal-contrib-label" style="display:flex; align-items:center; gap:6px;">
+                  <i class="fa-solid fa-hands-praying" style="color:var(--primary);"></i>
+                  <strong>Your Contribution</strong>
+                </span>
+                <span class="personal-contrib-value" style="color:var(--primary); font-weight:700;">${personalHours.toFixed(1)} hrs</span>
+              </div>
+              <div class="block-progress-track">
+                <div class="block-progress-fill" style="width: ${Math.min(100, Math.round((personalHours / Math.max(blockSummaries.find(b => b.isOwn).hours, 1)) * 100))}%;"></div>
+              </div>
+              <div style="font-size: 10px; color: var(--text-muted); text-align: right; font-weight: 500;">
+                (${Math.round((personalHours / Math.max(blockSummaries.find(b => b.isOwn).hours, 0.001)) * 100)}% of your block's total)
+              </div>
             </div>
           </div>
         </div>
