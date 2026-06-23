@@ -80,92 +80,92 @@
           <button class="notification-close" id="notification-banner-close"><i class="fa-solid fa-xmark"></i></button>
         </div>
 
-        <div class="dashboard-grid">
-          
-          <!-- Plant Visualization Section with Inline Stats & Merged Progress -->
-          <div class="card plant-card">
-            <div class="plant-status-overlay">
-              <span id="plant-stage-badge" class="badge">Seed</span>
-              <div class="stars-level-badge">
-                <div id="stars-progress-container" class="stars-row-mini"></div>
-                <span id="stars-level-text" class="stars-level-text">Level 1: Seeker</span>
+          <div class="dashboard-grid">
+            
+            <!-- Plant Visualization Section with Inline Stats & Merged Progress -->
+            <div class="card plant-card">
+              <div class="plant-status-overlay">
+                <span id="plant-stage-badge" class="badge">Seed</span>
+                <div class="stars-level-badge">
+                  <div id="stars-progress-container" class="stars-row-mini"></div>
+                  <span id="stars-level-text" class="stars-level-text">Level 1: Seeker</span>
+                </div>
+                <span id="plant-mood-badge" class="badge mood-badge">Happy</span>
               </div>
-              <span id="plant-mood-badge" class="badge mood-badge">Happy</span>
-            </div>
 
-            <!-- Dashboard Mini Timer (Hidden by default, shown when chanting is active) -->
-            <div id="dashboard-mini-timer" class="dashboard-mini-timer hidden">
-              <i class="fa-solid fa-clock-rotate-left"></i> <span id="dashboard-mini-timer-time">00:00:00</span>
-            </div>
+              <!-- Dashboard Mini Timer (Hidden by default, shown when chanting is active) -->
+              <div id="dashboard-mini-timer" class="dashboard-mini-timer hidden">
+                <i class="fa-solid fa-clock-rotate-left"></i> <span id="dashboard-mini-timer-time">00:00:00</span>
+              </div>
 
-            <div class="canvas-container">
-              <canvas id="plant-canvas" width="400" height="420"></canvas>
-            </div>
+              <div class="canvas-container">
+                <canvas id="plant-canvas" width="400" height="420"></canvas>
+              </div>
 
-            <!-- Horizontal Stats Row (Unobstructed & Clean) -->
-            <div class="stats-horizontal-row">
-              <div class="stat-bubble-inline clickable" id="stat-box-hours-logged" title="View Chanting History">
-                <span class="bubble-number" id="stat-total-hours">0.0</span>
-                <span class="bubble-label">Chanted</span>
-              </div>
-              <div class="stat-bubble-inline" id="stat-box-journey-percent">
-                <span class="bubble-number" id="journey-percent-value">0%</span>
-                <span class="bubble-label">Journey</span>
-              </div>
-              <div class="stat-bubble-inline" id="stat-box-target">
-                <span class="bubble-number" id="stat-target-hours">333</span>
-                <span class="bubble-label">Target</span>
-              </div>
-              <div class="stat-bubble-inline" id="stat-box-vitality">
-                <span class="bubble-number" id="plant-health-percent">100%</span>
-                <span class="bubble-label">Vitality</span>
-                <div class="progress-bar-track mini" style="width: 32px; height: 3px; margin-top: 3px; margin-left: auto; margin-right: auto;">
-                  <div id="plant-health-fill" class="progress-bar-fill" style="width: 100%;"></div>
+              <!-- Horizontal Stats Row (Unobstructed & Clean) -->
+              <div class="stats-horizontal-row">
+                <div class="stat-bubble-inline clickable" id="stat-box-hours-logged" title="View Chanting History">
+                  <span class="bubble-number" id="stat-total-hours">0.0</span>
+                  <span class="bubble-label">Chanted</span>
+                </div>
+                <div class="stat-bubble-inline" id="stat-box-journey-percent">
+                  <span class="bubble-number" id="journey-percent-value">0%</span>
+                  <span class="bubble-label">Journey</span>
+                </div>
+                <div class="stat-bubble-inline" id="stat-box-target">
+                  <span class="bubble-number" id="stat-target-hours">333</span>
+                  <span class="bubble-label">Target</span>
+                </div>
+                <div class="stat-bubble-inline" id="stat-box-vitality">
+                  <span class="bubble-number" id="plant-health-percent">100%</span>
+                  <span class="bubble-label">Vitality</span>
+                  <div class="progress-bar-track mini" style="width: 32px; height: 3px; margin-top: 3px; margin-left: auto; margin-right: auto;">
+                    <div id="plant-health-fill" class="progress-bar-fill" style="width: 100%;"></div>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <!-- Merged Bottom Progress Bar Section -->
-            <div class="linear-progress-section bottom-progress">
-              <div class="progress-label">
-                <span id="progress-percent-label">0% of Journey</span>
-                <span id="progress-remaining-label">333h remaining</span>
-              </div>
-              <div class="progress-bar-track large">
-                <div id="journey-progress-fill" class="progress-bar-fill journey-fill" style="width: 0%;"></div>
-              </div>
-            </div>
-
-            <!-- Revival Progress (Hidden by default, shown when plant is dead) -->
-            <div id="revival-progress-container" class="revival-box hidden">
-              <h3><i class="fa-solid fa-heart-pulse pulse-icon"></i> Reviving Plant</h3>
-              <p>Your plant has withered. Chant at least 15 minutes a day for 3 consecutive days to revive it.</p>
-              <div class="revival-progress-bar-section">
+              <!-- Merged Bottom Progress Bar Section -->
+              <div class="linear-progress-section bottom-progress">
                 <div class="progress-label">
-                  <span id="revival-time-label">0 / 3 days completed</span>
-                  <span id="revival-percent-label">0%</span>
+                  <span id="progress-percent-label">0% of Journey</span>
+                  <span id="progress-remaining-label">333h remaining</span>
                 </div>
-                <div class="progress-bar-track warning">
-                  <div id="revival-progress-fill" class="progress-bar-fill revival-fill" style="width: 0%;"></div>
+                <div class="progress-bar-track large">
+                  <div id="journey-progress-fill" class="progress-bar-fill journey-fill" style="width: 0%;"></div>
+                </div>
+              </div>
+
+              <!-- Revival Progress (Hidden by default, shown when plant is dead) -->
+              <div id="revival-progress-container" class="revival-box hidden">
+                <h3><i class="fa-solid fa-heart-pulse pulse-icon"></i> Reviving Plant</h3>
+                <p>Your plant has withered. Chant at least 15 minutes a day for 3 consecutive days to revive it.</p>
+                <div class="revival-progress-bar-section">
+                  <div class="progress-label">
+                    <span id="revival-time-label">0 / 3 days completed</span>
+                    <span id="revival-percent-label">0%</span>
+                  </div>
+                  <div class="progress-bar-track warning">
+                    <div id="revival-progress-fill" class="progress-bar-fill revival-fill" style="width: 0%;"></div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <!-- Daily Guidance by Daisaku Ikeda Card -->
-          <div class="card guidance-card">
-            <div class="guidance-header">
-              <div style="display:flex; align-items:center; gap:8px;">
-                <span class="guidance-icon"><i class="fa-solid fa-book-open"></i></span>
-                <h2>Daily Guidance</h2>
+            <!-- Daily Guidance by Daisaku Ikeda Card -->
+            <div class="card guidance-card">
+              <div class="guidance-header">
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span class="guidance-icon"><i class="fa-solid fa-book-open"></i></span>
+                  <h2>Daily Guidance</h2>
+                </div>
+                <button id="btn-share-guidance" class="btn-share" title="Share Guidance"><i class="fa-solid fa-share-nodes"></i> Share</button>
               </div>
-              <button id="btn-share-guidance" class="btn-share" title="Share Guidance"><i class="fa-solid fa-share-nodes"></i> Share</button>
+              <p id="guidance-text">"Even one daimoku can pervade the entire universe. Truly heartfelt and determined daimoku, therefore, has the power to move everything."</p>
+              <span id="guidance-author">— Daisaku Ikeda</span>
             </div>
-            <p id="guidance-text">"Even one daimoku can pervade the entire universe. Truly heartfelt and determined daimoku, therefore, has the power to move everything."</p>
-            <span id="guidance-author">— Daisaku Ikeda</span>
-          </div>
 
-        </div>
+          </div>
       </section>
 
       <!-- VIEW 2: CHANT (TIMER) -->
@@ -605,21 +605,13 @@
 
         </div>
       </section>
-
       <!-- VIEW 5: CAMPAIGN -->
       <section id="view-campaign" class="content-view">
-        <div class="campaign-grid">
-          <div class="card campaign-header-card">
-            <h2>Block Campaigns</h2>
-            <p class="section-desc">Chant together with your block members to fill the collective bucket for each campaign.</p>
-          </div>
-          
-          <div class="campaigns-list" id="campaigns-list-container">
-            <!-- Dynamically populated campaign cards -->
-          </div>
+        <div class="campaign-grid" id="campaign-view-details">
+          <!-- Dynamically populated contents: campaigns list, each in its own card -->
         </div>
+        <select id="campaign-view-select" style="display: none;"></select>
       </section>
-
       <!-- VIEW 6: CALENDAR -->
       <section id="view-calendar" class="content-view">
         <div class="calendar-grid">

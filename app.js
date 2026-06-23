@@ -569,6 +569,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (logoutBtn) {
       logoutBtn.classList.remove('hidden');
     }
+    updateCampaignTabVisibility();
   }
 
   // --- PWA Native-like Notification Scheduling & Background Synchronization ---
@@ -936,6 +937,13 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         }
         
+        // Render SGI Campaign if entering campaign view
+        if (viewId === 'view-campaign') {
+          renderCampaignDashboard();
+        } else {
+          stopFireworks();
+        }
+        
         setTimeout(() => {
           if (viewId === 'view-history') {
             renderHistoryLogs();
@@ -954,9 +962,9 @@ document.addEventListener('DOMContentLoaded', () => {
           if (viewId === 'view-prayers') {
             renderTargetsList();
           }
-
+          
           if (viewId === 'view-campaign') {
-            renderCampaignsList();
+            renderCampaignDashboard();
           }
         }, 50);
       });
@@ -1231,6 +1239,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // History analytics
     updateHistoryAnalytics();
+
+    // Update campaign tab visibility dynamically
+    updateCampaignTabVisibility();
+
+    // If SGI Campaign view is currently active, refresh it
+    const viewCampaign = document.getElementById('view-campaign');
+    if (viewCampaign && viewCampaign.classList.contains('active')) {
+      renderCampaignDashboard();
+    }
   }
 
   // --- In-App Notifications Drawer with Decay Milestones ---
@@ -3078,29 +3095,208 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
 
-  // --- Campaigns Tab Renderer ---
-  function renderCampaignsList() {
-    const container = document.getElementById('campaigns-list-container');
-    if (!container) return;
+  // --- Fireworks Particle Engine ---
+  let fireworksInterval = null;
+  let fireworksCanvas = null;
+  let fireworksCtx = null;
+  let fireworksParticles = [];
+  let fireworksRockets = [];
+  
+  function initFireworks(canvas) {
+    fireworksCanvas = canvas;
+    if (!fireworksCanvas) return;
+    fireworksCtx = fireworksCanvas.getContext('2d');
+    fireworksParticles = [];
+    fireworksRockets = [];
     
-    container.innerHTML = '';
+    // Set resolution to match physical display dimensions
+    const rect = fireworksCanvas.getBoundingClientRect();
+    fireworksCanvas.width = rect.width || 320;
+    fireworksCanvas.height = rect.height || 260;
+    
+    if (fireworksInterval) clearInterval(fireworksInterval);
+    fireworksInterval = setInterval(updateAndDrawFireworks, 1000 / 60);
+  }
+  
+  function stopFireworks() {
+    if (fireworksInterval) {
+      clearInterval(fireworksInterval);
+      fireworksInterval = null;
+    }
+    if (fireworksCtx && fireworksCanvas) {
+      fireworksCtx.clearRect(0, 0, fireworksCanvas.width, fireworksCanvas.height);
+    }
+    fireworksCanvas = null;
+    fireworksCtx = null;
+  }
+  
+  function spawnFireworkRocket() {
+    if (!fireworksCanvas) return;
+    const w = fireworksCanvas.width;
+    const h = fireworksCanvas.height;
+    
+    // Start at bottom, fly up to random height in top portion
+    const rocket = {
+      x: w * 0.2 + Math.random() * (w * 0.6),
+      y: h,
+      tx: w * 0.15 + Math.random() * (w * 0.7),
+      ty: h * 0.15 + Math.random() * (h * 0.45),
+      speed: 3 + Math.random() * 3,
+      angle: 0,
+      color: `hsl(${Math.random() * 360}, 100%, 65%)`
+    };
+    
+    rocket.angle = Math.atan2(rocket.ty - rocket.y, rocket.tx - rocket.x);
+    fireworksRockets.push(rocket);
+  }
+  
+  function explodeFirework(x, y, color) {
+    const particleCount = 45 + Math.floor(Math.random() * 25);
+    for (let i = 0; i < particleCount; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 1 + Math.random() * 3.5;
+      fireworksParticles.push({
+        x: x,
+        y: y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        color: color,
+        alpha: 1,
+        decay: 0.015 + Math.random() * 0.015,
+        gravity: 0.04
+      });
+    }
+  }
+  
+  function updateAndDrawFireworks() {
+    if (!fireworksCanvas || !fireworksCtx) return;
+    
+    const w = fireworksCanvas.width;
+    const h = fireworksCanvas.height;
+    
+    // Smooth trail clear
+    fireworksCtx.fillStyle = 'rgba(0, 0, 0, 0.12)';
+    fireworksCtx.globalCompositeOperation = 'copy';
+    fireworksCtx.fillRect(0, 0, w, h);
+    fireworksCtx.globalCompositeOperation = 'source-over';
+    
+    // Launch logic
+    if (Math.random() < 0.035 && fireworksRockets.length < 4) {
+      spawnFireworkRocket();
+    }
+    
+    // Rocket updates
+    for (let i = fireworksRockets.length - 1; i >= 0; i--) {
+      const r = fireworksRockets[i];
+      const vx = Math.cos(r.angle) * r.speed;
+      const vy = Math.sin(r.angle) * r.speed;
+      
+      r.x += vx;
+      r.y += vy;
+      
+      fireworksCtx.beginPath();
+      fireworksCtx.arc(r.x, r.y, 2.5, 0, Math.PI * 2);
+      fireworksCtx.fillStyle = r.color;
+      fireworksCtx.fill();
+      
+      const dx = r.tx - r.x;
+      const dy = r.ty - r.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      
+      if (dist < 10 || r.y < r.ty || r.y < 0) {
+        explodeFirework(r.x, r.y, r.color);
+        fireworksRockets.splice(i, 1);
+      }
+    }
+    
+    // Particle updates
+    for (let i = fireworksParticles.length - 1; i >= 0; i--) {
+      const p = fireworksParticles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += p.gravity;
+      p.alpha -= p.decay;
+      
+      if (p.alpha <= 0) {
+        fireworksParticles.splice(i, 1);
+        continue;
+      }
+      
+      fireworksCtx.save();
+      fireworksCtx.globalAlpha = p.alpha;
+      fireworksCtx.beginPath();
+      fireworksCtx.arc(p.x, p.y, 1.8, 0, Math.PI * 2);
+      fireworksCtx.fillStyle = p.color;
+      fireworksCtx.fill();
+      fireworksCtx.restore();
+    }
+  }
+
+  // --- Campaign Helpers for Navigation Tab Visibility ---
+  function isCampaignActiveToday(campaignId) {
+    const activeList = MockFirebase.db.getActiveCampaigns();
+    if (!activeList.includes(campaignId)) return false;
+    
+    const campaignDates = MockFirebase.db.getCampaignDates();
+    const dates = campaignDates[campaignId];
+    if (dates && dates.start && dates.end) {
+      const now = new Date();
+      const startT = new Date(dates.start + 'T00:00:00').getTime();
+      const endT = new Date(dates.end + 'T23:59:59').getTime();
+      const todayTime = now.getTime();
+      return todayTime >= startT && todayTime <= endT;
+    }
+    return true;
+  }
+  
+  function hasActiveCampaignToday() {
+    const allCampaignIds = ['youth_division', 'may_3rd', 'mens_division', 'womens_division', 'july_3rd', 'november_18th'];
+    return allCampaignIds.some(id => isCampaignActiveToday(id));
+  }
+  
+  function updateCampaignTabVisibility() {
+    const navCampaign = document.getElementById('nav-campaign');
+    if (!navCampaign) return;
     
     const currentUser = MockFirebase.auth.getCurrentUser();
     if (!currentUser) {
-      container.innerHTML = `
+      navCampaign.classList.add('hidden');
+      return;
+    }
+    
+    const hasActive = hasActiveCampaignToday();
+    if (hasActive) {
+      navCampaign.classList.remove('hidden');
+    } else {
+      navCampaign.classList.add('hidden');
+      
+      // Route user away if they are currently on the hidden campaign view
+      const viewCampaign = document.getElementById('view-campaign');
+      if (viewCampaign && viewCampaign.classList.contains('active')) {
+        const navDashboard = document.getElementById('nav-dashboard');
+        if (navDashboard) {
+          navDashboard.click();
+        }
+      }
+    }
+  }
+
+  // --- Campaign View Dashboard Renderer ---
+  function renderCampaignDashboard() {
+    const detailsContainer = document.getElementById('campaign-view-details');
+    if (!detailsContainer) return;
+    
+    const currentUser = MockFirebase.auth.getCurrentUser();
+    if (!currentUser) {
+      detailsContainer.innerHTML = `
         <div class="empty-state">
           <i class="fa-solid fa-lock"></i>
           <p>Please log in to view and participate in campaigns.</p>
         </div>
       `;
+      stopFireworks();
       return;
     }
-    
-    const block = currentUser.block;
-    const email = currentUser.email.toLowerCase();
-    
-    const targets = MockFirebase.db.getCampaignTargets();
-    const contributions = MockFirebase.db.getCampaignContributions();
     
     const activeList = MockFirebase.db.getActiveCampaigns();
     const campaignDates = MockFirebase.db.getCampaignDates();
@@ -3114,180 +3310,178 @@ document.addEventListener('DOMContentLoaded', () => {
       { id: 'november_18th', name: "November 18th Campaign", icon: "fa-tree" }
     ];
     
-    const campaigns = defaultCampaigns.map(c => {
-      const dates = campaignDates[c.id] || { start: '', end: '' };
+    const campaigns = defaultCampaigns.filter(c => isCampaignActiveToday(c.id));
+    
+    if (campaigns.length === 0) {
+      detailsContainer.innerHTML = `
+        <div class="empty-state" style="padding: 40px 20px; text-align: center;">
+          <i class="fa-solid fa-bullhorn" style="font-size: 36px; color: var(--text-muted); margin-bottom: 12px; opacity: 0.5;"></i>
+          <p style="font-size: 13.5px; color: var(--text-muted); font-weight: 600;">No Active Campaigns</p>
+          <p style="font-size: 11.5px; color: var(--text-muted); margin-top: 4px; max-width: 280px; margin-left: auto; margin-right: auto; line-height: 1.4;">Active campaigns will appear here once activated by a block administrator in Settings.</p>
+        </div>
+      `;
+      stopFireworks();
+      return;
+    }
+    
+    const targets = MockFirebase.db.getCampaignTargets();
+    const contributions = MockFirebase.db.getCampaignContributions();
+    
+    let htmlContent = '';
+    let completedCampaignId = null;
+    
+    campaigns.forEach(campaign => {
+      const selectedCampaignId = campaign.id;
+      const campaignContribs = contributions.filter(item => item.campaignId === selectedCampaignId);
+      
+      const globalSeconds = campaignContribs.reduce((sum, item) => sum + item.durationSeconds, 0);
+      const globalHours = globalSeconds / 3600;
+      const targetHours = targets[selectedCampaignId] || 100;
+      const progressPercent = Math.min(100, Math.round((globalHours / targetHours) * 100));
+      
+      const p1Mark = (targetHours / 4).toFixed(0);
+      const p2Mark = (targetHours / 2).toFixed(0);
+      const p3Mark = (3 * targetHours / 4).toFixed(0);
+      const p4Mark = targetHours.toFixed(0);
+      
+      const dates = campaignDates[selectedCampaignId] || { start: '', end: '' };
       let periodStr = "No date set";
       if (dates.start && dates.end) {
         const startD = new Date(dates.start + 'T00:00:00');
         const endD = new Date(dates.end + 'T00:00:00');
         periodStr = `${startD.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} - ${endD.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
       }
-      return {
-        ...c,
-        start: dates.start,
-        end: dates.end,
-        period: periodStr
-      };
-    }).filter(c => activeList.includes(c.id));
-    
-    if (campaigns.length === 0) {
-      container.innerHTML = `
-        <div class="empty-state" style="padding: 40px 20px; text-align: center;">
-          <i class="fa-solid fa-bullhorn" style="font-size: 36px; color: var(--text-muted); margin-bottom: 12px; opacity: 0.5;"></i>
-          <p style="font-size: 13px; color: var(--text-muted); font-weight: 600;">No Active Campaigns</p>
-          <p style="font-size: 11px; color: var(--text-muted); margin-top: 4px; max-width: 280px; margin-left: auto; margin-right: auto; line-height: 1.4;">Active campaigns will appear here once activated by a block administrator.</p>
-        </div>
-      `;
-      return;
-    }
-    
-    campaigns.forEach(c => {
-      // 1. Calculate Global Progress
-      const campaignContribs = contributions.filter(item => item.campaignId === c.id);
-      const globalSeconds = campaignContribs.reduce((sum, item) => sum + item.durationSeconds, 0);
-      const globalHours = globalSeconds / 3600;
       
-      const targetHours = targets[c.id] || 100;
-      const progressPercent = Math.min(100, Math.round((globalHours / targetHours) * 100));
-      
-      // 2. Count active blocks and members
-      const activeBlocks = [...new Set(campaignContribs.map(item => item.block))];
-      const activeBlocksCount = activeBlocks.length;
-      
-      const activeUsers = [...new Set(campaignContribs.map(item => item.userEmail))];
-      const activeUsersCount = activeUsers.length;
-
-      // 3. Calculate Block Progress (user's block specific)
-      const blockContribs = campaignContribs.filter(item => item.block === block);
-      const blockSeconds = blockContribs.reduce((sum, item) => sum + item.durationSeconds, 0);
-      const blockHours = blockSeconds / 3600;
-      
-      // 4. Calculate Personal Contribution
-      const personalSeconds = campaignContribs.filter(item => item.userEmail === email).reduce((sum, item) => sum + item.durationSeconds, 0);
-      const personalHours = personalSeconds / 3600;
-      
-      // 5. Get Contributor Leaderboard (user's block specific)
-      const contributorsMap = {};
-      blockContribs.forEach(item => {
-        const name = item.username || item.userEmail;
-        if (!contributorsMap[name]) {
-          contributorsMap[name] = 0;
-        }
-        contributorsMap[name] += item.durationSeconds;
+      const blocksList = ['Wisdom', 'Compassion', 'Courage', 'Faith', 'Harmony'];
+      const blockTotals = {};
+      blocksList.forEach(b => {
+        blockTotals[b] = 0;
       });
       
-      const contributorsList = Object.keys(contributorsMap).map(name => ({
-        username: name,
-        hours: contributorsMap[name] / 3600,
-        isMe: name === currentUser.username
-      })).sort((a, b) => b.hours - a.hours);
-      
-      // Determine campaign status
-      const now = new Date();
-      const startDate = new Date(c.start + 'T00:00:00');
-      const endDate = new Date(c.end + 'T23:59:59');
-      let status = "Upcoming";
-      let statusClass = "";
-      
-      if (now >= startDate && now <= endDate) {
-        status = "Active";
-        statusClass = "active-campaign";
-      } else if (now > endDate) {
-        status = "Ended";
-      }
-      
-      const card = document.createElement('div');
-      card.className = `card campaign-card ${statusClass}`;
-      
-      let leaderboardHtml = "";
-      if (contributorsList.length > 0) {
-        leaderboardHtml = `
-          <div class="campaign-leaderboard-section" style="margin-top:10px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.08);">
-            <button class="btn-toggle-leaderboard" style="background:transparent; border:none; color:var(--text-muted); font-size:11px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:4px; padding:0; outline:none;">
-              <span><i class="fa-solid fa-list-ol"></i> Block Members Progress (${contributorsList.length})</span>
-              <i class="fa-solid fa-chevron-down" style="font-size:10px; transition: transform 0.2s;"></i>
-            </button>
-            <div class="leaderboard-content" style="margin-top:8px; display:none; flex-direction:column; gap:6px;">
-              ${contributorsList.map((contrib, idx) => `
-                <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; padding:6px 10px; background:rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius:8px;">
-                  <span style="display:flex; align-items:center; gap:6px;">
-                    <span style="font-size:10px; color:var(--text-muted); font-weight:700;">#${idx + 1}</span>
-                    <span style="${contrib.isMe ? 'font-weight:700; color:var(--primary);' : ''}">${contrib.username} ${contrib.isMe ? '(You)' : ''}</span>
-                  </span>
-                  <span style="font-weight:600;">${contrib.hours.toFixed(1)} hrs</span>
-                </div>
-              `).join('')}
-            </div>
-          </div>
-        `;
-      }
-      
-      card.innerHTML = `
-        <div class="campaign-card-header">
-          <div>
-            <h3><i class="fa-solid ${c.icon}"></i> ${c.name}</h3>
-            <span class="campaign-period-label">${c.period}</span>
-          </div>
-          <span class="campaign-badge">${status}</span>
-        </div>
-        
-        <div class="campaign-card-content" style="display:flex; gap:16px; align-items:center; margin-top:12px;">
-          <div style="flex:1; display:flex; flex-direction:column; gap:6px;">
-            <div class="campaign-stats-row" style="display:flex; justify-content:space-between; font-size:12px; font-weight:600; color:var(--text-main); margin-bottom: 2px;">
-              <span>Global Combined Progress</span>
-              <span>${globalHours.toFixed(1)} / ${targetHours} hrs (${progressPercent}%)</span>
-            </div>
-            <div style="font-size:11px; color:var(--text-muted); margin-bottom: 6px; display:flex; align-items:center; gap:4px;">
-              <i class="fa-solid fa-users" style="color:var(--primary); font-size:10px;"></i>
-              <span>Active in <strong>${activeBlocksCount} Blocks</strong> | <strong>${activeUsersCount} Members</strong></span>
-            </div>
-            <div style="font-size:11px; color:var(--text-muted); display:flex; justify-content:space-between; padding:4px 0; border-top:1px dashed rgba(255,255,255,0.05);">
-              <span>${block} Block contribution:</span>
-              <strong>${blockHours.toFixed(1)} hrs</strong>
-            </div>
-            <div style="font-size:11px; color:var(--text-muted); display:flex; justify-content:space-between; padding:4px 0; border-top:1px dashed rgba(255,255,255,0.05);">
-              <span>Your personal contribution:</span>
-              <strong style="color:var(--primary);">${personalHours.toFixed(1)} hrs</strong>
-            </div>
-          </div>
-          <div class="campaign-bucket-container">
-            <div class="bucket-handle"></div>
-            <div class="glass-bucket">
-              <div class="water-liquid" style="height: ${progressPercent}%; ${progressPercent === 0 ? 'display: none;' : ''}">
-                <svg class="water-waves" xmlns="http://www.w3.org/2000/svg" viewBox="0 24 120 28" preserveAspectRatio="none">
-                  <g class="parallax">
-                    <use href="#gentle-wave" x="48" y="0" fill="var(--bucket-water-1)" />
-                    <use href="#gentle-wave" x="48" y="3" fill="var(--bucket-water-2)" />
-                    <use href="#gentle-wave" x="48" y="5" fill="var(--bucket-water-3)" />
-                  </g>
-                </svg>
-              </div>
-              <div class="bucket-progress-value">${progressPercent}%</div>
-            </div>
-          </div>
-        </div>
-        
-        ${leaderboardHtml}
-      `;
-      
-      // Wire up toggle leaderboard button
-      if (contributorsList.length > 0) {
-        const toggleBtn = card.querySelector('.btn-toggle-leaderboard');
-        const content = card.querySelector('.leaderboard-content');
-        if (toggleBtn && content) {
-          toggleBtn.addEventListener('click', () => {
-            const isHidden = content.style.display === 'none';
-            content.style.display = isHidden ? 'flex' : 'none';
-            const chevronIcon = toggleBtn.querySelector('i.fa-chevron-down, i.fa-chevron-up');
-            if (chevronIcon) {
-              chevronIcon.className = isHidden ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down';
-            }
-          });
+      campaignContribs.forEach(item => {
+        if (blockTotals[item.block] !== undefined) {
+          blockTotals[item.block] += item.durationSeconds;
         }
+      });
+      
+      const blockSummaries = blocksList.map(bName => {
+        const seconds = blockTotals[bName];
+        const hours = seconds / 3600;
+        return {
+          name: bName,
+          hours: hours,
+          seconds: seconds,
+          isOwn: bName.toLowerCase() === currentUser.block.toLowerCase()
+        };
+      }).sort((a, b) => b.hours - a.hours);
+      
+      const maxBlockHours = Math.max(...blockSummaries.map(b => b.hours), 1);
+      
+      const personalSeconds = campaignContribs
+        .filter(item => item.userEmail.toLowerCase() === currentUser.email.toLowerCase())
+        .reduce((sum, item) => sum + item.durationSeconds, 0);
+      const personalHours = personalSeconds / 3600;
+      
+      if (progressPercent >= 100 && !completedCampaignId) {
+        completedCampaignId = selectedCampaignId;
       }
       
-      container.appendChild(card);
+      htmlContent += `
+        <div class="card campaign-view-card active-campaign-container" style="margin-bottom: 24px; padding: 20px; border: var(--border); border-radius: 16px; background: var(--bg-card);">
+          <div class="campaign-title-row" style="display:flex; align-items:center; gap:10px; margin-bottom: 16px; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 10px;">
+            <span class="campaign-header-icon" style="font-size:20px; color:var(--primary);"><i class="fa-solid ${campaign.icon || 'fa-bullhorn'}"></i></span>
+            <h3 style="margin:0; font-family:var(--font-serif); font-size:20px; color:var(--text-main);">${campaign.name}</h3>
+          </div>
+          
+          <!-- Grand Glass Bucket Visual Card -->
+          <div class="grand-bucket-wrapper">
+            <div class="grand-bucket-container">
+              <div class="grand-bucket-handle"></div>
+              <div class="grand-glass-bucket">
+                <div class="grand-water-liquid" style="height: ${progressPercent}%; ${progressPercent === 0 ? 'display: none;' : ''}">
+                  <svg class="grand-water-waves" xmlns="http://www.w3.org/2000/svg" viewBox="0 24 120 28" preserveAspectRatio="none">
+                    <g class="parallax">
+                      <use href="#gentle-wave" x="48" y="0" fill="var(--bucket-water-1)" />
+                      <use href="#gentle-wave" x="48" y="3" fill="var(--bucket-water-2)" />
+                      <use href="#gentle-wave" x="48" y="5" fill="var(--bucket-water-3)" />
+                    </g>
+                  </svg>
+                </div>
+                <div class="grand-bucket-progress-value">${progressPercent}%</div>
+              </div>
+              
+              <!-- Dynamic Target Markers Overlaid -->
+              <div class="bucket-target-markers">
+                <div class="bucket-marker-line ${globalHours >= (targetHours * 0.25) ? 'filled' : ''}" style="bottom: 25%;">
+                  <span class="bucket-marker-label">${p1Mark}h (25%)</span>
+                </div>
+                <div class="bucket-marker-line ${globalHours >= (targetHours * 0.5) ? 'filled' : ''}" style="bottom: 50%;">
+                  <span class="bucket-marker-label">${p2Mark}h (50%)</span>
+                </div>
+                <div class="bucket-marker-line ${globalHours >= (targetHours * 0.75) ? 'filled' : ''}" style="bottom: 75%;">
+                  <span class="bucket-marker-label">${p3Mark}h (75%)</span>
+                </div>
+                <div class="bucket-marker-line ${globalHours >= targetHours ? 'filled' : ''}" style="bottom: 98%;">
+                  <span class="bucket-marker-label">${p4Mark}h (100%)</span>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Fireworks Celebration Overlay Canvas -->
+            <canvas id="fireworks-canvas-${selectedCampaignId}" class="fireworks-canvas"></canvas>
+          </div>
+          
+          <div class="campaign-dates-desc">
+            <strong>Campaign Period:</strong> ${periodStr}<br>
+            <span style="font-size:12px; color:var(--text-main); font-weight:600;">Total Chanted: ${globalHours.toFixed(1)} / ${targetHours} hours</span>
+          </div>
+
+          <!-- SGI Blocks Contribution Leaderboard -->
+          <div class="card campaign-leaderboard-card">
+            <h3 class="leaderboard-title"><i class="fa-solid fa-ranking-star"></i> SGI Blocks Leaderboard</h3>
+            <div style="display:flex; flex-direction:column; gap:10px;">
+              ${blockSummaries.map(b => {
+                const relPercent = Math.min(100, Math.round((b.hours / maxBlockHours) * 100));
+                return `
+                  <div class="block-row ${b.isOwn ? 'own-block' : ''}">
+                    <div class="block-meta">
+                      <span style="display:flex; align-items:center; gap:6px;">
+                        <strong>${b.name} Block</strong>
+                        ${b.isOwn ? '<span class="block-badge">Your Block</span>' : ''}
+                      </span>
+                      <span>${b.hours.toFixed(1)} hrs</span>
+                    </div>
+                    <div class="block-progress-track">
+                      <div class="block-progress-fill" style="width: ${relPercent}%;"></div>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+            
+            <!-- Personal Campaign Contribution Info Box -->
+            <div class="personal-campaign-contribution">
+              <span class="personal-contrib-label">
+                <i class="fa-solid fa-hands-praying" style="color:var(--primary);"></i>
+                Your campaign contribution:
+              </span>
+              <span class="personal-contrib-value">${personalHours.toFixed(1)} hrs</span>
+            </div>
+          </div>
+        </div>
+      `;
     });
+    
+    detailsContainer.innerHTML = htmlContent;
+    
+    if (completedCampaignId) {
+      const fCanvas = document.getElementById(`fireworks-canvas-${completedCampaignId}`);
+      if (fCanvas) {
+        initFireworks(fCanvas);
+      }
+    } else {
+      stopFireworks();
+    }
   }
 
 
@@ -3472,7 +3666,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const allTargets = MockFirebase.db.getCampaignTargets();
         allTargets[id] = val;
         MockFirebase.db.saveCampaignTargets(allTargets);
-        renderCampaignsList();
+        renderCampaignDashboard();
       });
       
       const startInput = div.querySelector('.campaign-start-input');
@@ -3485,7 +3679,7 @@ document.addEventListener('DOMContentLoaded', () => {
         allDates[id].start = val;
         MockFirebase.db.saveCampaignDates(allDates);
         
-        renderCampaignsList();
+        renderCampaignDashboard();
         const calView = document.getElementById('view-calendar');
         if (calView && calView.classList.contains('active')) {
           renderCalendar();
@@ -3503,7 +3697,7 @@ document.addEventListener('DOMContentLoaded', () => {
         allDates[id].end = val;
         MockFirebase.db.saveCampaignDates(allDates);
         
-        renderCampaignsList();
+        renderCampaignDashboard();
         const calView = document.getElementById('view-calendar');
         if (calView && calView.classList.contains('active')) {
           renderCalendar();
@@ -3526,8 +3720,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         MockFirebase.db.saveActiveCampaigns(activeList);
         
+        updateCampaignTabVisibility();
         renderCampaignTargetsEditor();
-        renderCampaignsList();
+        renderCampaignDashboard();
         populateTargetDropdowns();
       });
       
@@ -4022,6 +4217,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // initGardenSubviews deleted as subviews are rolled back to separate bottom navigation tabs
 
   // --- Boot Sequences ---
   loadState();
@@ -4034,6 +4230,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   
   initNavigation();
+  updateCampaignTabVisibility();
   updateQuote();
   renderTargetsList();
   populateTargetDropdowns();
@@ -4046,6 +4243,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const bootUser = MockFirebase.auth.getCurrentUser();
   if (bootUser) {
     hideAuthOverlay();
+    updateCampaignTabVisibility();
     
     // Check admin status
     const adminPanelCard = document.getElementById('admin-panel-card');
@@ -4062,6 +4260,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   } else {
     showAuthOverlay();
+    updateCampaignTabVisibility();
   }
   
   // Initialize Plant Canvas
@@ -4273,10 +4472,30 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Register PWA Service Worker
   if ('serviceWorker' in navigator) {
+    // Force reload on new service worker activation
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!refreshing) {
+        refreshing = true;
+        console.log("Service Worker controller changed! Reloading page...");
+        window.location.reload();
+      }
+    });
+
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('sw.js')
         .then(async (reg) => {
           console.log('Service Worker registered successfully!', reg.scope);
+          
+          // Force update check
+          reg.addEventListener('updatefound', () => {
+            const newWorker = reg.installing;
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                console.log("New service worker version detected!");
+              }
+            });
+          });
           
           // Request permissions and register syncs
           try {
