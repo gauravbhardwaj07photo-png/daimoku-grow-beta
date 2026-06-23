@@ -1191,7 +1191,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderAchievements();
     
     // Trigger canvas state updates
-    PlantRenderer.updateState(parseFloat(totalHours), state.health, state.isDead, timerState === 'running');
+    PlantRenderer.updateState(decimalHours, state.health, state.isDead, timerState === 'running');
     
     // Update pot style in PlantRenderer
     if (state.settings && state.settings.potStyle) {
