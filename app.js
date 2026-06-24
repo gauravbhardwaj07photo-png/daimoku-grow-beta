@@ -2778,6 +2778,9 @@ document.addEventListener('DOMContentLoaded', () => {
       target.completed = !target.completed;
       saveState();
       renderTargetsList();
+      if (target.completed) {
+        showEncouragementPopUp("Victory achieved on your determination! Your completed targets can be seen below.", "Congratulations on the Victory! 🏆");
+      }
     }
   }
 
@@ -4321,15 +4324,19 @@ document.addEventListener('DOMContentLoaded', () => {
     "Perfect harmony! Your Daimoku is the key to absolute peace and boundless joy! 🕊️💖"
   ];
 
-  function showEncouragementPopUp(customText = "") {
+  function showEncouragementPopUp(customText = "", customTitle = "") {
     const modal = document.getElementById('encouragement-modal');
     const msgEl = document.getElementById('encouragement-message');
+    const titleEl = document.getElementById('encouragement-title');
     if (modal && msgEl) {
       if (customText) {
         msgEl.textContent = customText;
       } else {
         const randomIndex = Math.floor(Math.random() * ENCOURAGEMENTS.length);
         msgEl.textContent = ENCOURAGEMENTS[randomIndex];
+      }
+      if (titleEl) {
+        titleEl.textContent = customTitle || "Session Recorded! 🙏";
       }
       modal.style.display = 'flex';
       modal.classList.remove('hidden');
@@ -4340,9 +4347,13 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnCloseEncouragement) {
     btnCloseEncouragement.addEventListener('click', () => {
       const modal = document.getElementById('encouragement-modal');
+      const titleEl = document.getElementById('encouragement-title');
       if (modal) {
         modal.style.display = 'none';
         modal.classList.add('hidden');
+      }
+      if (titleEl) {
+        titleEl.textContent = "Session Recorded! 🙏";
       }
     });
   }
