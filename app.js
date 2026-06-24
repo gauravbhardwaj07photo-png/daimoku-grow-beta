@@ -3261,17 +3261,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const navCampaign = document.getElementById('nav-campaign');
     if (!navCampaign) return;
     
+    const timerCampaignContainer = document.getElementById('timer-campaign-select-container');
+    const manualCampaignContainer = document.getElementById('manual-campaign-select-container');
+    
     const currentUser = MockFirebase.auth.getCurrentUser();
     if (!currentUser) {
       navCampaign.classList.add('hidden');
+      if (timerCampaignContainer) timerCampaignContainer.classList.add('hidden');
+      if (manualCampaignContainer) manualCampaignContainer.classList.add('hidden');
       return;
     }
     
     const hasActive = hasActiveCampaignToday();
     if (hasActive) {
       navCampaign.classList.remove('hidden');
+      if (timerCampaignContainer) timerCampaignContainer.classList.remove('hidden');
+      if (manualCampaignContainer) manualCampaignContainer.classList.remove('hidden');
     } else {
       navCampaign.classList.add('hidden');
+      if (timerCampaignContainer) timerCampaignContainer.classList.add('hidden');
+      if (manualCampaignContainer) manualCampaignContainer.classList.add('hidden');
       
       // Route user away if they are currently on the hidden campaign view
       const viewCampaign = document.getElementById('view-campaign');
