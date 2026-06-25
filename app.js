@@ -2225,10 +2225,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         // Delete Log event handler
-        item.querySelector('.btn-delete-log').addEventListener('click', (e) => {
+        item.querySelector('.btn-delete-log').addEventListener('click', async (e) => {
           const id = e.currentTarget.getAttribute('data-id');
           if (confirm("Are you sure you want to delete this session? This will adjust your total chanting progress.")) {
-            deleteChantSession(id);
+            await deleteChantSession(id);
           }
         });
         
@@ -2319,7 +2319,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.classList.add(phase);
   }
 
-  function deleteChantSession(id) {
+  async function deleteChantSession(id) {
     const idx = state.sessions.findIndex(s => s.id === id);
     if (idx !== -1) {
       const deleted = state.sessions[idx];
@@ -2342,18 +2342,13 @@ document.addEventListener('DOMContentLoaded', () => {
       if (campaignId) {
         const currentUser = MockFirebase.auth.getCurrentUser();
         if (currentUser) {
-          // Find and delete matching contribution in DB
-          let contributions = MockFirebase.db.getCampaignContributions();
-          const idxCont = contributions.findIndex(c => 
-            c.userEmail === currentUser.email && 
-            c.campaignId === campaignId && 
-            c.date === deleted.date && 
-            c.durationSeconds === deleted.durationSeconds
+          // Delete matching contribution in Firestore and local mock
+          await MockFirebase.db.deleteCampaignContribution(
+            currentUser.email,
+            campaignId,
+            deleted.date,
+            deleted.durationSeconds
           );
-          if (idxCont !== -1) {
-            contributions.splice(idxCont, 1);
-            MockFirebase.db.saveCampaignContributions(contributions);
-          }
         }
       }
       
@@ -2381,8 +2376,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Clear all history
   if (btnClearHistory) {
-    btnClearHistory.addEventListener('click', () => {
+    btnClearHistory.addEventListener('click', async () => {
       if (confirm("WARNING: This will delete ALL your chanting history and reset your plant to a seed. Proceed?")) {
+        const currentUser = MockFirebase.auth.getCurrentUser();
+        if (currentUser) {
+          await MockFirebase.db.clearUserCampaignContributions(currentUser.email);
+        }
+        
         state.totalSeconds = 0;
         state.health = 100;
         state.isDead = false;

@@ -463,6 +463,67 @@ const MockFirebase = {
         window.dispatchEvent(new Event('db-updated'));
       }
     },
+    async deleteCampaignContribution(userEmail, campaignId, date, durationSeconds) {
+      const email = userEmail.toLowerCase().trim();
+      if (isFirebaseConfigured && db) {
+        try {
+          const snapshot = await db.collection('contributions')
+            .where('userEmail', '==', email)
+            .where('campaignId', '==', campaignId)
+            .where('date', '==', date)
+            .where('durationSeconds', '==', durationSeconds)
+            .get();
+          
+          const batch = db.batch();
+          snapshot.forEach(doc => {
+            batch.delete(doc.ref);
+          });
+          await batch.commit();
+          console.log(`Firestore delete contribution: deleted ${snapshot.size} matches.`);
+        } catch (e) {
+          console.warn("Firestore delete contribution error:", e);
+        }
+      } else {
+        // Local Mock
+        let contributions = this.getCampaignContributions();
+        const idx = contributions.findIndex(c => 
+          c.userEmail.toLowerCase() === email &&
+          c.campaignId === campaignId &&
+          c.date === date &&
+          c.durationSeconds === durationSeconds
+        );
+        if (idx !== -1) {
+          contributions.splice(idx, 1);
+          localStorage.setItem('daimoku_db_campaign_contributions', JSON.stringify(contributions));
+          window.dispatchEvent(new Event('db-updated'));
+        }
+      }
+    },
+    async clearUserCampaignContributions(userEmail) {
+      const email = userEmail.toLowerCase().trim();
+      if (isFirebaseConfigured && db) {
+        try {
+          const snapshot = await db.collection('contributions')
+            .where('userEmail', '==', email)
+            .get();
+          
+          const batch = db.batch();
+          snapshot.forEach(doc => {
+            batch.delete(doc.ref);
+          });
+          await batch.commit();
+          console.log(`Firestore clear user contributions: deleted ${snapshot.size} matches.`);
+        } catch (e) {
+          console.warn("Firestore clear user contributions error:", e);
+        }
+      } else {
+        // Local Mock
+        let contributions = this.getCampaignContributions();
+        contributions = contributions.filter(c => c.userEmail.toLowerCase() !== email);
+        localStorage.setItem('daimoku_db_campaign_contributions', JSON.stringify(contributions));
+        window.dispatchEvent(new Event('db-updated'));
+      }
+    },
     addCampaignContribution(userEmail, username, block, campaignId, durationSeconds, date) {
       if (isFirebaseConfigured && db) {
         try {
