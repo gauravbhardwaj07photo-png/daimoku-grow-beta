@@ -3,6 +3,7 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
+  try {
   
   // --- Constants & Database ---
   const GOAL_HOURS = 333;
@@ -129,33 +130,108 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- Achievements, Practice Ranks & Badges Logic (Defined early to prevent initialization errors) ---
   const ACHIEVEMENTS_LIST = [
-    { id: 'streak_7', title: "7-Day Streak", desc: "Chant consecutively for 7 days", icon: "fa-fire", check: (s) => s.streak >= 7 },
-    { id: 'streak_15', title: "15-Day Streak", desc: "Chant consecutively for 15 days", icon: "fa-bolt", check: (s) => s.streak >= 15 },
-    { id: 'streak_30', title: "1-Month Streak", desc: "Chant consecutively for 30 days", icon: "fa-calendar-day", check: (s) => s.streak >= 30 },
-    { id: 'streak_90', title: "3-Month Streak", desc: "Chant consecutively for 90 days", icon: "fa-shield-halved", check: (s) => s.streak >= 90 },
-    { id: 'streak_180', title: "6-Month Streak", desc: "Chant consecutively for 180 days", icon: "fa-award", check: (s) => s.streak >= 180 },
-    { id: 'streak_365', title: "1-Year Streak", desc: "Chant consecutively for 365 days", icon: "fa-trophy", check: (s) => s.streak >= 365 },
-    
-    { id: 'session_1h', title: "Focus Master (1h)", desc: "Log a session of 1 hour or more", icon: "fa-clock", check: (s) => s.sessions.some(x => x.durationSeconds >= 3600) },
-    { id: 'session_2h', title: "Marathon Chanter (2h)", desc: "Log a session of 2 hours or more", icon: "fa-stopwatch", check: (s) => s.sessions.some(x => x.durationSeconds >= 7200) },
-    { id: 'session_3h20m', title: "Revival Hero (3h 20m)", desc: "Log a session of 3 hours 20 mins+", icon: "fa-heart-pulse", check: (s) => s.sessions.some(x => x.durationSeconds >= 12000) },
-    
-    { id: 'total_1h', title: "First Drop", desc: "Reach 1 hour of total chanting", icon: "fa-droplet", check: (s) => (s.totalSeconds / 3600) >= 1 },
-    { id: 'total_10h', title: "Garden Seedling", desc: "Reach 10 hours of total chanting", icon: "fa-seedling", check: (s) => (s.totalSeconds / 3600) >= 10 },
-    { id: 'total_50h', title: "Steady Roots", desc: "Reach 50 hours of total chanting", icon: "fa-tree", check: (s) => (s.totalSeconds / 3600) >= 50 },
-    { id: 'total_150h', title: "Strong Trunk", desc: "Reach 150 hours of total chanting", icon: "fa-mountain", check: (s) => (s.totalSeconds / 3600) >= 150 },
-    { id: 'total_333h', title: "Majestic Canopy", desc: "Reach 333 hours of total chanting", icon: "fa-crown", check: (s) => (s.totalSeconds / 3600) >= 333 },
+    // --- STREAK ---
+    { id: 'first_daimoku', title: "First Dew", desc: "Chant for the first time. Minimum 1 minute Daimoku recorded", icon: "fa-droplet", tier: "endeavor", check: (s) => s.sessions.some(x => x.durationSeconds >= 60) },
+    { id: 'streak_3', title: "Sprout", desc: "Chant consecutively for 3 days. A quiet commitment begins to form like morning dew on a leaf.", icon: "fa-droplet", tier: "endeavor", check: (s) => s.streak >= 3 },
+    { id: 'streak_7', title: "Soka Resolve", desc: "Chant consecutively for 7 days. Your daily rhythm breaks through the soil of routine.", icon: "fa-seedling", tier: "endeavor", check: (s) => s.streak >= 7 },
+    { id: 'streak_15', title: "Deepening Roots", desc: "Chant consecutively for 15 days. Standing steady and drawing silent strength from the earth.", icon: "fa-leaf", tier: "endeavor", check: (s) => s.streak >= 15 },
+    { id: 'streak_30', title: "Steadfast Ichinen", desc: "Maintain consistency for 30 days. Establishing a powerful, single-minded determination in your daily life.", icon: "fa-fire", tier: "endeavor", check: (s) => s.streak >= 30 },
+    { id: 'streak_90', title: "Lotus Pillar", desc: "Maintain consistency for 90 days. Weathering life's changes with an unshakeable, growing spirit.", icon: "fa-cloud-sun", tier: "endeavor", check: (s) => s.streak >= 90 },
+    { id: 'streak_180', title: "Toda Medal", desc: "Chant consecutively for 180 days. Standing firm in faith, blooming pure above the mud of daily obstacles.", icon: "fa-monument", tier: "endeavor", check: (s) => s.streak >= 180 },
+    { id: 'streak_365', title: "Shinichi's Vow", desc: "Chant daily for 365 days. Embodying the mentor-disciple spirit with an unbroken daily commitment to absolute victory.", icon: "fa-trophy", tier: "legendary", check: (s) => s.streak >= 365 },
 
-    { id: 'early_bird', title: "Early Bird", desc: "Chant before 8:00 AM", icon: "fa-sun", check: (s) => s.sessions.some(x => {
+    // --- FOCUS ---
+    { id: 'session_15m', title: "Daimoku Fire", desc: "Log a continuous session of 15 minutes via timer or stopwatch. Cleansing the mind like a refreshing breeze.", icon: "fa-wind", tier: "endeavor", check: (s) => s.sessions.some(x => x.durationSeconds >= 900) },
+    { id: 'session_30m', title: "Daimoku Thunder", desc: "Log a continuous session of 30 minutes. Your practice flows naturally, building steady momentum.", icon: "fa-water", tier: "endeavor", check: (s) => s.sessions.some(x => x.durationSeconds >= 1800) },
+    { id: 'session_1h', title: "Daimoku Rain", desc: "Log a continuous session of 1 hour. Erecting a quiet monument of absolute concentration and peace.", icon: "fa-hourglass-half", tier: "endeavor", check: (s) => s.sessions.some(x => x.durationSeconds >= 3600) },
+    { id: 'session_2h', title: "Treasure Tower", desc: "Log a continuous session of 2 hours. Sinking deep into the tranquil, bottomless depths of your own life.", icon: "fa-compass", tier: "endeavor", check: (s) => s.sessions.some(x => x.durationSeconds >= 7200) },
+    { id: 'session_3h20m', title: "Lion's Roar", desc: "Log a continuous session of 3h 20m or more. A powerful, breakthrough chant that clears all obstacles.", icon: "fa-bullhorn", tier: "rare", check: (s) => s.sessions.some(x => x.durationSeconds >= 12000) },
+
+    // --- LIFETIME ---
+    { id: 'total_1h', title: "First Leaf", desc: "Chant for the very first time. Planting the seed of Buddhahood and absolute happiness in your life.", icon: "fa-wand-magic-sparkles", tier: "endeavor", check: (s) => (s.totalSeconds / 3600) >= 1 },
+    { id: 'total_10h', title: "Cherry Blossom", desc: "Reach 10 hours of total chanting. A young sapling rises, expressing hope and potential.", icon: "fa-spa", tier: "endeavor", check: (s) => (s.totalSeconds / 3600) >= 10 },
+    { id: 'total_30h', title: "Sun of Soka", desc: "Reach 30 hours of total chanting. Illumining your life and environment with the radiant light of Soka.", icon: "fa-sun", tier: "endeavor", check: (s) => (s.totalSeconds / 3600) >= 30 },
+    { id: 'total_50h', title: "Bodhi Tree", desc: "Reach 50 hours of total chanting. Anchoring deep into the soil of daily discipline, unaffected by any storm.", icon: "fa-anchor", tier: "endeavor", check: (s) => (s.totalSeconds / 3600) >= 50 },
+    { id: 'total_100h', title: "Mount Sumeru", desc: "Reach 100 hours of total chanting. Creating a shelter of peace and quiet encouragement for others.", icon: "fa-tree-city", tier: "endeavor", check: (s) => (s.totalSeconds / 3600) >= 100 },
+    { id: 'total_150h', title: "Mount Fuji", desc: "Reach 150 hours of total chanting. Standing unshakeable and majestic, like Mount Fuji, against all adversity.", icon: "fa-mountain", tier: "endeavor", check: (s) => (s.totalSeconds / 3600) >= 150 },
+    { id: 'total_200h', title: "Eagle Peak", desc: "Reach 200 hours of total chanting. Standing tall among giants in the global community of practitioners.", icon: "fa-tree", tier: "endeavor", check: (s) => (s.totalSeconds / 3600) >= 200 },
+    { id: 'total_333h', title: "Shinichi's Triumph", desc: "Reach 333 hours of total chanting. Fully realizing the majestic tree milestone with President Ikeda's victorious spirit.", icon: "fa-crown", tier: "milestone", check: (s) => (s.totalSeconds / 3600) >= 333 },
+
+    // --- HABITS ---
+    { id: 'early_bird', title: "Dawn Devotion", desc: "Chant before 8:00 AM. Welcoming the day with a clean mind and triumphant determination.", icon: "fa-mug-hot", tier: "endeavor", check: (s) => s.sessions.some(x => {
       const date = new Date(x.date);
       return !isNaN(date.getTime()) && date.getHours() < 8;
     }) },
-    { id: 'night_owl', title: "Night Owl", desc: "Chant after 9:00 PM", icon: "fa-moon", check: (s) => s.sessions.some(x => {
+    { id: 'night_owl', title: "Midnight Muse", desc: "Chant after 9:00 PM. Wrapping up the day in quiet reflection, sending peace to the world.", icon: "fa-cloud-moon", tier: "endeavor", check: (s) => s.sessions.some(x => {
       const date = new Date(x.date);
       return !isNaN(date.getTime()) && date.getHours() >= 21;
     }) },
-    { id: 'first_target', title: "Determination", desc: "Create your first prayer target", icon: "fa-bullseye", check: (s) => s.targets.length >= 1 },
-    { id: 'target_completed', title: "Victory", desc: "Complete a prayer target", icon: "fa-circle-check", check: (s) => s.targets.some(x => x.completed) }
+    { id: 'diurnal_balance', title: "Buddha Day & Night", desc: "Chant in both morning (before 12 PM) and evening (after 6 PM) on the same day.", icon: "fa-circle-half-stroke", tier: "endeavor", check: (s) => {
+      const days = {};
+      s.sessions.forEach(x => {
+        const d = new Date(x.date);
+        if (!isNaN(d.getTime())) {
+          const dateStr = d.toISOString().split('T')[0];
+          if (!days[dateStr]) days[dateStr] = { morning: false, evening: false };
+          if (d.getHours() < 12) days[dateStr].morning = true;
+          if (d.getHours() >= 18) days[dateStr].evening = true;
+        }
+      });
+      return Object.values(days).some(d => d.morning && d.evening);
+    } },
+    { id: 'weekend_warrior', title: "Weekend Sanctuary", desc: "Chant for at least 2 hours total over a single Saturday & Sunday.", icon: "fa-umbrella-beach", tier: "endeavor", check: (s) => {
+      const weekendTotals = {};
+      s.sessions.forEach(x => {
+        const d = new Date(x.date);
+        if (!isNaN(d.getTime())) {
+          const day = d.getDay();
+          if (day === 0 || day === 6) {
+            const sat = new Date(d.getTime());
+            sat.setDate(d.getDate() - (day === 0 ? 1 : 0));
+            const satStr = sat.toISOString().split('T')[0];
+            weekendTotals[satStr] = (weekendTotals[satStr] || 0) + x.durationSeconds;
+          }
+        }
+      });
+      return Object.values(weekendTotals).some(t => t >= 7200);
+    } },
+
+    // --- DETERMINATIONS ---
+    { id: 'first_target', title: "Strong Ichinen", desc: "Create your first prayer target. Planting a deliberate vow in the garden of your life.", icon: "fa-bullseye", tier: "endeavor", check: (s) => s.targets.length >= 1 },
+    { id: 'multi_target', title: "Many Vows, One Heart", desc: "Hold 3 active determinations at once - breadth of sincere prayer.", icon: "fa-heart", tier: "endeavor", check: (s) => s.targets.filter(x => !x.completed).length >= 3 },
+    { id: 'target_completed', title: "Nanjo's Resolve", desc: "Complete your first prayer target. Watching a resolve bloom into a beautiful, solid reality.", icon: "fa-award", tier: "endeavor", check: (s) => s.targets.some(x => x.completed) },
+    { id: 'victory_arch', title: "Kaneko Medal", desc: "Complete 3 prayer targets. A gorgeous medal of victory, representing gentle persistence and absolute proof.", icon: "fa-medal", tier: "milestone", check: (s) => s.targets.filter(x => x.completed).length >= 3 },
+
+    // --- CAMPAIGN ---
+    { id: 'soka_pioneer', title: "Shijo's Medal", desc: "Contribute to an SGI Campaign target. Embodying loyalty, courage, and global action for humanity's peace.", icon: "fa-users", tier: "endeavor", check: (s) => s.sessions.some(x => x.campaignId || (x.targetId && x.targetId.startsWith('campaign_'))) },
+    { id: 'campaign_pillar', title: "Osaka Medal", desc: "Never miss a campaign - unwavering dedication to the collective vow across all seasons.", icon: "fa-globe", tier: "legendary", check: (s) => ['youth_division', 'may_3rd', 'mens_division', 'womens_division', 'july_3rd', 'november_18th'].every(id => s.sessions.some(x => x.campaignId === id)) },
+
+    // --- REVIVAL ---
+    { id: 'self_healing', title: "Hossaku Kempon", desc: "Resume chanting after a break - love and attention always heals. Return after a 7-day gap.", icon: "fa-hand-holding-heart", tier: "endeavor", check: (s) => {
+      if (s.sessions.length < 2) return false;
+      const sorted = [...s.sessions].sort((a, b) => new Date(a.date) - new Date(b.date));
+      for (let i = 1; i < sorted.length; i++) {
+        const prev = new Date(sorted[i - 1].date);
+        const curr = new Date(sorted[i].date);
+        const gapMs = curr.getTime() - prev.getTime();
+        const gapDays = gapMs / (1000 * 60 * 60 * 24);
+        if (gapDays >= 7) return true;
+      }
+      return false;
+    } },
+    { id: 'phoenix_sprout', title: "Esho Funi", desc: "Successfully revive a withered plant back to life.", icon: "fa-fire-flame-curved", tier: "rare", check: (s) => {
+      if (s.sessions.length < 4) return false;
+      const sorted = [...s.sessions].sort((a, b) => new Date(a.date) - new Date(b.date));
+      let gapCount = 0;
+      for (let i = 1; i < sorted.length; i++) {
+        const prev = new Date(sorted[i - 1].date);
+        const curr = new Date(sorted[i].date);
+        const gapMs = curr.getTime() - prev.getTime();
+        const gapDays = gapMs / (1000 * 60 * 60 * 24);
+        if (gapDays >= 7) gapCount++;
+      }
+      return gapCount >= 3;
+    } }
   ];
 
   function getRankDetails(hours) {
@@ -209,14 +285,18 @@ document.addEventListener('DOMContentLoaded', () => {
     ACHIEVEMENTS_LIST.forEach(ach => {
       const isUnlocked = ach.check(state);
       const div = document.createElement('div');
-      div.className = `badge-item ${isUnlocked ? 'unlocked' : 'locked'}`;
+      div.className = `badge-item ${isUnlocked ? 'unlocked' : 'locked'} ${ach.tier || 'endeavor'}`;
       
+      const tierText = ach.tier || 'endeavor';
       div.innerHTML = `
         <div class="badge-icon-box">
           <i class="fa-solid ${ach.icon}"></i>
         </div>
         <div class="badge-info">
-          <span class="badge-title">${ach.title}</span>
+          <div class="badge-title-row">
+            <span class="badge-title">${ach.title}</span>
+            <span class="badge-tier-tag ${tierText}">${tierText}</span>
+          </div>
           <span class="badge-desc">${ach.desc}</span>
         </div>
       `;
@@ -242,7 +322,8 @@ document.addEventListener('DOMContentLoaded', () => {
     },
     theme: 'theme-sage-light',
     dismissedAlerts: [], // Array of closed notification IDs
-    revivalDates: [] // Dates of consecutive daimoku for revival while dead
+    revivalDates: [], // Dates of consecutive daimoku for revival while dead
+    unlockedAchievements: [] // Array of persistently unlocked achievement IDs
   };
 
   // --- Timer Variables ---
@@ -539,6 +620,7 @@ document.addEventListener('DOMContentLoaded', () => {
     state = userState;
     
     // Ensure all standard properties exist in state
+    if (state.sessions === undefined) state.sessions = [];
     if (state.streak === undefined) state.streak = 0;
     if (state.revivalSeconds === undefined) state.revivalSeconds = 0;
     if (state.isDead === undefined) state.isDead = false;
@@ -548,9 +630,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (state.revivalDates === undefined) state.revivalDates = [];
     if (state.theme === undefined) state.theme = 'theme-sage-light';
     if (state.settings === undefined) state.settings = { morningReminder: true, eveningReminder: true, potStyle: 'clay' };
+    if (state.unlockedAchievements === undefined) state.unlockedAchievements = [];
     
     // Rebuild revival dates (self-healing)
     rebuildRevivalDates();
+    initializeUnlockedAchievements(true);
     
     // Save to active local state cache
     localStorage.setItem('daimoku_grow_state', JSON.stringify(state));
@@ -738,6 +822,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
           state = JSON.parse(saved);
           // Ensure properties exist
+          if (state.sessions === undefined) state.sessions = [];
           if (state.streak === undefined) state.streak = 0;
           if (state.revivalSeconds === undefined) state.revivalSeconds = 0;
           if (state.isDead === undefined) state.isDead = false;
@@ -745,6 +830,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (state.lastNotifiedThreshold === undefined) state.lastNotifiedThreshold = 0;
           if (state.dismissedAlerts === undefined) state.dismissedAlerts = [];
           if (state.revivalDates === undefined) state.revivalDates = [];
+          if (state.unlockedAchievements === undefined) state.unlockedAchievements = [];
           
           // Apply saved theme
           document.body.className = state.theme || 'theme-sage-light';
@@ -753,6 +839,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
     }
+    
+    // Run silent initialization of unlocked achievements
+    initializeUnlockedAchievements(true);
     
     // Set manual form default date to today
     const today = new Date().toISOString().split('T')[0];
@@ -1198,6 +1287,24 @@ document.addEventListener('DOMContentLoaded', () => {
     // Update achievements and main dashboard stars
     renderAchievements();
     
+    // Update streak badge on main dashboard
+    const dashboardStreakBadge = document.getElementById('plant-streak-badge');
+    const dashboardStreakValue = document.getElementById('dashboard-streak-value');
+    if (dashboardStreakBadge && dashboardStreakValue) {
+      if (state.streak > 0) {
+        dashboardStreakValue.textContent = state.streak;
+        dashboardStreakBadge.classList.remove('hidden');
+      } else {
+        dashboardStreakBadge.classList.add('hidden');
+      }
+    }
+
+    // Update goal milestone estimate
+    updateMilestoneEstimate();
+
+    // Update Diurnal Sky background
+    updateDiurnalTheme();
+    
     // Trigger canvas state updates
     PlantRenderer.updateState(decimalHours, state.health, state.isDead, timerState === 'running');
     
@@ -1587,11 +1694,35 @@ document.addEventListener('DOMContentLoaded', () => {
   function saveChantSession(durationSeconds, method) {
     const now = new Date();
     
+    // Check 24-hour daily limit
+    const targetDateYMD = now.toISOString().split('T')[0];
+    let alreadyChantedSecs = 0;
+    state.sessions.forEach(s => {
+      const sDateYMD = new Date(s.date).toISOString().split('T')[0];
+      if (sDateYMD === targetDateYMD) {
+        alreadyChantedSecs += s.durationSeconds;
+      }
+    });
+    
+    if (alreadyChantedSecs >= 86400) {
+      alert("You have already logged 24 hours of chanting for today! This session cannot be saved.");
+      return;
+    }
+    
+    let actualDuration = durationSeconds;
+    if (alreadyChantedSecs + durationSeconds > 86400) {
+      actualDuration = 86400 - alreadyChantedSecs;
+      const cappedMins = Math.floor(actualDuration / 60);
+      alert(`Daily limit reached! Saving only the remaining ${cappedMins} minutes for today.`);
+    }
+    
+    if (actualDuration <= 0) return;
+    
     const personalTargetId = timerPersonalSelect.value || null;
     const campaignId = timerCampaignSelect.value || null;
     
     if (personalTargetId) {
-      accumulateTimeToTarget(personalTargetId, durationSeconds);
+      accumulateTimeToTarget(personalTargetId, actualDuration);
     }
     
     if (campaignId) {
@@ -1602,7 +1733,7 @@ document.addEventListener('DOMContentLoaded', () => {
           currentUser.username,
           currentUser.block,
           campaignId,
-          durationSeconds,
+          actualDuration,
           now.toISOString()
         );
       }
@@ -1612,7 +1743,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const session = {
       id: Date.now().toString(),
       date: now.toISOString(),
-      durationSeconds: durationSeconds,
+      durationSeconds: actualDuration,
       method: method,
       personalTargetId: personalTargetId,
       campaignId: campaignId,
@@ -1625,12 +1756,12 @@ document.addEventListener('DOMContentLoaded', () => {
     state.lastNotifiedThreshold = 0; // Reset warning alert state
     state.dismissedAlerts = []; // Reset dismissed alerts on chanting activity
     // Always accumulate chanting time to total progress
-    state.totalSeconds += durationSeconds;
+    state.totalSeconds += actualDuration;
     
     if (state.isDead) {
       // Dead plant mode: check revival progress
       const dateTodayStr = now.toISOString().split('T')[0];
-      updateRevivalProgress(dateTodayStr, durationSeconds);
+      updateRevivalProgress(dateTodayStr, actualDuration);
     } else {
       // Normal healthy mode
       state.health = 100; // Recover full hydration
@@ -1642,8 +1773,12 @@ document.addEventListener('DOMContentLoaded', () => {
     
     saveState();
     
-    // Trigger encouragement custom modal
-    showEncouragementPopUp();
+    // Check for newly unlocked achievements
+    const unlockedAny = checkNewAchievements();
+    if (!unlockedAny) {
+      // Trigger encouragement custom modal if no achievements unlocked
+      showEncouragementPopUp();
+    }
   }
 
   function calculateStreak() {
@@ -1743,6 +1878,29 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     
+    // Calculate total chanting already logged for the selected day
+    const targetDateYMD = selectedDate.toISOString().split('T')[0];
+    let alreadyChantedSecs = 0;
+    state.sessions.forEach(s => {
+      const sDateYMD = new Date(s.date).toISOString().split('T')[0];
+      if (sDateYMD === targetDateYMD) {
+        alreadyChantedSecs += s.durationSeconds;
+      }
+    });
+    
+    if (alreadyChantedSecs >= 86400) {
+      alert("You have already logged 24 hours of chanting for this day!");
+      return;
+    }
+    
+    if (alreadyChantedSecs + totalSecs > 86400) {
+      const remainingSecs = 86400 - alreadyChantedSecs;
+      const remHrs = Math.floor(remainingSecs / 3600);
+      const remMins = Math.floor((remainingSecs % 3600) / 60);
+      alert(`Adding this session would exceed the 24-hour daily limit. You have already logged ${Math.floor(alreadyChantedSecs / 3600)}h ${Math.floor((alreadyChantedSecs % 3600) / 60)}m, so you can only add up to ${remHrs}h ${remMins}m for this day.`);
+      return;
+    }
+    
     const personalTargetId = manualPersonalSelect.value || null;
     const campaignId = manualCampaignSelect.value || null;
     
@@ -1794,8 +1952,12 @@ document.addEventListener('DOMContentLoaded', () => {
     calculateStreak();
     saveState();
     
-    // Trigger encouragement custom modal
-    showEncouragementPopUp();
+    // Check for newly unlocked achievements
+    const unlockedAny = checkNewAchievements();
+    if (!unlockedAny) {
+      // Trigger encouragement custom modal if no achievements unlocked
+      showEncouragementPopUp();
+    }
     
     // Reset fields
     logHours.value = 0;
@@ -1913,15 +2075,33 @@ document.addEventListener('DOMContentLoaded', () => {
           methodIcon = '<i class="fa-solid fa-pen-to-square" title="Manual Log"></i>';
         }
         
+        const commentHtml = session.comment ? `<div class="log-comment">"${session.comment}"</div>` : '';
+        
         item.innerHTML = `
-          <div class="log-info">
+          <div class="log-info" style="flex-grow: 1;">
             <div class="log-time-amount">${methodIcon} ${durationText} chanted</div>
             <div class="log-date-label">${dateString}</div>
+            ${commentHtml}
           </div>
           <div class="log-actions">
-            <button class="btn-delete-log" data-id="${session.id}"><i class="fa-regular fa-trash-can"></i></button>
+            <button class="btn-comment-log" data-id="${session.id}" title="Add/Edit Comment"><i class="fa-regular fa-comment"></i></button>
+            <button class="btn-delete-log" data-id="${session.id}" title="Delete"><i class="fa-regular fa-trash-can"></i></button>
           </div>
         `;
+        
+        // Comment Log event handler
+        item.querySelector('.btn-comment-log').addEventListener('click', (e) => {
+          const id = e.currentTarget.getAttribute('data-id');
+          const sess = state.sessions.find(s => s.id === id);
+          if (sess) {
+            const comment = prompt("Enter a comment/note for this chanting session:", sess.comment || "");
+            if (comment !== null) {
+              sess.comment = comment.trim();
+              saveState();
+              renderHistoryLogs();
+            }
+          }
+        });
         
         // Delete Log event handler
         item.querySelector('.btn-delete-log').addEventListener('click', (e) => {
@@ -1936,6 +2116,86 @@ document.addEventListener('DOMContentLoaded', () => {
       
       logsListContainer.appendChild(section);
     });
+  }
+
+  // --- Goal Milestone Estimator ---
+  function updateMilestoneEstimate() {
+    const estimateText = document.getElementById('milestone-estimate-text');
+    if (!estimateText) return;
+
+    const decimalHours = state.totalSeconds / 3600;
+    const remainingHours = GOAL_HOURS - decimalHours;
+
+    if (remainingHours <= 0) {
+      estimateText.textContent = "Goal achieved! Your plant is a Majestic Tree! 🌳";
+      return;
+    }
+
+    // Calculate hours chattered in the last 7 days
+    const now = new Date();
+    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    let secondsLastWeek = 0;
+    state.sessions.forEach(s => {
+      const sDate = new Date(s.date);
+      if (sDate >= oneWeekAgo && sDate <= now) {
+        secondsLastWeek += s.durationSeconds;
+      }
+    });
+
+    const hoursLastWeek = secondsLastWeek / 3600;
+
+    // Project target date
+    if (hoursLastWeek > 0.05) {
+      const weeksRemaining = remainingHours / hoursLastWeek;
+      const targetDate = new Date();
+      targetDate.setDate(targetDate.getDate() + (weeksRemaining * 7));
+      
+      const options = { year: 'numeric', month: 'long', day: 'numeric' };
+      const formattedDate = targetDate.toLocaleDateString(undefined, options);
+      
+      estimateText.textContent = `Est. Tree Date: ${formattedDate} (~${hoursLastWeek.toFixed(1)}h/wk)`;
+    } else {
+      // Fallback: Check overall average chattered since their first record
+      if (state.sessions.length > 0) {
+        const dates = state.sessions.map(s => new Date(s.date).getTime());
+        const firstDate = Math.min(...dates);
+        const daysActive = Math.max(1, Math.ceil((now.getTime() - firstDate) / (24 * 60 * 60 * 1000)));
+        const dailyRate = decimalHours / daysActive; // hours per day
+
+        if (dailyRate > 0.01) {
+          const daysRemaining = remainingHours / dailyRate;
+          const targetDate = new Date();
+          targetDate.setDate(targetDate.getDate() + daysRemaining);
+
+          const options = { year: 'numeric', month: 'long', day: 'numeric' };
+          const formattedDate = targetDate.toLocaleDateString(undefined, options);
+          const weeklyRate = dailyRate * 7;
+          estimateText.textContent = `Est. Tree Date: ${formattedDate} (~${weeklyRate.toFixed(1)}h/wk overall)`;
+        } else {
+          estimateText.textContent = "Est. Tree Date: -- (active chanting needed)";
+        }
+      } else {
+        estimateText.textContent = "Est. Tree Date: -- (chant to calculate)";
+      }
+    }
+  }
+
+  // --- Diurnal Theme Switcher ---
+  function updateDiurnalTheme() {
+    const nowHour = new Date().getHours();
+    let phase = 'diurnal-day';
+    if (nowHour >= 5 && nowHour < 9) {
+      phase = 'diurnal-sunrise';
+    } else if (nowHour >= 9 && nowHour < 17) {
+      phase = 'diurnal-day';
+    } else if (nowHour >= 17 && nowHour < 20) {
+      phase = 'diurnal-sunset';
+    } else {
+      phase = 'diurnal-night';
+    }
+    
+    document.body.classList.remove('diurnal-sunrise', 'diurnal-day', 'diurnal-sunset', 'diurnal-night');
+    document.body.classList.add(phase);
   }
 
   function deleteChantSession(id) {
@@ -2412,6 +2672,7 @@ document.addEventListener('DOMContentLoaded', () => {
         state.health = 100;
       }
       saveState();
+      checkNewAchievements();
       alert(`Debug: set total chanting to ${hrs} hours.`);
     });
   });
@@ -2779,7 +3040,10 @@ document.addEventListener('DOMContentLoaded', () => {
       saveState();
       renderTargetsList();
       if (target.completed) {
-        showEncouragementPopUp("Victory achieved on your determination! Your completed targets can be seen below.", "Congratulations on the Victory! 🏆");
+        const unlockedAny = checkNewAchievements();
+        if (!unlockedAny) {
+          showEncouragementPopUp("Victory achieved on your determination! Your completed targets can be seen below.", "Congratulations on the Victory! 🏆");
+        }
       }
     }
   }
@@ -3022,6 +3286,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
       
+      // Check if user chanted on this day
+      const hasChanted = state.sessions.some(s => {
+        const sDate = new Date(s.date);
+        const matchStr = `${sDate.getFullYear()}-${String(sDate.getMonth() + 1).padStart(2, '0')}-${String(sDate.getDate()).padStart(2, '0')}`;
+        return matchStr === dateStr;
+      });
+      
+      if (hasChanted) {
+        cell.classList.add('chanted');
+        const leaf = document.createElement('i');
+        leaf.className = 'fa-solid fa-leaf calendar-leaf-icon';
+        cell.appendChild(leaf);
+      }
+      
       cell.addEventListener('click', () => {
         selectedDateStr = dateStr;
         const cells = daysGrid.querySelectorAll('.calendar-day-cell');
@@ -3048,9 +3326,17 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     const events = getEventsForDate(selectedDateStr);
+    
+    // Get chanting sessions on this day
+    const daySessions = state.sessions.filter(s => {
+      const sDate = new Date(s.date);
+      const matchStr = `${sDate.getFullYear()}-${String(sDate.getMonth() + 1).padStart(2, '0')}-${String(sDate.getDate()).padStart(2, '0')}`;
+      return matchStr === selectedDateStr;
+    });
+    
     eventsList.innerHTML = '';
     
-    if (events.length === 0) {
+    if (events.length === 0 && daySessions.length === 0) {
       eventsList.innerHTML = `
         <div class="empty-state" style="padding: 10px;">
           <i class="fa-regular fa-calendar" style="font-size:24px; color:var(--text-muted); margin-bottom: 6px;"></i>
@@ -3060,6 +3346,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     
+    // Render schedule events
     events.forEach(e => {
       const div = document.createElement('div');
       div.className = `event-item ${e.type}`;
@@ -3068,6 +3355,28 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="event-details">
           <span class="event-title">${e.title}</span>
           <span class="event-desc">${e.desc}</span>
+        </div>
+      `;
+      eventsList.appendChild(div);
+    });
+
+    // Render chanting sessions
+    daySessions.forEach((s, idx) => {
+      const div = document.createElement('div');
+      div.className = 'event-item chanting';
+      
+      const sh = Math.floor(s.durationSeconds / 3600);
+      const sm = Math.round((s.durationSeconds % 3600) / 60);
+      const durationText = sh > 0 ? `${sh}h ${sm}m` : `${sm}m`;
+      const timeStr = new Date(s.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      
+      div.innerHTML = `
+        <span class="event-time-badge" style="background-color: var(--primary-light); color: var(--primary); font-weight: bold; display: flex; align-items: center; justify-content: center;">
+          <i class="fa-solid fa-leaf"></i>
+        </span>
+        <div class="event-details">
+          <span class="event-title">Daimoku Chanted</span>
+          <span class="event-desc">Logged session: <strong>${durationText}</strong> at ${timeStr}</span>
         </div>
       `;
       eventsList.appendChild(div);
@@ -4254,6 +4563,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   
   initNavigation();
+  updateDiurnalTheme();
   updateCampaignTabVisibility();
   updateQuote();
   renderTargetsList();
@@ -4365,6 +4675,333 @@ document.addEventListener('DOMContentLoaded', () => {
         titleEl.textContent = "Session Recorded! 🙏";
       }
     });
+  }
+
+  // --- Fireworks & Badge Celebration System ---
+  let celebrationQueue = [];
+  let isCelebrationActive = false;
+  let celebrationParticles = [];
+  let celebrationRockets = [];
+  let celebrationAnimationId = null;
+  let celebrationCanvas = null;
+  let celebrationCtx = null;
+  let celebrationDurationTimeout = null;
+
+  class CelebrationParticle {
+    constructor(x, y, color) {
+      this.x = x;
+      this.y = y;
+      this.color = color;
+      this.radius = Math.random() * 3 + 1.5;
+      const angle = Math.random() * Math.PI * 2;
+      const speed = Math.random() * 6 + 2;
+      this.vx = Math.cos(angle) * speed;
+      this.vy = Math.sin(angle) * speed;
+      this.gravity = 0.1;
+      this.friction = 0.98;
+      this.alpha = 1;
+      this.decay = Math.random() * 0.015 + 0.01;
+    }
+
+    update() {
+      this.vx *= this.friction;
+      this.vy *= this.friction;
+      this.vy += this.gravity;
+      this.x += this.vx;
+      this.y += this.vy;
+      this.alpha -= this.decay;
+    }
+
+    draw(ctx) {
+      ctx.save();
+      ctx.globalAlpha = this.alpha;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+      ctx.fillStyle = this.color;
+      ctx.shadowBlur = 6;
+      ctx.shadowColor = this.color;
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  class CelebrationRocket {
+    constructor(startX, startY, targetX, targetY, color, particleColors) {
+      this.x = startX;
+      this.y = startY;
+      this.targetX = targetX;
+      this.targetY = targetY;
+      this.color = color;
+      this.particleColors = particleColors;
+      const dx = targetX - startX;
+      const dy = targetY - startY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      const speed = 10;
+      this.vx = (dx / distance) * speed;
+      this.vy = (dy / distance) * speed;
+      this.exploded = false;
+      this.trail = [];
+    }
+
+    update() {
+      this.trail.push({ x: this.x, y: this.y });
+      if (this.trail.length > 8) this.trail.shift();
+      this.x += this.vx;
+      this.y += this.vy;
+      if (this.vy >= 0 || this.y <= this.targetY) {
+        this.exploded = true;
+      }
+    }
+
+    draw(ctx) {
+      ctx.save();
+      if (this.trail.length > 1) {
+        ctx.beginPath();
+        ctx.moveTo(this.trail[0].x, this.trail[0].y);
+        for (let i = 1; i < this.trail.length; i++) {
+          ctx.lineTo(this.trail[i].x, this.trail[i].y);
+        }
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, 3, 0, Math.PI * 2);
+      ctx.fillStyle = this.color;
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  function getColorsForRarity(rarity) {
+    switch (rarity) {
+      case 'legendary':
+        return ['#ffd700', '#ffcc00', '#ffa500', '#ff8c00', '#ff4500', '#ffffff'];
+      case 'rare':
+        return ['#8a2be2', '#9370db', '#da70d6', '#ba55d3', '#ff00ff', '#ffffff'];
+      case 'milestone':
+        return ['#008080', '#20b2aa', '#3cb371', '#2e8b57', '#00ff7f', '#ffffff'];
+      case 'endeavor':
+      default:
+        return ['#8ea68e', '#8fbc8f', '#98fb98', '#c2d9c2', '#e2ede2', '#ffffff'];
+    }
+  }
+
+  function startFireworks(rarity) {
+    celebrationCanvas = document.getElementById('celebration-canvas');
+    if (!celebrationCanvas) return;
+    celebrationCtx = celebrationCanvas.getContext('2d');
+    
+    const dpr = window.devicePixelRatio || 1;
+    celebrationCanvas.width = window.innerWidth * dpr;
+    celebrationCanvas.height = window.innerHeight * dpr;
+    celebrationCtx.scale(dpr, dpr);
+    
+    celebrationCanvas.style.display = 'block';
+    
+    celebrationParticles = [];
+    celebrationRockets = [];
+    
+    if (celebrationAnimationId) {
+      cancelAnimationFrame(celebrationAnimationId);
+    }
+    if (celebrationDurationTimeout) {
+      clearTimeout(celebrationDurationTimeout);
+    }
+    
+    const colors = getColorsForRarity(rarity);
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    
+    // Launch a few initial rockets
+    const numRockets = 3 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < numRockets; i++) {
+      setTimeout(() => {
+        if (!isCelebrationActive) return;
+        const startX = w * (0.2 + Math.random() * 0.6);
+        const startY = h;
+        const targetX = w * (0.15 + Math.random() * 0.7);
+        const targetY = h * (0.2 + Math.random() * 0.45);
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        celebrationRockets.push(new CelebrationRocket(startX, startY, targetX, targetY, color, colors));
+      }, i * 400);
+    }
+    
+    // Continually launch rockets for 4 seconds
+    const intervalId = setInterval(() => {
+      if (!isCelebrationActive) {
+        clearInterval(intervalId);
+        return;
+      }
+      const startX = w * (0.2 + Math.random() * 0.6);
+      const startY = h;
+      const targetX = w * (0.15 + Math.random() * 0.7);
+      const targetY = h * (0.2 + Math.random() * 0.45);
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      celebrationRockets.push(new CelebrationRocket(startX, startY, targetX, targetY, color, colors));
+    }, 1200);
+    
+    function animate() {
+      celebrationCtx.clearRect(0, 0, w, h);
+      
+      // Update & Draw Rockets
+      for (let i = celebrationRockets.length - 1; i >= 0; i--) {
+        const rocket = celebrationRockets[i];
+        rocket.update();
+        rocket.draw(celebrationCtx);
+        
+        if (rocket.exploded) {
+          const numParticles = rarity === 'legendary' ? 100 : (rarity === 'rare' ? 70 : 50);
+          for (let p = 0; p < numParticles; p++) {
+            const pColor = rocket.particleColors[Math.floor(Math.random() * rocket.particleColors.length)];
+            celebrationParticles.push(new CelebrationParticle(rocket.x, rocket.y, pColor));
+          }
+          celebrationRockets.splice(i, 1);
+        }
+      }
+      
+      // Update & Draw Particles
+      for (let i = celebrationParticles.length - 1; i >= 0; i--) {
+        const particle = celebrationParticles[i];
+        particle.update();
+        particle.draw(celebrationCtx);
+        
+        if (particle.alpha <= 0) {
+          celebrationParticles.splice(i, 1);
+        }
+      }
+      
+      if (isCelebrationActive) {
+        celebrationAnimationId = requestAnimationFrame(animate);
+      }
+    }
+    
+    animate();
+    
+    celebrationDurationTimeout = setTimeout(() => {
+      clearInterval(intervalId);
+      stopFireworksGracefully();
+    }, 6000);
+  }
+
+  function stopFireworksGracefully() {
+    celebrationRockets = [];
+    setTimeout(() => {
+      if (celebrationAnimationId) {
+        cancelAnimationFrame(celebrationAnimationId);
+        celebrationAnimationId = null;
+      }
+      const canvas = document.getElementById('celebration-canvas');
+      if (canvas) {
+        canvas.style.display = 'none';
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+    }, 1500);
+  }
+
+  function queueBadgeCelebration(badge) {
+    celebrationQueue.push(badge);
+    if (!isCelebrationActive) {
+      showNextCelebration();
+    }
+  }
+
+  function showNextCelebration() {
+    if (celebrationQueue.length === 0) {
+      isCelebrationActive = false;
+      return;
+    }
+    isCelebrationActive = true;
+    const badge = celebrationQueue.shift();
+    
+    const modal = document.getElementById('badge-unlock-modal');
+    const icon = document.getElementById('unlock-badge-icon');
+    const tier = document.getElementById('unlock-badge-tier');
+    const title = document.getElementById('unlock-badge-title');
+    const desc = document.getElementById('unlock-badge-desc');
+    const card = document.querySelector('.badge-unlock-card');
+    
+    if (modal && icon && tier && title && desc && card) {
+      icon.className = `fa-solid ${badge.icon}`;
+      title.textContent = badge.title;
+      desc.textContent = badge.desc;
+      
+      const tierText = badge.tier || 'endeavor';
+      tier.textContent = tierText;
+      tier.className = `badge-tier ${tierText}`;
+      
+      card.classList.remove('legendary-glow', 'rare-glow', 'milestone-glow');
+      if (tierText === 'legendary') card.classList.add('legendary-glow');
+      else if (tierText === 'rare') card.classList.add('rare-glow');
+      else if (tierText === 'milestone') card.classList.add('milestone-glow');
+
+      modal.style.display = 'flex';
+      modal.classList.remove('hidden');
+      
+      startFireworks(tierText);
+    }
+  }
+
+  const btnCloseBadgeUnlock = document.getElementById('btn-close-badge-unlock');
+  if (btnCloseBadgeUnlock) {
+    btnCloseBadgeUnlock.addEventListener('click', () => {
+      const modal = document.getElementById('badge-unlock-modal');
+      if (modal) {
+        modal.style.display = 'none';
+        modal.classList.add('hidden');
+      }
+      
+      stopFireworksGracefully();
+      isCelebrationActive = false;
+      showNextCelebration();
+    });
+  }
+
+  function checkNewAchievements() {
+    if (!state.unlockedAchievements) {
+      state.unlockedAchievements = [];
+    }
+    const newUnlocks = [];
+    ACHIEVEMENTS_LIST.forEach(ach => {
+      if (ach.check(state)) {
+        if (!state.unlockedAchievements.includes(ach.id)) {
+          state.unlockedAchievements.push(ach.id);
+          newUnlocks.push(ach);
+        }
+      }
+    });
+
+    if (newUnlocks.length > 0) {
+      saveState();
+      newUnlocks.forEach(ach => {
+        queueBadgeCelebration(ach);
+      });
+      return true;
+    }
+    return false;
+  }
+
+  function initializeUnlockedAchievements(silent = true) {
+    if (!state.unlockedAchievements) {
+      state.unlockedAchievements = [];
+    }
+    let stateChanged = false;
+    ACHIEVEMENTS_LIST.forEach(ach => {
+      if (ach.check(state)) {
+        if (!state.unlockedAchievements.includes(ach.id)) {
+          state.unlockedAchievements.push(ach.id);
+          stateChanged = true;
+        }
+      }
+    });
+    if (stateChanged && silent) {
+      localStorage.setItem('daimoku_grow_state', JSON.stringify(state));
+      const user = MockFirebase.auth.getCurrentUser();
+      if (user) {
+        MockFirebase.db.saveUserState(user.email, state);
+      }
+    }
   }
 
   function checkThreeConsecutiveDays(datesArray) {
@@ -4576,6 +5213,13 @@ document.addEventListener('DOMContentLoaded', () => {
   document.body.addEventListener('click', goFullscreen);
   document.body.addEventListener('touchstart', goFullscreen);
 
-
+  } catch (err) {
+    console.error("Initialization Error:", err);
+    var banner = document.getElementById('debug-error-banner');
+    if (banner) {
+      banner.style.display = 'block';
+      banner.innerHTML += 'Caught Init Error: ' + err.message + '\nStack:\n' + err.stack + '\n\n';
+    }
+  }
 });
 

@@ -267,68 +267,76 @@ const MockFirebase = {
 
 // Database Migration for July 3rd Campaign Sync
 function migrateDatabase() {
-  const versionKey = 'daimoku_db_migration_version';
-  const currentVersion = parseInt(localStorage.getItem(versionKey) || '0');
-  
-  if (currentVersion < 1) {
-    // 1. Ensure July 3rd is active
-    let activeCampaigns = [];
-    try {
-      const savedActive = localStorage.getItem('daimoku_db_active_campaigns');
-      activeCampaigns = savedActive ? JSON.parse(savedActive) : [];
-    } catch (e) {}
+  try {
+    const versionKey = 'daimoku_db_migration_version';
+    const currentVersion = parseInt(localStorage.getItem(versionKey) || '0');
     
-    if (!activeCampaigns.includes('july_3rd')) {
-      activeCampaigns.push('july_3rd');
-      localStorage.setItem('daimoku_db_active_campaigns', JSON.stringify(activeCampaigns));
+    if (currentVersion < 1) {
+      // 1. Ensure July 3rd is active
+      let activeCampaigns = [];
+      try {
+        const savedActive = localStorage.getItem('daimoku_db_active_campaigns');
+        activeCampaigns = savedActive ? JSON.parse(savedActive) : [];
+      } catch (e) {}
+      if (!activeCampaigns) activeCampaigns = [];
+      
+      if (!activeCampaigns.includes('july_3rd')) {
+        activeCampaigns.push('july_3rd');
+        localStorage.setItem('daimoku_db_active_campaigns', JSON.stringify(activeCampaigns));
+      }
+      
+      // 2. Ensure July 3rd dates are set correctly (start covers today)
+      let campaignDates = {};
+      try {
+        const savedDates = localStorage.getItem('daimoku_db_campaign_dates');
+        campaignDates = savedDates ? JSON.parse(savedDates) : {};
+      } catch (e) {}
+      if (!campaignDates) campaignDates = {};
+      
+      if (!campaignDates.july_3rd || campaignDates.july_3rd.start !== '2026-06-19') {
+        campaignDates.july_3rd = { start: '2026-06-19', end: '2026-11-19' };
+        localStorage.setItem('daimoku_db_campaign_dates', JSON.stringify(campaignDates));
+      }
+      
+      // 3. Ensure July 3rd target is 50 hours
+      let campaignTargets = {};
+      try {
+        const savedTargets = localStorage.getItem('daimoku_db_campaign_targets');
+        campaignTargets = savedTargets ? JSON.parse(savedTargets) : {};
+      } catch (e) {}
+      if (!campaignTargets) campaignTargets = {};
+      
+      if (!campaignTargets.july_3rd || campaignTargets.july_3rd !== 50) {
+        campaignTargets.july_3rd = 50;
+        localStorage.setItem('daimoku_db_campaign_targets', JSON.stringify(campaignTargets));
+      }
+      
+      // 4. Ensure Wisdom block has a contribution of 1.7 hours (6120 seconds) for July 3rd
+      let contributions = [];
+      try {
+        const savedContribs = localStorage.getItem('daimoku_db_campaign_contributions');
+        contributions = savedContribs ? JSON.parse(savedContribs) : [];
+      } catch (e) {}
+      if (!contributions) contributions = [];
+      
+      const hasWisdomContrib = contributions.some(c => c.campaignId === 'july_3rd' && c.userEmail === 'wisdom@email.com');
+      if (!hasWisdomContrib) {
+        contributions.push({
+          id: 'migration_seeded_wisdom_july3rd',
+          userEmail: 'wisdom@email.com',
+          username: 'Wisdom Member',
+          block: 'Wisdom',
+          campaignId: 'july_3rd',
+          durationSeconds: 6120, // 1.7 hours
+          date: '2026-06-19'
+        });
+        localStorage.setItem('daimoku_db_campaign_contributions', JSON.stringify(contributions));
+      }
+      
+      localStorage.setItem(versionKey, '1');
     }
-    
-    // 2. Ensure July 3rd dates are set correctly (start covers today)
-    let campaignDates = {};
-    try {
-      const savedDates = localStorage.getItem('daimoku_db_campaign_dates');
-      campaignDates = savedDates ? JSON.parse(savedDates) : {};
-    } catch (e) {}
-    
-    if (!campaignDates.july_3rd || campaignDates.july_3rd.start !== '2026-06-19') {
-      campaignDates.july_3rd = { start: '2026-06-19', end: '2026-11-19' };
-      localStorage.setItem('daimoku_db_campaign_dates', JSON.stringify(campaignDates));
-    }
-    
-    // 3. Ensure July 3rd target is 50 hours
-    let campaignTargets = {};
-    try {
-      const savedTargets = localStorage.getItem('daimoku_db_campaign_targets');
-      campaignTargets = savedTargets ? JSON.parse(savedTargets) : {};
-    } catch (e) {}
-    
-    if (!campaignTargets.july_3rd || campaignTargets.july_3rd !== 50) {
-      campaignTargets.july_3rd = 50;
-      localStorage.setItem('daimoku_db_campaign_targets', JSON.stringify(campaignTargets));
-    }
-    
-    // 4. Ensure Wisdom block has a contribution of 1.7 hours (6120 seconds) for July 3rd
-    let contributions = [];
-    try {
-      const savedContribs = localStorage.getItem('daimoku_db_campaign_contributions');
-      contributions = savedContribs ? JSON.parse(savedContribs) : [];
-    } catch (e) {}
-    
-    const hasWisdomContrib = contributions.some(c => c.campaignId === 'july_3rd' && c.userEmail === 'wisdom@email.com');
-    if (!hasWisdomContrib) {
-      contributions.push({
-        id: 'migration_seeded_wisdom_july3rd',
-        userEmail: 'wisdom@email.com',
-        username: 'Wisdom Member',
-        block: 'Wisdom',
-        campaignId: 'july_3rd',
-        durationSeconds: 6120, // 1.7 hours
-        date: '2026-06-19'
-      });
-      localStorage.setItem('daimoku_db_campaign_contributions', JSON.stringify(contributions));
-    }
-    
-    localStorage.setItem(versionKey, '1');
+  } catch (e) {
+    console.error("Database migration failed:", e);
   }
 }
 

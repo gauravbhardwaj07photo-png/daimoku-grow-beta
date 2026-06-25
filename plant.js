@@ -5,16 +5,106 @@
  */
 
 const PlantRenderer = (function() {
+  try {
   let canvas = null;
   let ctx = null;
   let animationId = null;
   let windTime = 0;
+  
+  // Private helper for deterministic random generation (prevents frame jitter)
+  function seededRandom(seed) {
+    const x = Math.sin(seed) * 10000;
+    return x - Math.floor(x);
+  }
+  
+  // Private helper for recursive branch drawing
+  function drawBranchRecursive(length, thickness, bendAngle, depth, maxDepth, branchId, masterScale, woodColor, leafColors, tips) {
+    ctx.save();
+    
+    // Draw the branch curve in 3 segments
+    const segments = 3;
+    const segLength = length / segments;
+    ctx.strokeStyle = woodColor;
+    ctx.lineCap = 'round';
+    
+    // Wind sway propagates: tips sway more
+    const windSway = Math.sin(windTime * 0.8 + depth + branchId) * 0.035 * (currentHealth / 100);
+    
+    for (let i = 0; i < segments; i++) {
+      const currentThickness = thickness * (1 - (i / segments) * 0.25 * (depth === maxDepth ? 0.5 : 1));
+      ctx.lineWidth = currentThickness * masterScale;
+      
+      const angle = bendAngle / segments + windSway / segments;
+      ctx.rotate(angle);
+      
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(0, -segLength);
+      ctx.stroke();
+      ctx.translate(0, -segLength);
+    }
+    
+    // If leaf tip (depth === 1), collect coordinates and draw flowers
+    if (depth === 1) {
+      const matrix = ctx.getTransform();
+      const dpr = window.devicePixelRatio || 1;
+      tips.push({
+        x: matrix.e / dpr,
+        y: matrix.f / dpr,
+        angle: Math.atan2(matrix.b, matrix.a),
+        branchId: branchId
+      });
+      
+      // Draw flowers if healthy & mature (and not dead)
+      if (!isDead && currentHealth > 40) {
+        const stageInfo = getGrowthStage(currentHours);
+        if (stageInfo.stage === 5) {
+          drawFlower(0, 0, 7 * masterScale);
+        } else if (stageInfo.stage === 6 && currentHealth > 50) {
+          const blossomColors = ['#ff7bbd', '#ff9ebe', '#ffd3e2', '#cc99ff', '#ffb3d9'];
+          const petalColor = blossomColors[branchId % blossomColors.length];
+          drawFlower(0, 0, 9 * masterScale, petalColor);
+        }
+      }
+    } else {
+      // Recurse: split branches
+      const nextLength = length * 0.72;
+      const nextThickness = thickness * 0.65;
+      const stageInfo = getGrowthStage(currentHours);
+      
+      if (stageInfo.stage === 3) {
+        drawBranchRecursive(nextLength, nextThickness, -0.4, depth - 1, maxDepth, branchId * 2 + 1, masterScale, woodColor, leafColors, tips);
+        drawBranchRecursive(nextLength, nextThickness, 0.4, depth - 1, maxDepth, branchId * 2 + 2, masterScale, woodColor, leafColors, tips);
+      } else if (stageInfo.stage === 4) {
+        drawBranchRecursive(nextLength, nextThickness, -0.55, depth - 1, maxDepth, branchId * 2 + 1, masterScale, woodColor, leafColors, tips);
+        drawBranchRecursive(nextLength, nextThickness, 0.55, depth - 1, maxDepth, branchId * 2 + 2, masterScale, woodColor, leafColors, tips);
+      } else if (stageInfo.stage === 5) {
+        drawBranchRecursive(nextLength, nextThickness, -0.65, depth - 1, maxDepth, branchId * 3 + 1, masterScale, woodColor, leafColors, tips);
+        drawBranchRecursive(nextLength * 0.85, nextThickness, 0.1, depth - 1, maxDepth, branchId * 3 + 2, masterScale, woodColor, leafColors, tips);
+        drawBranchRecursive(nextLength, nextThickness, 0.65, depth - 1, maxDepth, branchId * 3 + 3, masterScale, woodColor, leafColors, tips);
+      } else if (stageInfo.stage === 6) {
+        drawBranchRecursive(nextLength, nextThickness, -0.72, depth - 1, maxDepth, branchId * 4 + 1, masterScale, woodColor, leafColors, tips);
+        drawBranchRecursive(nextLength, nextThickness, 0.72, depth - 1, maxDepth, branchId * 4 + 2, masterScale, woodColor, leafColors, tips);
+        drawBranchRecursive(nextLength * 0.8, nextThickness, -0.22, depth - 1, maxDepth, branchId * 4 + 3, masterScale, woodColor, leafColors, tips);
+        drawBranchRecursive(nextLength * 0.8, nextThickness, 0.22, depth - 1, maxDepth, branchId * 4 + 4, masterScale, woodColor, leafColors, tips);
+      }
+    }
+    
+    ctx.restore();
+  }
   
   // Plant State
   let currentHours = 0;
   let currentHealth = 100;
   let isDead = false;
   let isChanting = false;
+  
+  // Drifting Clouds State
+  let clouds = [
+    { x: 50, y: 50, speed: 0.08, scale: 0.95, opacity: 0.65 },
+    { x: 180, y: 80, speed: 0.06, scale: 1.50, opacity: 0.58 },
+    { x: 300, y: 30, speed: 0.11, scale: 0.85, opacity: 0.70 }
+  ];
   
   // Lion Animation State Machine Variables
   let lionState = 'offscreen'; // 'offscreen', 'walking-in', 'sitting', 'walking-out'
@@ -121,12 +211,36 @@ const PlantRenderer = (function() {
     if (animationId) return;
     
     function loop() {
-      // Wind speed increases slightly if the plant is happy
-      const windSpeed = isDead ? 0.005 : (currentHealth > 70 ? 0.02 : 0.012);
-      windTime += windSpeed;
-      
-      draw();
-      animationId = requestAnimationFrame(loop);
+      try {
+        // Wind speed increases slightly if the plant is happy
+        const windSpeed = isDead ? 0.005 : (currentHealth > 70 ? 0.02 : 0.012);
+        windTime += windSpeed;
+        
+        // Update clouds drift physics
+        const w = canvas ? canvas.width / (window.devicePixelRatio || 1) : 400;
+        clouds.forEach(cloud => {
+          cloud.x += cloud.speed;
+          if (cloud.x > w + 100 * cloud.scale) {
+            cloud.x = -100 * cloud.scale;
+            cloud.y = 20 + Math.random() * 90;
+            cloud.speed = 0.05 + Math.random() * 0.12;
+            cloud.scale = 0.75 + Math.random() * 0.85;
+            cloud.opacity = 0.50 + Math.random() * 0.35;
+          }
+        });
+        
+        draw();
+        animationId = requestAnimationFrame(loop);
+      } catch (err) {
+        console.error("Error in animation loop:", err);
+        cancelAnimationFrame(animationId);
+        animationId = null;
+        var banner = document.getElementById('debug-error-banner');
+        if (banner) {
+          banner.style.display = 'block';
+          banner.innerHTML += 'Caught animation loop error: ' + err.message + '\nStack:\n' + err.stack + '\n\n';
+        }
+      }
     }
     
     animationId = requestAnimationFrame(loop);
@@ -324,6 +438,27 @@ const PlantRenderer = (function() {
   }
 
   /**
+   * Helper: Draw a single cloud procedurally
+   */
+  function drawCloud(cx, cy, scale, opacity, cloudColor) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(scale, scale);
+    ctx.fillStyle = cloudColor;
+    ctx.globalAlpha = opacity;
+    
+    ctx.beginPath();
+    ctx.arc(0, 0, 18, Math.PI * 0.5, Math.PI * 1.5);
+    ctx.arc(15, -12, 22, Math.PI * 1.0, Math.PI * 2.0);
+    ctx.arc(42, -8, 18, Math.PI * 1.3, Math.PI * 2.2);
+    ctx.arc(55, 0, 16, Math.PI * 1.5, Math.PI * 0.5);
+    ctx.closePath();
+    ctx.fill();
+    
+    ctx.restore();
+  }
+
+  /**
    * Main Draw Function
    */
   function draw() {
@@ -336,17 +471,51 @@ const PlantRenderer = (function() {
     ctx.clearRect(0, 0, w, h);
 
     const nowHour = new Date().getHours();
-    const isNight = (nowHour >= 19 || nowHour < 5);
+    
+    // Determine Diurnal Phase: Sunrise (5-9), Day (9-17), Sunset (17-20), Night (20-5)
+    let phase = 'day';
+    if (nowHour >= 5 && nowHour < 9) {
+      phase = 'sunrise';
+    } else if (nowHour >= 9 && nowHour < 17) {
+      phase = 'day';
+    } else if (nowHour >= 17 && nowHour < 20) {
+      phase = 'sunset';
+    } else {
+      phase = 'night';
+    }
+    
+    const isNight = phase === 'night';
 
-    // If it is night, draw a beautiful dark twilight background and stars
-    if (isNight) {
+    // Sky Background Rendering
+    if (phase === 'sunrise') {
       const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
-      skyGrad.addColorStop(0, '#0a0d1a'); // Dark deep midnight
-      skyGrad.addColorStop(1, '#151a30'); // Twilight navy
+      skyGrad.addColorStop(0, '#ffd3b6'); // Soft peach sunrise
+      skyGrad.addColorStop(0.5, '#ffaaa5'); // Soft rose
+      skyGrad.addColorStop(1, '#d4a5b8'); // Lavender base
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, w, h);
+    } else if (phase === 'day') {
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
+      skyGrad.addColorStop(0, '#e8f0fe'); // Light sky blue
+      skyGrad.addColorStop(1, '#faf7f2'); // Soft cream base
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, w, h);
+    } else if (phase === 'sunset') {
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
+      skyGrad.addColorStop(0, '#a88be8'); // Sunset violet
+      skyGrad.addColorStop(0.5, '#ff8a7a'); // Warm orange-pink
+      skyGrad.addColorStop(1, '#fec85a'); // Golden glow
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, w, h);
+    } else { // Night
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
+      skyGrad.addColorStop(0, '#0b0f19'); // Dark midnight sky
+      skyGrad.addColorStop(0.5, '#151a30'); // Twilight navy
+      skyGrad.addColorStop(1, '#202640'); // Indigo glow
       ctx.fillStyle = skyGrad;
       ctx.fillRect(0, 0, w, h);
 
-      // Draw a few subtle twinkling stars
+      // Draw Twinkling Stars
       ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
       const starPositions = [
         { x: w * 0.20, y: h * 0.15, r: 1.2 },
@@ -354,7 +523,10 @@ const PlantRenderer = (function() {
         { x: w * 0.78, y: h * 0.22, r: 1.5 },
         { x: w * 0.88, y: h * 0.10, r: 1.0 },
         { x: w * 0.15, y: h * 0.30, r: 0.9 },
-        { x: w * 0.52, y: h * 0.18, r: 1.1 }
+        { x: w * 0.52, y: h * 0.18, r: 1.1 },
+        { x: w * 0.28, y: h * 0.25, r: 1.3 },
+        { x: w * 0.68, y: h * 0.12, r: 1.0 },
+        { x: w * 0.82, y: h * 0.30, r: 0.7 }
       ];
       starPositions.forEach(star => {
         ctx.save();
@@ -366,16 +538,33 @@ const PlantRenderer = (function() {
       });
     }
 
-    // Draw Sun or Moon based on local hour (7 PM onwards moon)
+    // Determine Sun/Moon coordinates
     const sunMoonX = 75;
     const sunMoonY = 75;
     
-    if (!isNight) {
-      // Draw Sun
+    // Draw Sun/Moon depending on diurnal phase
+    if (phase === 'sunrise') {
+      ctx.save();
+      ctx.translate(sunMoonX + 15, sunMoonY + 15); // Rising sun position (lower)
+      const sunGlow = ctx.createRadialGradient(0, 0, 20, 0, 0, 60);
+      sunGlow.addColorStop(0, 'rgba(255, 171, 64, 0.60)');
+      sunGlow.addColorStop(0.5, 'rgba(255, 138, 101, 0.20)');
+      sunGlow.addColorStop(1, 'rgba(255, 204, 128, 0)');
+      ctx.fillStyle = sunGlow;
+      ctx.beginPath();
+      ctx.arc(0, 0, 60, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.fillStyle = '#ffb74d'; // Warm orange rising core
+      ctx.shadowColor = '#e65100';
+      ctx.shadowBlur = 15;
+      ctx.beginPath();
+      ctx.arc(0, 0, 20, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    } else if (phase === 'day') {
       ctx.save();
       ctx.translate(sunMoonX, sunMoonY);
-      
-      // Sun glow (Enlarged and made more prominent)
       const sunGlow = ctx.createRadialGradient(0, 0, 26, 0, 0, 68);
       sunGlow.addColorStop(0, 'rgba(255, 215, 64, 0.60)');
       sunGlow.addColorStop(0.5, 'rgba(255, 215, 64, 0.25)');
@@ -385,21 +574,37 @@ const PlantRenderer = (function() {
       ctx.arc(0, 0, 68, 0, Math.PI * 2);
       ctx.fill();
       
-      // Sun core (Enlarged)
-      ctx.fillStyle = '#ffca28';
+      ctx.fillStyle = '#ffca28'; // Golden core
       ctx.shadowColor = '#ff9800';
       ctx.shadowBlur = 20;
       ctx.beginPath();
       ctx.arc(0, 0, 26, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
-    } else {
-      // Draw Moon (crescent)
+    } else if (phase === 'sunset') {
+      ctx.save();
+      ctx.translate(sunMoonX + 25, sunMoonY + 30); // Setting sun position (lower)
+      const sunGlow = ctx.createRadialGradient(0, 0, 24, 0, 0, 62);
+      sunGlow.addColorStop(0, 'rgba(244, 67, 54, 0.65)');
+      sunGlow.addColorStop(0.5, 'rgba(255, 152, 0, 0.25)');
+      sunGlow.addColorStop(1, 'rgba(255, 193, 7, 0)');
+      ctx.fillStyle = sunGlow;
+      ctx.beginPath();
+      ctx.arc(0, 0, 62, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.fillStyle = '#ff5722'; // Orange-red core
+      ctx.shadowColor = '#d84315';
+      ctx.shadowBlur = 18;
+      ctx.beginPath();
+      ctx.arc(0, 0, 24, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    } else { // Night Moon
       ctx.save();
       ctx.translate(sunMoonX, sunMoonY);
       ctx.rotate(-Math.PI / 4);
       
-      // Moon glow (Enlarged and made more prominent)
       const moonGlow = ctx.createRadialGradient(0, 0, 25, 0, 0, 62);
       moonGlow.addColorStop(0, 'rgba(236, 239, 241, 0.50)');
       moonGlow.addColorStop(0.5, 'rgba(236, 239, 241, 0.20)');
@@ -409,8 +614,7 @@ const PlantRenderer = (function() {
       ctx.arc(0, 0, 62, 0, Math.PI * 2);
       ctx.fill();
       
-      // Moon crescent shape (Enlarged and thickened)
-      ctx.fillStyle = '#eceff1';
+      ctx.fillStyle = '#eceff1'; // Crescent moon shape
       ctx.shadowColor = '#b0bec5';
       ctx.shadowBlur = 18;
       ctx.beginPath();
@@ -420,16 +624,38 @@ const PlantRenderer = (function() {
       ctx.fill();
       ctx.restore();
     }
+
+    // Draw Drifting Clouds behind the plant
+    let cloudColor = 'rgba(255, 255, 255, 0.95)';
+    if (phase === 'sunrise') {
+      cloudColor = 'rgba(255, 235, 240, 0.90)'; // Soft rose-lavender clouds
+    } else if (phase === 'sunset') {
+      cloudColor = 'rgba(255, 210, 190, 0.88)'; // Peach-gold sunset clouds
+    } else if (phase === 'night') {
+      cloudColor = 'rgba(25, 30, 48, 0.35)'; // Dark wispy silhouette clouds
+    }
     
+    clouds.forEach(cloud => {
+      drawCloud(cloud.x, cloud.y, cloud.scale, cloud.opacity, cloudColor);
+    });
+
     // Draw plant spotlight beautifully (warm by day, cool by night)
     const potY = h - 98;
     ctx.save();
     const spotGrad = ctx.createLinearGradient(w / 2, 0, w / 2, potY + 10);
-    if (!isNight) {
+    if (phase === 'sunrise') {
+      spotGrad.addColorStop(0, 'rgba(255, 230, 180, 0.20)');
+      spotGrad.addColorStop(0.6, 'rgba(255, 230, 180, 0.08)');
+      spotGrad.addColorStop(1, 'rgba(255, 230, 180, 0)');
+    } else if (phase === 'day') {
       spotGrad.addColorStop(0, 'rgba(255, 255, 210, 0.18)');
       spotGrad.addColorStop(0.6, 'rgba(255, 255, 210, 0.08)');
       spotGrad.addColorStop(1, 'rgba(255, 255, 210, 0)');
-    } else {
+    } else if (phase === 'sunset') {
+      spotGrad.addColorStop(0, 'rgba(255, 180, 150, 0.20)');
+      spotGrad.addColorStop(0.6, 'rgba(255, 180, 150, 0.08)');
+      spotGrad.addColorStop(1, 'rgba(255, 180, 150, 0)');
+    } else { // Night
       spotGrad.addColorStop(0, 'rgba(235, 245, 255, 0.28)'); // Enhanced spotlight at night
       spotGrad.addColorStop(0.6, 'rgba(235, 245, 255, 0.12)');
       spotGrad.addColorStop(1, 'rgba(235, 245, 255, 0)');
@@ -475,14 +701,25 @@ const PlantRenderer = (function() {
     // Droop factor
     const droopFactor = isDead ? 0.85 : (1 - currentHealth / 100);
     
-    // Master plant scale based on growth stage
+    // Master plant scale based on continuous growth logic (grows smoothly with each hour of Daimoku)
     let stageScale = 1.0;
-    switch (stageInfo.stage) {
-      case 2: stageScale = 0.80; break;  // Sprout
-      case 3: stageScale = 0.95; break;  // Seedling
-      case 4: stageScale = 1.0; break;   // Young Plant
-      case 5: stageScale = 1.15; break;  // Mature Shrub
-      case 6: stageScale = 2.10; break;  // Majestic Tree (Rescaled to fit perfectly on screen without going out)
+    if (currentHours <= 0) {
+      stageScale = 0;
+    } else if (currentHours <= 10) {
+      // Sprout stage: grow smoothly from 0.40 to 0.80
+      stageScale = 0.40 + 0.40 * (currentHours / 10);
+    } else if (currentHours <= 50) {
+      // Seedling stage: grow smoothly from 0.80 to 0.95
+      stageScale = 0.80 + 0.15 * ((currentHours - 10) / 40);
+    } else if (currentHours <= 150) {
+      // Young Plant stage: grow smoothly from 0.95 to 1.05
+      stageScale = 0.95 + 0.10 * ((currentHours - 50) / 100);
+    } else if (currentHours <= 333) {
+      // Mature Shrub stage: grow smoothly from 1.05 to 1.25
+      stageScale = 1.05 + 0.20 * ((currentHours - 150) / 183);
+    } else {
+      // Majestic Tree stage: grow smoothly from 2.10 up to 2.50 based on next milestones
+      stageScale = 2.10 + Math.min(0.40, 0.40 * ((currentHours - 333) / 667));
     }
     
     const masterScale = stageScale * healthScale;
@@ -641,12 +878,14 @@ const PlantRenderer = (function() {
     
     // Draw the Plant (Drawn after the pot so it is on top of the soil and visible)
     if (stageInfo.stage > 1) {
+      // Clear or initialize tips list for this frame
+      const tips = [];
+      
       ctx.save();
       // Translate to soil center
       ctx.translate(potX, potY + rimH - 3);
       
       const windAngle = Math.sin(windTime) * 0.04 * (isDead ? 0.2 : (currentHealth / 100 + 0.3));
-      
       const leafColors = getLeafColors(currentHealth, isDead);
       const woodColor = isDead ? colors.wood.dead : (currentHealth <= 40 ? colors.wood.dry : colors.wood.healthy);
       
@@ -662,7 +901,7 @@ const PlantRenderer = (function() {
 
         ctx.rotate(windAngle);
         
-        const stemLength = 75 * masterScale; // Increased stem length
+        const stemLength = 75 * masterScale;
         
         // Draw stem
         ctx.beginPath();
@@ -679,251 +918,60 @@ const PlantRenderer = (function() {
         ctx.lineCap = 'round';
         ctx.stroke();
         
-        // Draw 2 small leaves at top
-        const leafSize = 22 * masterScale;
+        // Draw leaves along the stem - grows 1 leaf per hour
+        const leafCount = Math.max(1, Math.min(10, Math.floor(currentHours)));
         const leafAngleOffset = 0.4 + (0.5 * droopFactor); // Droop leaves down
         
-        // If dead, point leaves straight down
-        const leafAngle1 = isDead ? (Math.PI / 2 - 0.1) : (-Math.PI/4 + leafAngleOffset);
-        const leafAngle2 = isDead ? (Math.PI / 2 + 0.1) : (-Math.PI*3/4 - leafAngleOffset);
+        for (let i = 1; i <= leafCount; i++) {
+          const t = i / (leafCount + 1);
+          // Interpolate point along quadratic Bezier curve
+          const lx = (1 - t) * (1 - t) * 0 + 2 * (1 - t) * t * ctrlX + t * t * endX;
+          const ly = (1 - t) * (1 - t) * 0 + 2 * (1 - t) * t * ctrlY + t * t * endY;
+          
+          const leafSize = (14 + t * 8) * masterScale;
+          const leafAngle1 = isDead ? (Math.PI / 2 - 0.1) : (-Math.PI/4 + leafAngleOffset);
+          const leafAngle2 = isDead ? (Math.PI / 2 + 0.1) : (-Math.PI*3/4 - leafAngleOffset);
+          
+          if (i % 2 === 0) {
+            drawLeaf(lx, ly, leafSize, leafSize * 0.6, leafAngle1, leafColors[i % leafColors.length]);
+          } else {
+            drawLeaf(lx, ly, leafSize, leafSize * 0.6, leafAngle2, leafColors[(i + 1) % leafColors.length]);
+          }
+        }
         
-        drawLeaf(endX, endY, leafSize, leafSize * 0.6, leafAngle1, leafColors[0]);
-        drawLeaf(endX, endY, leafSize, leafSize * 0.6, leafAngle2, leafColors[1]);
-        
-      } else if (stageInfo.stage === 3) {
-        // --- STAGE 3: SEEDLING ---
-        // Draw split seed shells at the base (soil level)
-        ctx.save();
-        ctx.fillStyle = '#6e5a4f';
-        ctx.beginPath(); ctx.arc(-6, 2, 3 * masterScale, Math.PI * 0.5, Math.PI * 1.5); ctx.fill();
-        ctx.beginPath(); ctx.arc(4, 3, 3 * masterScale, -Math.PI * 0.5, Math.PI * 0.5); ctx.fill();
-        ctx.restore();
+      } else {
+        // --- STAGES 3-6: ORGANIC BRANCHING TREE ---
+        // Draw split seed shells at the base for Stage 3 seedling
+        if (stageInfo.stage === 3) {
+          ctx.save();
+          ctx.fillStyle = '#6e5a4f';
+          ctx.beginPath(); ctx.arc(-6, 2, 3 * masterScale, Math.PI * 0.5, Math.PI * 1.5); ctx.fill();
+          ctx.beginPath(); ctx.arc(4, 3, 3 * masterScale, -Math.PI * 0.5, Math.PI * 0.5); ctx.fill();
+          ctx.restore();
+        }
 
         ctx.rotate(windAngle);
         
-        const stemLength = 125 * masterScale; // Increased stem length
+        let maxDepth = 2;
+        let trunkLen = 60;
+        let trunkThickness = 7;
         
-        // Draw central stem curve
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        // If dead, droop stem extremely
-        const endX = isDead ? -50 * masterScale : -35 * droopFactor;
-        const endY = isDead ? -stemLength * 0.2 : -stemLength + 20 * droopFactor;
-        const cx = isDead ? -55 * masterScale : (-15 * droopFactor + Math.sin(windTime * 0.7) * 4);
-        const cy = isDead ? -stemLength * 0.65 : -stemLength / 2;
-        
-        ctx.quadraticCurveTo(cx, cy, endX, endY);
-        ctx.strokeStyle = woodColor;
-        ctx.lineWidth = 6 * masterScale;
-        ctx.lineCap = 'round';
-        ctx.stroke();
-        
-        // Draw leaves along the stem - grows dynamically with hours
-        const leafPairs = 3 + Math.min(3, Math.floor((currentHours - 10) / 15));
-        for (let i = 1; i <= leafPairs; i++) {
-          const ratio = i / leafPairs;
-          
-          // Interpolate point along the Bezier curve
-          const t = ratio;
-          const lx = 2 * (1 - t) * t * cx + t * t * endX;
-          const ly = 2 * (1 - t) * t * cy + t * t * endY;
-          
-          const currentLeafSize = (25 + (1 - ratio) * 10) * masterScale;
-          const droop = 0.2 + (0.6 * droopFactor);
-          
-          // If dead, point leaves straight down
-          const leafAngle1 = isDead ? (Math.PI / 2 - 0.2) : (-Math.PI/6 + droop);
-          const leafAngle2 = isDead ? (Math.PI / 2 + 0.2) : (-Math.PI*5/6 - droop);
-          
-          // Draw left and right leaf
-          drawLeaf(lx, ly, currentLeafSize, currentLeafSize * 0.5, leafAngle1, leafColors[i % leafColors.length]);
-          drawLeaf(lx, ly, currentLeafSize, currentLeafSize * 0.5, leafAngle2, leafColors[(i+1) % leafColors.length]);
+        if (stageInfo.stage === 3) {
+          maxDepth = 2; trunkLen = 60; trunkThickness = 7;
+        } else if (stageInfo.stage === 4) {
+          maxDepth = 3; trunkLen = 80; trunkThickness = 9;
+        } else if (stageInfo.stage === 5) {
+          maxDepth = 4; trunkLen = 95; trunkThickness = 11;
+        } else if (stageInfo.stage === 6) {
+          maxDepth = 4; trunkLen = 100; trunkThickness = 13;
         }
         
-      } else if (stageInfo.stage === 4) {
-        // --- STAGE 4: YOUNG PLANT (Branched Bush) ---
-        // A main stem and 2 side branches
-        ctx.rotate(windAngle);
-        
-        const stemLength = 160 * masterScale;
-        
-        // Main stem path
-        const drawBranch = (startX, startY, length, angle, depth) => {
-          if (depth <= 0) return;
-          
-          ctx.save();
-          ctx.translate(startX, startY);
-          
-          // Apply sway and droop physics
-          const sway = Math.sin(windTime + depth) * 0.03 * (currentHealth / 100);
-          const droop = (1 - depth * 0.2) * 0.15 * droopFactor;
-          
-          ctx.rotate(angle + sway + (angle > 0 ? droop : -droop));
-          
-          // Draw branch line
-          ctx.beginPath();
-          ctx.moveTo(0, 0);
-          ctx.lineTo(0, -length);
-          ctx.strokeStyle = woodColor;
-          ctx.lineWidth = depth * 3 * masterScale;
-          ctx.lineCap = 'round';
-          ctx.stroke();
-          
-          // Draw leaves on this branch - grows dynamically with hours
-          const numLeaves = 4 + Math.min(4, Math.floor((currentHours - 50) / 25));
-          for (let i = 1; i <= numLeaves; i++) {
-            const r = i / numLeaves;
-            const ly = -length * r;
-            const lSize = (20 + (1 - r) * 10) * masterScale;
-            const leafDroop = 0.25 + (0.5 * droopFactor);
-            
-            drawLeaf(0, ly, lSize, lSize * 0.55, -Math.PI/4 + leafDroop, leafColors[i % leafColors.length]);
-            drawLeaf(0, ly, lSize, lSize * 0.55, -Math.PI*3/4 - leafDroop, leafColors[(i+2) % leafColors.length]);
-          }
-          
-          // Spawn sub-branches at top of this branch
-          if (depth > 1) {
-            const branchLen = length * 0.65;
-            drawBranch(0, -length, branchLen, -0.5, depth - 1);
-            drawBranch(0, -length, branchLen, 0.5, depth - 1);
-          }
-          
-          ctx.restore();
-        };
-        
-        // Start branch recursion
-        drawBranch(0, 0, stemLength, 0, 2);
-        
-      } else if (stageInfo.stage === 5) {
-        // --- STAGE 5: MATURE SHRUB (With Flowers) ---
-        ctx.rotate(windAngle * 1.2);
-        
-        const drawMatureBranch = (startX, startY, length, angle, depth) => {
-          if (depth <= 0) return;
-          
-          ctx.save();
-          ctx.translate(startX, startY);
-          
-          const sway = Math.sin(windTime * 0.8 + depth) * 0.035 * (currentHealth / 100);
-          const droop = (2 - depth) * 0.18 * droopFactor;
-          
-          ctx.rotate(angle + sway + (angle > 0 ? droop : -droop));
-          
-          ctx.beginPath();
-          ctx.moveTo(0, 0);
-          ctx.lineTo(0, -length);
-          ctx.strokeStyle = woodColor;
-          ctx.lineWidth = depth * 4 * masterScale;
-          ctx.lineCap = 'round';
-          ctx.stroke();
-          
-          // Leaves - grows dynamically with hours
-          const leaves = 5 + Math.min(5, Math.floor((currentHours - 150) / 45));
-          for (let i = 1; i <= leaves; i++) {
-            const r = i / leaves;
-            const ly = -length * r;
-            const lSize = (22 + (1-r)*8) * masterScale;
-            const leafDroop = 0.25 + (0.65 * droopFactor);
-            
-            drawLeaf(0, ly, lSize, lSize * 0.5, -Math.PI/5 + leafDroop, leafColors[i % leafColors.length]);
-            drawLeaf(0, ly, lSize, lSize * 0.5, -Math.PI*4/5 - leafDroop, leafColors[(i+1) % leafColors.length]);
-          }
-          
-          // Draw flowers if healthy & mature (and not dead)
-          if (!isDead && currentHealth > 40 && depth === 1) {
-            // Draw a flower at the tip of the branch
-            drawFlower(0, -length, 8 * masterScale);
-          }
-          
-          if (depth > 1) {
-            drawMatureBranch(0, -length, length * 0.7, -0.65, depth - 1);
-            drawMatureBranch(0, -length, length * 0.7, 0.65, depth - 1);
-            drawMatureBranch(0, -length * 0.6, length * 0.5, 0, depth - 1);
-          }
-          
-          ctx.restore();
-        };
-        
-        drawMatureBranch(0, 0, 180 * masterScale, 0, 2);
-        
-      } else if (stageInfo.stage === 6) {
-        // --- STAGE 6: MAJESTIC TREE (Peepal Tree Style) ---
-        // Thick trunk, wide-spreading canopy, colorful deterministic flowers, peepal leaves
-        ctx.rotate(windAngle * 0.8);
-        
-        const drawTreeBranch = (startX, startY, length, angle, depth, branchId = 0) => {
-          if (depth <= 0) return;
-          
-          ctx.save();
-          ctx.translate(startX, startY);
-          
-          const sway = Math.sin(windTime * 0.6 + depth + branchId) * 0.02 * (currentHealth / 100);
-          const droop = (3 - depth) * 0.12 * droopFactor;
-          
-          ctx.rotate(angle + sway + (angle > 0 ? droop : -droop));
-          
-          // Thick tapering trunk/branch (Peepal trees have sturdy, thick structures)
-          ctx.beginPath();
-          ctx.moveTo(-depth * 3.5 * masterScale, 0);
-          ctx.lineTo(-depth * 2.2 * masterScale, -length);
-          ctx.lineTo(depth * 2.2 * masterScale, -length);
-          ctx.lineTo(depth * 3.5 * masterScale, 0);
-          ctx.closePath();
-          ctx.fillStyle = woodColor;
-          ctx.fill();
-          
-          // If top level branch, render full cluster of peepal leaves
-          if (depth === 1) {
-            // Canopy peepal leaves cluster - grows dynamically with hours
-            const leafCount = Math.min(16, 8 + Math.floor((currentHours - 332) / 100));
-            for (let i = 0; i < leafCount; i++) {
-              const leafAngle = (i / leafCount) * Math.PI * 2;
-              const dist = 14 * masterScale;
-              const lx = Math.cos(leafAngle) * dist;
-              const ly = -length + Math.sin(leafAngle) * dist;
-              const lSize = 25 * masterScale;
-              const leafCol = leafColors[i % leafColors.length];
-              
-              drawPeepalLeaf(lx, ly, lSize, lSize * 0.65, leafAngle + (Math.sin(windTime + i) * 0.1), leafCol);
-            }
-            
-            // Colorful, deterministic, non-blinking blossoms
-            if (!isDead && currentHealth > 50) {
-              const blossomColors = ['#ff7bbd', '#ff9ebe', '#ffd3e2', '#cc99ff', '#ffb3d9']; // Colorful pinks, corals, purples
-              const petalColor = blossomColors[branchId % blossomColors.length];
-              drawFlower(0, -length - 4, 10 * masterScale, petalColor);
-            }
-          } else {
-            // Draw peepal leaves along the trunk branches - grows dynamically with hours
-            const innerLeaves = Math.min(6, 3 + Math.floor((currentHours - 332) / 150));
-            for (let i = 1; i <= innerLeaves; i++) {
-              const r = i / innerLeaves;
-              const ly = -length * r;
-              const lSize = 24 * masterScale;
-              drawPeepalLeaf(0, ly, lSize, lSize * 0.6, -Math.PI/4 + 0.3, leafColors[i % leafColors.length]);
-              drawPeepalLeaf(0, ly, lSize, lSize * 0.6, -Math.PI*3/4 - 0.3, leafColors[(i+1) % leafColors.length]);
-            }
-          }
-          
-          // Recurse wide-spreading branches (Peepal shape)
-          if (depth > 1) {
-            const nextLength = length * 0.75;
-            drawTreeBranch(0, -length, nextLength, -0.72, depth - 1, branchId * 4 + 1);
-            drawTreeBranch(0, -length, nextLength, 0.72, depth - 1, branchId * 4 + 2);
-            drawTreeBranch(0, -length * 0.55, nextLength * 0.8, -0.2, depth - 1, branchId * 4 + 3);
-            drawTreeBranch(0, -length * 0.55, nextLength * 0.8, 0.2, depth - 1, branchId * 4 + 4);
-          }
-          
-          ctx.restore();
-        };
-        
-        // Root trunk width scale (base length 75 ensures it fits perfectly)
-        drawTreeBranch(0, 0, 75 * masterScale, 0, 3, 0);
+        // Draw recursive winding branch structure and collect tip locations
+        drawBranchRecursive(trunkLen, trunkThickness, -0.1, maxDepth, maxDepth, 0, masterScale, woodColor, leafColors, tips);
       }
       
       // Happy sparkle particles logic (only when happy and actively chanting/testing)
       if (!isDead && currentHealth > 70 && Math.random() < 0.05) {
-        // Draw a tiny sparkle particle that will float away (rendered statically for simplicity)
         ctx.save();
         ctx.translate(Math.random() * 80 - 40, -100 * masterScale);
         ctx.fillStyle = 'rgba(229, 173, 53, 0.6)';
@@ -934,6 +982,38 @@ const PlantRenderer = (function() {
       }
       
       ctx.restore();
+
+      // Draw leaves in absolute screen-space coordinates at branch tips (only for stages > 2)
+      if (stageInfo.stage > 2 && tips.length > 0) {
+        const leafCount = Math.floor(currentHours);
+        const finalLeafCount = Math.min(500, leafCount);
+        
+        for (let i = 1; i <= finalLeafCount; i++) {
+          const tipIndex = Math.floor(seededRandom(i * 123.45) * tips.length);
+          const tip = tips[tipIndex];
+          if (!tip) continue;
+          
+          // Scattered leaf placement relative to tip
+          const dist = seededRandom(i * 23.45) * 28 * masterScale;
+          const angleOffset = (seededRandom(i * 34.56) - 0.5) * Math.PI * 2;
+          
+          const lx = tip.x + Math.cos(angleOffset) * dist;
+          const ly = tip.y + Math.sin(angleOffset) * dist;
+          
+          const leafSize = (16 + seededRandom(i * 45.67) * 10) * masterScale;
+          const baseAngle = tip.angle + angleOffset * 0.3;
+          const flutter = Math.sin(windTime * 4 + i) * 0.08 * (isDead ? 0.2 : (currentHealth / 100));
+          const droop = isDead ? Math.PI / 2 : 0;
+          const finalAngle = baseAngle + flutter + droop;
+          const leafColor = leafColors[i % leafColors.length];
+          
+          if (stageInfo.stage === 6) {
+            drawPeepalLeaf(lx, ly, leafSize, leafSize * 0.65, finalAngle, leafColor);
+          } else {
+            drawLeaf(lx, ly, leafSize, leafSize * 0.55, finalAngle, leafColor);
+          }
+        }
+      }
     }
 
     // 6. Draw Animations
@@ -1280,4 +1360,12 @@ const PlantRenderer = (function() {
     resizeCanvas: resizeCanvas,
     setPotStyle: setPotStyle
   };
+  } catch (err) {
+    console.error("PlantRenderer load error:", err);
+    var banner = document.getElementById('debug-error-banner');
+    if (banner) {
+      banner.style.display = 'block';
+      banner.innerHTML += 'Caught plant.js load error: ' + err.message + '\nStack:\n' + err.stack + '\n\n';
+    }
+  }
 })();

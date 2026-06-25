@@ -91,6 +91,7 @@
                   <span id="stars-level-text" class="stars-level-text">Level 1: Seeker</span>
                 </div>
                 <span id="plant-mood-badge" class="badge mood-badge">Happy</span>
+                <span id="plant-streak-badge" class="badge streak-badge hidden"><i class="fa-solid fa-fire"></i> <span id="dashboard-streak-value">0</span> Days</span>
               </div>
 
               <!-- Dashboard Mini Timer (Hidden by default, shown when chanting is active) -->
@@ -133,6 +134,10 @@
                 </div>
                 <div class="progress-bar-track large">
                   <div id="journey-progress-fill" class="progress-bar-fill journey-fill" style="width: 0%;"></div>
+                </div>
+                <div class="milestone-estimator" id="milestone-estimator">
+                  <span class="estimator-icon"><i class="fa-solid fa-hourglass-half"></i></span>
+                  <span id="milestone-estimate-text">Est. Tree Date: --</span>
                 </div>
               </div>
 
@@ -345,7 +350,6 @@
                 </div>
               </div>
             </div>
-
             <!-- History Logs List -->
             <div class="card logs-card">
               <div class="logs-header">
@@ -804,6 +808,22 @@
       <div class="share-actions-row">
         <button id="btn-download-share" class="btn btn-primary btn-full"><i class="fa-solid fa-download"></i> Download Image</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Celebration Canvas for Fireworks Particle System -->
+  <canvas id="celebration-canvas" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 9999; display: none;"></canvas>
+
+  <!-- Badge Unlock Celebration Modal -->
+  <div id="badge-unlock-modal" class="modal-overlay hidden" style="display: none;">
+    <div class="modal-card card badge-unlock-card">
+      <div class="modal-badge-icon">
+        <i id="unlock-badge-icon" class="fa-solid fa-trophy"></i>
+      </div>
+      <div id="unlock-badge-tier" class="badge-tier legendary">Legendary</div>
+      <h3 id="unlock-badge-title">Shinichi's Vow</h3>
+      <p id="unlock-badge-desc">Embodying the mentor-disciple spirit with an unbroken daily commitment to absolute victory.</p>
+      <button id="btn-close-badge-unlock" class="btn btn-primary btn-full">Awesome! 🎉</button>
     </div>
   </div>
 
