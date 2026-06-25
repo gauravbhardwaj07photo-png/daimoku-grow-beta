@@ -313,18 +313,22 @@ const MockFirebase = {
     },
     async saveWhitelist(list) {
       if (isFirebaseConfigured && db) {
-        // Set all list entries in Firestore whitelist collection
-        for (const item of list) {
-          await db.collection('whitelist').doc(item.email.toLowerCase()).set({ code: item.code });
-        }
-        
-        // Remove items not in list
-        const snapshot = await db.collection('whitelist').get();
-        snapshot.forEach(doc => {
-          if (!list.some(item => item.email.toLowerCase() === doc.id)) {
-            db.collection('whitelist').doc(doc.id).delete();
+        try {
+          // Set all list entries in Firestore whitelist collection
+          for (const item of list) {
+            await db.collection('whitelist').doc(item.email.toLowerCase()).set({ code: item.code });
           }
-        });
+          
+          // Remove items not in list
+          const snapshot = await db.collection('whitelist').get();
+          snapshot.forEach(doc => {
+            if (!list.some(item => item.email.toLowerCase() === doc.id)) {
+              db.collection('whitelist').doc(doc.id).delete();
+            }
+          });
+        } catch (e) {
+          console.warn("Firestore saveWhitelist error:", e);
+        }
       } else {
         localStorage.setItem('daimoku_db_whitelist', JSON.stringify(list));
         window.dispatchEvent(new Event('db-updated'));
@@ -335,8 +339,13 @@ const MockFirebase = {
     async getUserState(email) {
       const normalizedEmail = email.toLowerCase().trim();
       if (isFirebaseConfigured && db) {
-        const doc = await db.collection('userStates').doc(normalizedEmail).get();
-        return doc.exists ? doc.data() : null;
+        try {
+          const doc = await db.collection('userStates').doc(normalizedEmail).get();
+          return doc.exists ? doc.data() : null;
+        } catch (e) {
+          console.warn("Firestore getUserState error:", e);
+          return null;
+        }
       } else {
         const saved = localStorage.getItem(`daimoku_db_state_${normalizedEmail}`);
         return saved ? JSON.parse(saved) : null;
@@ -345,9 +354,13 @@ const MockFirebase = {
     saveUserState(email, stateData) {
       const normalizedEmail = email.toLowerCase().trim();
       if (isFirebaseConfigured && db) {
-        db.collection('userStates').doc(normalizedEmail).set(stateData).catch(e => {
-          console.warn("Firestore save userState error:", e);
-        });
+        try {
+          db.collection('userStates').doc(normalizedEmail).set(stateData).catch(e => {
+            console.warn("Firestore save userState error:", e);
+          });
+        } catch (e) {
+          console.warn("Firestore save userState sync error:", e);
+        }
       }
       // Always cache in localStorage for fast local bootstrap
       localStorage.setItem(`daimoku_db_state_${normalizedEmail}`, JSON.stringify(stateData));
@@ -366,9 +379,13 @@ const MockFirebase = {
     },
     saveCampaignTargets(targets) {
       if (isFirebaseConfigured && db) {
-        db.collection('settings').doc('campaigns').update({ targets }).catch(e => {
-          console.warn("Firestore update campaign targets error:", e);
-        });
+        try {
+          db.collection('settings').doc('campaigns').update({ targets }).catch(e => {
+            console.warn("Firestore update campaign targets error:", e);
+          });
+        } catch (e) {
+          console.warn("Firestore update campaign targets sync error:", e);
+        }
       } else {
         localStorage.setItem('daimoku_db_campaign_targets', JSON.stringify(targets));
         window.dispatchEvent(new Event('db-updated'));
@@ -388,9 +405,13 @@ const MockFirebase = {
     },
     saveCampaignDates(dates) {
       if (isFirebaseConfigured && db) {
-        db.collection('settings').doc('campaigns').update({ dates }).catch(e => {
-          console.warn("Firestore update campaign dates error:", e);
-        });
+        try {
+          db.collection('settings').doc('campaigns').update({ dates }).catch(e => {
+            console.warn("Firestore update campaign dates error:", e);
+          });
+        } catch (e) {
+          console.warn("Firestore update campaign dates sync error:", e);
+        }
       } else {
         localStorage.setItem('daimoku_db_campaign_dates', JSON.stringify(dates));
         window.dispatchEvent(new Event('db-updated'));
@@ -411,9 +432,13 @@ const MockFirebase = {
     },
     saveActiveCampaigns(activeList) {
       if (isFirebaseConfigured && db) {
-        db.collection('settings').doc('campaigns').update({ active: activeList }).catch(e => {
-          console.warn("Firestore update active campaigns error:", e);
-        });
+        try {
+          db.collection('settings').doc('campaigns').update({ active: activeList }).catch(e => {
+            console.warn("Firestore update active campaigns error:", e);
+          });
+        } catch (e) {
+          console.warn("Firestore update active campaigns sync error:", e);
+        }
       } else {
         localStorage.setItem('daimoku_db_active_campaigns', JSON.stringify(activeList));
         window.dispatchEvent(new Event('db-updated'));
@@ -440,16 +465,20 @@ const MockFirebase = {
     },
     addCampaignContribution(userEmail, username, block, campaignId, durationSeconds, date) {
       if (isFirebaseConfigured && db) {
-        db.collection('contributions').add({
-          campaignId,
-          userEmail: userEmail.toLowerCase(),
-          username,
-          block,
-          durationSeconds,
-          date
-        }).catch(e => {
-          console.error("Firestore add contribution error:", e);
-        });
+        try {
+          db.collection('contributions').add({
+            campaignId,
+            userEmail: userEmail.toLowerCase(),
+            username,
+            block,
+            durationSeconds,
+            date
+          }).catch(e => {
+            console.error("Firestore add contribution error:", e);
+          });
+        } catch (e) {
+          console.error("Firestore add contribution sync error:", e);
+        }
       } else {
         const contributions = this.getCampaignContributions();
         contributions.push({

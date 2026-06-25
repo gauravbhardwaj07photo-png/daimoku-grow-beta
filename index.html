@@ -28,6 +28,7 @@
   <div id="debug-error-banner" style="display:none; position:fixed; top:0; left:0; width:100%; background:red; color:white; z-index:999999; padding:20px; font-size:14px; white-space:pre-wrap; overflow-y:auto; max-height:50vh;"></div>
   <script>
     window.addEventListener('error', function(e) {
+      if (e.message === 'Script error.' || !e.filename) return;
       var banner = document.getElementById('debug-error-banner');
       banner.style.display = 'block';
       banner.innerHTML += 'Error: ' + e.message + ' at ' + e.filename + ':' + e.lineno + ':' + e.colno + '\n' + (e.error && e.error.stack ? e.error.stack : '') + '\n\n';
@@ -828,9 +829,9 @@
   </div>
 
   <!-- Include Firebase SDK Compat Libraries -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js" crossorigin="anonymous"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js" crossorigin="anonymous"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js" crossorigin="anonymous"></script>
 
   <!-- Include App Logic and Scripts -->
   <script src="plant.js"></script>
