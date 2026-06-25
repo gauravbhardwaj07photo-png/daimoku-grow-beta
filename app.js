@@ -613,13 +613,111 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function loadUserStateForLoggedInUser(user) {
-    let userState = MockFirebase.db.getUserState(user.email);
-    if (!userState) {
-      userState = migrateLocalToCloud(user);
-    }
-    state = userState;
+    const normalizedEmail = user.email.toLowerCase().trim();
+    const localCachedState = localStorage.getItem(`daimoku_db_state_${normalizedEmail}`);
     
-    // Ensure all standard properties exist in state
+    // 1. Load local cache synchronously first (restores any existing data instantly)
+    if (localCachedState) {
+      try {
+        state = JSON.parse(localCachedState);
+        applyLoadedStateSafeguards();
+      } catch (e) {
+        console.warn("Error parsing local cached state:", e);
+      }
+    } else {
+      // Fallback to guest state if no user state exists yet
+      const guestState = localStorage.getItem('daimoku_grow_state');
+      if (guestState) {
+        try {
+          state = JSON.parse(guestState);
+          applyLoadedStateSafeguards();
+        } catch (e) {}
+      }
+    }
+    
+    // Apply header & visual updates instantly from local cache
+    applyLoggedInUserVisuals(user);
+    
+    // 2. Fetch from cloud asynchronously to revalidate and sync
+    MockFirebase.db.getUserState(user.email).then(cloudState => {
+      if (cloudState) {
+        state = cloudState;
+      } else {
+        // First time cloud user: migrate local state to cloud
+        state = migrateLocalToCloud(user);
+      }
+      applyLoadedStateSafeguards();
+      
+      // Reconcile user state with campaign contributions (self-healing)
+      healUserStateFromContributions(user);
+      
+      // Save updated cloud state back to localStorage caches
+      localStorage.setItem('daimoku_grow_state', JSON.stringify(state));
+      localStorage.setItem(`daimoku_db_state_${normalizedEmail}`, JSON.stringify(state));
+      
+      // Redraw UI with fresh cloud data
+      rebuildRevivalDates();
+      updateUI();
+      console.log("Firebase sync: cloud state fetched and loaded.");
+    }).catch(err => {
+      console.warn("Failed to fetch state from Firestore, running on local cache:", err);
+    });
+  }
+
+  function healUserStateFromContributions(user) {
+    const normalizedEmail = user.email.toLowerCase().trim();
+    const contributions = MockFirebase.db.getCampaignContributions();
+    
+    // Filter contributions for this specific user
+    const userContributions = contributions.filter(c => c.userEmail && c.userEmail.toLowerCase() === normalizedEmail);
+    if (userContributions.length === 0) return;
+    
+    let stateChanged = false;
+    if (!state) state = {};
+    if (!state.sessions) state.sessions = [];
+    
+    userContributions.forEach(c => {
+      // Check if this contribution is already in state.sessions
+      const exists = state.sessions.some(s => {
+        const durationMatches = (s.duration === c.durationSeconds);
+        const sDate = s.date ? new Date(s.date).toISOString().split('T')[0] : '';
+        const cDate = c.date ? new Date(c.date).toISOString().split('T')[0] : '';
+        return durationMatches && (sDate === cDate);
+      });
+      
+      if (!exists) {
+        state.sessions.push({
+          duration: c.durationSeconds,
+          date: c.date,
+          type: 'manual',
+          campaign: c.campaignId || '',
+          comment: "Restored from campaign contribution"
+        });
+        stateChanged = true;
+      }
+    });
+    
+    if (stateChanged) {
+      // Recalculate totalSeconds
+      state.totalSeconds = state.sessions.reduce((acc, s) => acc + s.duration, 0);
+      
+      // Sort sessions ascending
+      state.sessions.sort((a, b) => new Date(a.date) - new Date(b.date));
+      
+      // Recalculate health and streaks
+      state.health = 100;
+      state.isDead = false;
+      state.revivalSeconds = 0;
+      calculateStreak();
+      
+      // Save state to local storage and Firestore
+      saveState();
+      console.log("Self-healing: restored missing sessions from campaign contributions.");
+    }
+  }
+
+  function applyLoadedStateSafeguards() {
+    if (!state) state = {};
     if (state.sessions === undefined) state.sessions = [];
     if (state.streak === undefined) state.streak = 0;
     if (state.revivalSeconds === undefined) state.revivalSeconds = 0;
@@ -632,15 +730,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if (state.settings === undefined) state.settings = { morningReminder: true, eveningReminder: true, potStyle: 'clay' };
     if (state.unlockedAchievements === undefined) state.unlockedAchievements = [];
     
+    // Apply saved theme
+    document.body.className = state.theme || 'theme-sage-light';
+  }
+
+  function applyLoggedInUserVisuals(user) {
     // Rebuild revival dates (self-healing)
     rebuildRevivalDates();
     initializeUnlockedAchievements(true);
     
     // Save to active local state cache
     localStorage.setItem('daimoku_grow_state', JSON.stringify(state));
-    
-    // Apply saved theme
-    document.body.className = state.theme || 'theme-sage-light';
     
     // Update badge and buttons in header
     const badge = document.getElementById('user-block-badge');
@@ -3874,7 +3974,7 @@ document.addEventListener('DOMContentLoaded', () => {
       
       const deleteBtn = div.querySelector('.btn-delete-whitelist');
       if (deleteBtn) {
-        deleteBtn.addEventListener('click', (e) => {
+        deleteBtn.addEventListener('click', async (e) => {
           const emailToDelete = e.currentTarget.getAttribute('data-email');
           const adminEmails = [
             'admin@email.com',
@@ -3898,8 +3998,12 @@ document.addEventListener('DOMContentLoaded', () => {
           if (confirm(`Are you sure you want to remove ${emailToDelete} from the whitelist? This will revoke their access.`)) {
             let list = MockFirebase.db.getWhitelist();
             list = list.filter(w => w.email.toLowerCase() !== emailToDelete.toLowerCase());
-            MockFirebase.db.saveWhitelist(list);
-            renderWhitelist();
+            try {
+              await MockFirebase.db.saveWhitelist(list);
+              renderWhitelist();
+            } catch (err) {
+              alert("Failed to save whitelist: " + err.message);
+            }
           }
         });
       }
@@ -3912,7 +4016,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const whitelistInput = document.getElementById('whitelist-email-input');
   const whitelistCodeInput = document.getElementById('whitelist-code-input');
   if (whitelistForm && whitelistInput) {
-    whitelistForm.addEventListener('submit', (e) => {
+    whitelistForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const email = whitelistInput.value.trim().toLowerCase();
       let code = whitelistCodeInput ? whitelistCodeInput.value.trim().toUpperCase() : '';
@@ -3930,11 +4034,15 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       
       list.push({ email: email, code: code });
-      MockFirebase.db.saveWhitelist(list);
-      whitelistInput.value = '';
-      if (whitelistCodeInput) whitelistCodeInput.value = '';
-      renderWhitelist();
-      alert(`Successfully whitelisted: ${email} with code: ${code}`);
+      try {
+        await MockFirebase.db.saveWhitelist(list);
+        whitelistInput.value = '';
+        if (whitelistCodeInput) whitelistCodeInput.value = '';
+        renderWhitelist();
+        alert(`Successfully whitelisted: ${email} with code: ${code}`);
+      } catch (err) {
+        alert("Failed to whitelist email: " + err.message);
+      }
     });
   }
 
@@ -4325,7 +4433,7 @@ document.addEventListener('DOMContentLoaded', () => {
     hideBiometricScanningOverlay();
     
     try {
-      const user = MockFirebase.auth.signIn(credInfo.email, credInfo.password);
+      const user = await MockFirebase.auth.signIn(credInfo.email, credInfo.password);
       loadUserStateForLoggedInUser(user);
       hideAuthOverlay();
       
@@ -4354,13 +4462,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Form Submissions Listeners
   if (loginForm) {
-    loginForm.addEventListener('submit', (e) => {
+    loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const email = document.getElementById('login-email').value;
       const password = document.getElementById('login-password').value;
       
       try {
-        const user = MockFirebase.auth.signIn(email, password);
+        const user = await MockFirebase.auth.signIn(email, password);
         loadUserStateForLoggedInUser(user);
         hideAuthOverlay();
         
@@ -4393,7 +4501,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   if (registerForm) {
-    registerForm.addEventListener('submit', (e) => {
+    registerForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const username = document.getElementById('register-username').value.trim();
       const email = document.getElementById('register-email').value.trim();
@@ -4407,7 +4515,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       
       try {
-        const user = MockFirebase.auth.signUp(username, email, password, block, code);
+        const user = await MockFirebase.auth.signUp(username, email, password, block, code);
         loadUserStateForLoggedInUser(user);
         hideAuthOverlay();
         
@@ -4440,7 +4548,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   if (forgotPasswordForm) {
-    forgotPasswordForm.addEventListener('submit', (e) => {
+    forgotPasswordForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const email = document.getElementById('recovery-email').value;
       const newPassword = document.getElementById('recovery-new-password').value;
@@ -4451,7 +4559,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       
       try {
-        MockFirebase.auth.resetPassword(email, newPassword);
+        await MockFirebase.auth.resetPassword(email, newPassword);
         alert("Password updated successfully! Please log in with your new credentials.");
         showAuthForm(loginForm);
       } catch(err) {
@@ -5216,6 +5324,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // Listen for real-time Firebase database changes
   window.addEventListener('db-updated', () => {
     console.log("Firebase sync: updating UI...");
+    const user = MockFirebase.auth.getCurrentUser();
+    if (user) {
+      healUserStateFromContributions(user);
+    }
     updateUI();
   });
 
