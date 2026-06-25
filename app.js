@@ -5213,6 +5213,12 @@ document.addEventListener('DOMContentLoaded', () => {
   document.body.addEventListener('click', goFullscreen);
   document.body.addEventListener('touchstart', goFullscreen);
 
+  // Listen for real-time Firebase database changes
+  window.addEventListener('db-updated', () => {
+    console.log("Firebase sync: updating UI...");
+    updateUI();
+  });
+
   } catch (err) {
     console.error("Initialization Error:", err);
     var banner = document.getElementById('debug-error-banner');
