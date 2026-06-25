@@ -670,36 +670,57 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Filter contributions for this specific user
     const userContributions = contributions.filter(c => c.userEmail && c.userEmail.toLowerCase() === normalizedEmail);
-    if (userContributions.length === 0) return;
     
     let stateChanged = false;
     if (!state) state = {};
     if (!state.sessions) state.sessions = [];
     
-    userContributions.forEach(c => {
-      // Check if this contribution is already in state.sessions
-      const exists = state.sessions.some(s => {
-        const durationMatches = (s.duration === c.durationSeconds);
-        const sDate = s.date ? new Date(s.date).toISOString().split('T')[0] : '';
-        const cDate = c.date ? new Date(c.date).toISOString().split('T')[0] : '';
-        return durationMatches && (sDate === cDate);
-      });
-      
-      if (!exists) {
-        state.sessions.push({
-          duration: c.durationSeconds,
-          date: c.date,
-          type: 'manual',
-          campaign: c.campaignId || '',
-          comment: "Restored from campaign contribution"
+    if (userContributions.length > 0) {
+      userContributions.forEach(c => {
+        // Check if this contribution is already in state.sessions
+        const exists = state.sessions.some(s => {
+          const sDuration = s.durationSeconds !== undefined ? s.durationSeconds : s.duration;
+          const durationMatches = (sDuration === c.durationSeconds);
+          const sDate = s.date ? new Date(s.date).toISOString().split('T')[0] : '';
+          const cDate = c.date ? new Date(c.date).toISOString().split('T')[0] : '';
+          return durationMatches && (sDate === cDate);
         });
-        stateChanged = true;
-      }
-    });
+        
+        if (!exists) {
+          state.sessions.push({
+            id: Date.now().toString() + '_' + Math.random().toString(36).substr(2, 5),
+            date: c.date,
+            durationSeconds: c.durationSeconds,
+            method: 'manual',
+            campaignId: c.campaignId || '',
+            targetId: null,
+            personalTargetId: null,
+            comment: "Restored from campaign contribution"
+          });
+          stateChanged = true;
+        }
+      });
+    }
     
-    if (stateChanged) {
-      // Recalculate totalSeconds
-      state.totalSeconds = state.sessions.reduce((acc, s) => acc + s.duration, 0);
+    const isTotalSecondsInvalid = isNaN(state.totalSeconds) || typeof state.totalSeconds !== 'number';
+    if (stateChanged || isTotalSecondsInvalid) {
+      // Re-map any existing incorrect sessions (self-repair schema differences)
+      state.sessions.forEach(s => {
+        if (s.durationSeconds === undefined && s.duration !== undefined) {
+          s.durationSeconds = s.duration;
+        }
+        if (s.method === undefined && s.type !== undefined) {
+          s.method = s.type;
+        }
+        if (s.campaignId === undefined && s.campaign !== undefined) {
+          s.campaignId = s.campaign;
+        }
+      });
+
+      // Recalculate totalSeconds safely
+      state.totalSeconds = state.sessions.reduce((acc, s) => {
+        return acc + (s.durationSeconds || 0);
+      }, 0);
       
       // Sort sessions ascending
       state.sessions.sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -712,7 +733,7 @@ document.addEventListener('DOMContentLoaded', () => {
       
       // Save state to local storage and Firestore
       saveState();
-      console.log("Self-healing: restored missing sessions from campaign contributions.");
+      console.log("Self-healing: restored missing sessions from campaign contributions and recalculated stats.");
     }
   }
 
