@@ -4315,6 +4315,19 @@ document.addEventListener('DOMContentLoaded', () => {
   const registerForm = document.getElementById('register-form');
   const forgotPasswordForm = document.getElementById('forgot-password-form');
   
+  // Adjust recovery form fields based on Firebase configuration
+  const recoveryPasswordGroup = document.getElementById('recovery-password-group');
+  const recoveryNewPasswordInput = document.getElementById('recovery-new-password');
+  const btnRecoverySubmit = document.getElementById('btn-recovery-submit');
+  
+  if (typeof isFirebaseConfigured !== 'undefined' && isFirebaseConfigured) {
+    if (recoveryPasswordGroup) recoveryPasswordGroup.classList.add('hidden');
+    if (recoveryNewPasswordInput) recoveryNewPasswordInput.required = false;
+    if (btnRecoverySubmit) {
+      btnRecoverySubmit.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Send Reset Email';
+    }
+  }
+  
   function showAuthForm(formToShow) {
     loginForm.classList.remove('active');
     registerForm.classList.remove('active');
@@ -4572,16 +4585,23 @@ document.addEventListener('DOMContentLoaded', () => {
     forgotPasswordForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const email = document.getElementById('recovery-email').value;
-      const newPassword = document.getElementById('recovery-new-password').value;
       
-      if (newPassword.length < 6) {
-        alert("Password must be at least 6 characters.");
-        return;
+      const firebaseActive = (typeof isFirebaseConfigured !== 'undefined' && isFirebaseConfigured);
+      let newPassword = '';
+      
+      if (!firebaseActive) {
+        newPassword = document.getElementById('recovery-new-password').value;
+        if (newPassword.length < 6) {
+          alert("Password must be at least 6 characters.");
+          return;
+        }
       }
       
       try {
         await MockFirebase.auth.resetPassword(email, newPassword);
-        alert("Password updated successfully! Please log in with your new credentials.");
+        if (!firebaseActive) {
+          alert("Password updated successfully! Please log in with your new credentials.");
+        }
         showAuthForm(loginForm);
       } catch(err) {
         alert("Error: " + err.message);
