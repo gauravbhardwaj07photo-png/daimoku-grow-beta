@@ -675,58 +675,29 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function healUserStateFromContributions(user) {
-    const normalizedEmail = user.email.toLowerCase().trim();
-    const contributions = MockFirebase.db.getCampaignContributions();
-    
-    // Filter contributions for this specific user
-    const userContributions = contributions.filter(c => c.userEmail && c.userEmail.toLowerCase() === normalizedEmail);
-    
     let stateChanged = false;
     if (!state) state = {};
     if (!state.sessions) state.sessions = [];
     
-    if (userContributions.length > 0) {
-      userContributions.forEach(c => {
-        // Check if this contribution is already in state.sessions
-        const exists = state.sessions.some(s => {
-          const sDuration = s.durationSeconds !== undefined ? s.durationSeconds : s.duration;
-          const durationMatches = (sDuration === c.durationSeconds);
-          const sDate = s.date ? new Date(s.date).toISOString().split('T')[0] : '';
-          const cDate = c.date ? new Date(c.date).toISOString().split('T')[0] : '';
-          return durationMatches && (sDate === cDate);
-        });
-        
-        if (!exists) {
-          state.sessions.push({
-            id: Date.now().toString() + '_' + Math.random().toString(36).substr(2, 5),
-            date: c.date,
-            durationSeconds: c.durationSeconds,
-            method: 'manual',
-            campaignId: c.campaignId || '',
-            targetId: null,
-            personalTargetId: null,
-            comment: "Restored from campaign contribution"
-          });
-          stateChanged = true;
-        }
-      });
-    }
-    
     const isTotalSecondsInvalid = isNaN(state.totalSeconds) || typeof state.totalSeconds !== 'number';
-    if (stateChanged || isTotalSecondsInvalid) {
-      // Re-map any existing incorrect sessions (self-repair schema differences)
-      state.sessions.forEach(s => {
-        if (s.durationSeconds === undefined && s.duration !== undefined) {
-          s.durationSeconds = s.duration;
-        }
-        if (s.method === undefined && s.type !== undefined) {
-          s.method = s.type;
-        }
-        if (s.campaignId === undefined && s.campaign !== undefined) {
-          s.campaignId = s.campaign;
-        }
-      });
+    
+    // Re-map any existing incorrect sessions (self-repair schema differences)
+    state.sessions.forEach(s => {
+      if (s.durationSeconds === undefined && s.duration !== undefined) {
+        s.durationSeconds = s.duration;
+        stateChanged = true;
+      }
+      if (s.method === undefined && s.type !== undefined) {
+        s.method = s.type;
+        stateChanged = true;
+      }
+      if (s.campaignId === undefined && s.campaign !== undefined) {
+        s.campaignId = s.campaign;
+        stateChanged = true;
+      }
+    });
 
+    if (stateChanged || isTotalSecondsInvalid) {
       // Recalculate totalSeconds safely
       state.totalSeconds = state.sessions.reduce((acc, s) => {
         return acc + (s.durationSeconds || 0);
@@ -743,7 +714,7 @@ document.addEventListener('DOMContentLoaded', () => {
       
       // Save state to local storage and Firestore
       saveState();
-      console.log("Self-healing: restored missing sessions from campaign contributions and recalculated stats.");
+      console.log("Self-healing: personal state properties validated and repaired.");
     }
   }
 
@@ -1395,7 +1366,26 @@ document.addEventListener('DOMContentLoaded', () => {
     // Revival Card Visibility
     if (state.isDead) {
       revivalProgressContainer.classList.remove('hidden');
-      const daysCount = state.revivalDates ? state.revivalDates.length : 0;
+      
+      let daysCount = 0;
+      if (state.revivalDates && state.revivalDates.length > 0) {
+        const sorted = [...state.revivalDates].sort();
+        const timestamps = sorted.map(d => new Date(d + 'T12:00:00').getTime());
+        const oneDayMs = 24 * 60 * 60 * 1000;
+        let maxStreak = 1;
+        let currentStreak = 1;
+        for (let i = 0; i < timestamps.length - 1; i++) {
+          const diff = timestamps[i+1] - timestamps[i];
+          if (diff === oneDayMs) {
+            currentStreak++;
+            if (currentStreak > maxStreak) maxStreak = currentStreak;
+          } else if (diff > oneDayMs) {
+            currentStreak = 1;
+          }
+        }
+        daysCount = Math.min(3, maxStreak);
+      }
+      
       revivalTimeLabel.textContent = `${daysCount} / 3 days completed`;
       
       const revPercent = Math.min(100, Math.round((daysCount / 3) * 100));
@@ -2206,33 +2196,15 @@ document.addEventListener('DOMContentLoaded', () => {
           methodIcon = '<i class="fa-solid fa-pen-to-square" title="Manual Log"></i>';
         }
         
-        const commentHtml = session.comment ? `<div class="log-comment">"${session.comment}"</div>` : '';
-        
         item.innerHTML = `
           <div class="log-info" style="flex-grow: 1;">
             <div class="log-time-amount">${methodIcon} ${durationText} chanted</div>
             <div class="log-date-label">${dateString}</div>
-            ${commentHtml}
           </div>
           <div class="log-actions">
-            <button class="btn-comment-log" data-id="${session.id}" title="Add/Edit Comment"><i class="fa-regular fa-comment"></i></button>
             <button class="btn-delete-log" data-id="${session.id}" title="Delete"><i class="fa-regular fa-trash-can"></i></button>
           </div>
         `;
-        
-        // Comment Log event handler
-        item.querySelector('.btn-comment-log').addEventListener('click', (e) => {
-          const id = e.currentTarget.getAttribute('data-id');
-          const sess = state.sessions.find(s => s.id === id);
-          if (sess) {
-            const comment = prompt("Enter a comment/note for this chanting session:", sess.comment || "");
-            if (comment !== null) {
-              sess.comment = comment.trim();
-              saveState();
-              renderHistoryLogs();
-            }
-          }
-        });
         
         // Delete Log event handler
         item.querySelector('.btn-delete-log').addEventListener('click', async (e) => {
