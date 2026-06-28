@@ -335,6 +335,16 @@ document.addEventListener('DOMContentLoaded', () => {
   let timerStartTime = null;
   let timerAccumulatedPaused = 0; // ms accumulated before pause
 
+  // --- Fireworks & Badge Celebration Variables (Moved to top to prevent startup TDZ errors) ---
+  let celebrationQueue = [];
+  let isCelebrationActive = false;
+  let celebrationParticles = [];
+  let celebrationRockets = [];
+  let celebrationAnimationId = null;
+  let celebrationCanvas = null;
+  let celebrationCtx = null;
+  let celebrationDurationTimeout = null;
+
   // --- DOM Elements ---
   const views = document.querySelectorAll('.content-view');
   const navItems = document.querySelectorAll('.nav-item');
@@ -5134,14 +5144,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- Fireworks & Badge Celebration System ---
-  let celebrationQueue = [];
-  let isCelebrationActive = false;
-  let celebrationParticles = [];
-  let celebrationRockets = [];
-  let celebrationAnimationId = null;
-  let celebrationCanvas = null;
-  let celebrationCtx = null;
-  let celebrationDurationTimeout = null;
 
   class CelebrationParticle {
     constructor(x, y, color) {
