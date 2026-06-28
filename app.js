@@ -2916,6 +2916,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     state.targets.push(newTarget);
     saveState();
+    checkNewAchievements();
     
     // Reset form
     targetText.value = '';
@@ -2937,6 +2938,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (target.type === 'hours' && target.accumulatedSeconds >= target.targetSeconds) {
         target.completed = true;
         alert(`Congratulations! You have completed your target: "${target.text}"! 🎉`);
+        checkNewAchievements();
       }
     }
   }
@@ -2956,14 +2958,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const activeList = MockFirebase.db.getActiveCampaigns();
     const campaignDates = MockFirebase.db.getCampaignDates();
     
-    const allCampaigns = [
-      { id: 'youth_division', name: "Youth Division Campaign" },
-      { id: 'may_3rd', name: "May 3rd Campaign" },
-      { id: 'mens_division', name: "Men's Division Campaign" },
-      { id: 'womens_division', name: "Women's Division Campaign" },
-      { id: 'july_3rd', name: "July 3rd Campaign" },
-      { id: 'november_18th', name: "November 18th Campaign" }
-    ];
+    const campaignNames = MockFirebase.db.getCampaignNames();
+    const customCampaigns = MockFirebase.db.getCustomCampaigns();
+    const defaultCampaignIds = ['youth_division', 'may_3rd', 'mens_division', 'womens_division', 'july_3rd', 'november_18th'];
+    const allCampaignIds = [...defaultCampaignIds, ...customCampaigns];
+    
+    const allCampaigns = allCampaignIds.map(id => {
+      const name = campaignNames[id] || id;
+      return {
+        id: id,
+        name: name.endsWith("Campaign") ? name : name + " Campaign"
+      };
+    });
     
     const now = new Date();
     const timerTime = now.getTime();
@@ -3683,7 +3689,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   
   function hasActiveCampaignToday() {
-    const allCampaignIds = ['youth_division', 'may_3rd', 'mens_division', 'womens_division', 'july_3rd', 'november_18th'];
+    const defaultCampaignIds = ['youth_division', 'may_3rd', 'mens_division', 'womens_division', 'july_3rd', 'november_18th'];
+    const customCampaignIds = MockFirebase.db.getCustomCampaigns();
+    const allCampaignIds = [...defaultCampaignIds, ...customCampaignIds];
     return allCampaignIds.some(id => isCampaignActiveToday(id));
   }
   
@@ -3742,6 +3750,8 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const activeList = MockFirebase.db.getActiveCampaigns();
     const campaignDates = MockFirebase.db.getCampaignDates();
+    const campaignNames = MockFirebase.db.getCampaignNames();
+    const customCampaigns = MockFirebase.db.getCustomCampaigns();
     
     const defaultCampaigns = [
       { id: 'youth_division', name: "Youth Division Campaign", icon: "fa-child-reaching" },
@@ -3752,7 +3762,26 @@ document.addEventListener('DOMContentLoaded', () => {
       { id: 'november_18th', name: "November 18th Campaign", icon: "fa-tree" }
     ];
     
-    const campaigns = defaultCampaigns.filter(c => isCampaignActiveToday(c.id));
+    const iconMap = {
+      youth_division: "fa-child-reaching",
+      may_3rd: "fa-sun",
+      mens_division: "fa-user-tie",
+      womens_division: "fa-user-dress",
+      july_3rd: "fa-users-line",
+      november_18th: "fa-tree"
+    };
+    
+    const allCampaignIds = [...defaultCampaigns.map(c => c.id), ...customCampaigns];
+    const campaigns = allCampaignIds
+      .filter(id => isCampaignActiveToday(id))
+      .map(id => {
+        const name = campaignNames[id] || id;
+        return {
+          id: id,
+          name: name.endsWith("Campaign") ? name : name + " Campaign",
+          icon: iconMap[id] || "fa-bullhorn"
+        };
+      });
     
     if (campaigns.length === 0) {
       detailsContainer.innerHTML = `
@@ -3828,6 +3857,36 @@ document.addEventListener('DOMContentLoaded', () => {
         completedCampaignId = selectedCampaignId;
       }
       
+      // Calculate Est. Completion Date based on start date and daily average rate
+      const now = new Date();
+      let estCompletionStr = "Est. Completion Date: -- (chant to calculate)";
+      
+      if (globalHours >= targetHours) {
+        estCompletionStr = "Goal achieved! Campaign target completed! 🎉";
+      } else if (dates.start) {
+        const startD = new Date(dates.start + 'T00:00:00');
+        const msActive = now.getTime() - startD.getTime();
+        const daysActive = Math.max(1, Math.ceil(msActive / (24 * 60 * 60 * 1000)));
+        
+        if (msActive < 0) {
+          estCompletionStr = "Est. Completion Date: -- (campaign has not started)";
+        } else {
+          const dailyRate = globalHours / daysActive; // hours per day
+          if (dailyRate > 0.01) {
+            const daysRemaining = (targetHours - globalHours) / dailyRate;
+            const targetDate = new Date();
+            targetDate.setDate(targetDate.getDate() + daysRemaining);
+            
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            const formattedDate = targetDate.toLocaleDateString(undefined, options);
+            const weeklyRate = dailyRate * 7;
+            estCompletionStr = `Est. Completion Date: ${formattedDate} (~${weeklyRate.toFixed(1)}h/wk total)`;
+          } else {
+            estCompletionStr = "Est. Completion Date: -- (active chanting needed)";
+          }
+        }
+      }
+      
       htmlContent += `
         <div class="card campaign-view-card active-campaign-container" style="margin-bottom: 24px; padding: 20px; border: var(--border); border-radius: 16px; background: var(--bg-card);">
           <div class="campaign-title-row" style="display:flex; flex-direction:column; gap:4px; margin-bottom: 16px; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 10px;">
@@ -3878,8 +3937,12 @@ document.addEventListener('DOMContentLoaded', () => {
             <canvas id="fireworks-canvas-${selectedCampaignId}" class="fireworks-canvas"></canvas>
           </div>
           
-          <div class="campaign-dates-desc" style="text-align: center; margin-top: 14px; margin-bottom: 10px;">
+          <div class="campaign-dates-desc" style="text-align: center; margin-top: 14px; margin-bottom: 4px;">
             <span style="font-size:13.5px; color:var(--text-main); font-weight:700;"><i class="fa-solid fa-calculator" style="color:var(--primary); margin-right:4px;"></i> Total Chanted: ${globalHours.toFixed(1)} / ${targetHours} hours</span>
+          </div>
+
+          <div class="campaign-est-completion" style="text-align: center; font-size: 12px; color: var(--text-muted); margin-bottom: 14px; font-weight: 500;">
+            <i class="fa-regular fa-clock" style="color:var(--primary); margin-right:4px;"></i> ${estCompletionStr}
           </div>
 
           <!-- SGI Blocks Contribution Leaderboard -->
@@ -3951,6 +4014,17 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  const btnToggleAdminUsers = document.getElementById('btn-toggle-admin-users');
+  const adminUsersContent = document.getElementById('admin-users-content');
+  const adminUsersCard = document.getElementById('admin-users-card');
+  
+  if (btnToggleAdminUsers && adminUsersContent && adminUsersCard) {
+    btnToggleAdminUsers.addEventListener('click', () => {
+      adminUsersCard.classList.toggle('open');
+      adminUsersContent.classList.toggle('collapsed');
+    });
+  }
+
   const btnToggleAdminCalendar = document.getElementById('btn-toggle-admin-calendar');
   const adminCalendarContent = document.getElementById('admin-calendar-content');
   const adminCalendarCard = document.getElementById('admin-calendar-card');
@@ -3959,6 +4033,260 @@ document.addEventListener('DOMContentLoaded', () => {
     btnToggleAdminCalendar.addEventListener('click', () => {
       adminCalendarCard.classList.toggle('open');
       adminCalendarContent.classList.toggle('collapsed');
+    });
+  }
+
+  // Centered helper to update all admin panels visibility
+  function updateAdminCardsVisibility(isAdmin) {
+    const pCard = document.getElementById('admin-panel-card');
+    const cCard = document.getElementById('admin-calendar-card');
+    const uCard = document.getElementById('admin-users-card');
+    
+    if (isAdmin) {
+      if (pCard) pCard.classList.remove('hidden');
+      if (cCard) cCard.classList.remove('hidden');
+      if (uCard) uCard.classList.remove('hidden');
+      renderWhitelist();
+      renderCampaignTargetsEditor();
+      renderAdminCalendarSchedule();
+      renderUsersList();
+    } else {
+      if (pCard) pCard.classList.add('hidden');
+      if (cCard) cCard.classList.add('hidden');
+      if (uCard) uCard.classList.add('hidden');
+    }
+  }
+
+  // Render the registered members list
+  async function renderUsersList() {
+    const container = document.getElementById('admin-users-list-container');
+    if (!container) return;
+    
+    container.innerHTML = '<div style="font-size:12px; color:var(--text-muted); padding:10px 0;"><i class="fa-solid fa-spinner fa-spin"></i> Loading users...</div>';
+    
+    try {
+      const users = await MockFirebase.db.getAllUsers();
+      container.innerHTML = '';
+      
+      if (users.length === 0) {
+        container.innerHTML = '<div style="font-size:12px; color:var(--text-muted); padding:10px 0;">No registered users found.</div>';
+        return;
+      }
+      
+      users.forEach(u => {
+        const div = document.createElement('div');
+        div.style.display = 'flex';
+        div.style.flexDirection = 'column';
+        div.style.gap = '8px';
+        div.style.padding = '10px';
+        div.style.background = 'rgba(255, 255, 255, 0.03)';
+        div.style.border = '1px solid rgba(255, 255, 255, 0.08)';
+        div.style.borderRadius = '10px';
+        div.style.marginBottom = '8px';
+        div.style.fontSize = '13px';
+        
+        div.innerHTML = `
+          <div class="user-view-row" style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+            <div style="display:flex; flex-direction:column; gap:2px;">
+              <span style="font-weight:700; font-size:14px; color:var(--text-main);">${u.username} ${u.isAdmin ? '<span style="background:var(--primary); color:#fff; font-size:9px; padding:2px 4px; border-radius:4px; margin-left:4px; font-weight:700;">ADMIN</span>' : ''}</span>
+              <span style="color:var(--text-muted); font-size:12px;">${u.email}</span>
+              <span style="font-size:11px; font-weight:600; color:var(--primary); margin-top:2px;">${u.block} Block</span>
+            </div>
+            <div style="display:flex; gap:6px;">
+              <button class="btn-edit-user btn btn-secondary" style="padding:6px 10px; font-size:12px;" data-email="${u.email}"><i class="fa-solid fa-user-pen"></i> Edit</button>
+              ${u.isAdmin ? '' : `<button class="btn-delete-user" style="background:transparent; border:none; color:var(--accent-danger); cursor:pointer; padding:6px;" data-email="${u.email}"><i class="fa-regular fa-trash-can"></i></button>`}
+            </div>
+          </div>
+          
+          <div class="user-edit-form hidden" style="display:none; flex-direction:column; gap:8px; border-top:1px dashed rgba(255,255,255,0.15); padding-top:8px; margin-top:4px;">
+            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+              <div style="flex:1; min-width:120px;">
+                <label style="font-size:10px; font-weight:700; color:var(--text-muted);">Username</label>
+                <input type="text" class="edit-user-username" value="${u.username}" style="width:100%; padding:6px; border-radius:6px; border:var(--border); font-size:12px; background:var(--accent-cream); color:var(--text-main);">
+              </div>
+              <div style="flex:1.5; min-width:180px;">
+                <label style="font-size:10px; font-weight:700; color:var(--text-muted);">Email</label>
+                <input type="email" class="edit-user-email" value="${u.email}" style="width:100%; padding:6px; border-radius:6px; border:var(--border); font-size:12px; background:var(--accent-cream); color:var(--text-main);">
+              </div>
+              <div style="flex:1; min-width:100px;">
+                <label style="font-size:10px; font-weight:700; color:var(--text-muted);">Block</label>
+                <select class="edit-user-block" style="width:100%; padding:6px; border-radius:6px; border:var(--border); font-size:12px; background:var(--accent-cream); color:var(--text-main);">
+                  <option value="Wisdom" ${u.block === 'Wisdom' ? 'selected' : ''}>Wisdom</option>
+                  <option value="Compassion" ${u.block === 'Compassion' ? 'selected' : ''}>Compassion</option>
+                  <option value="Courage" ${u.block === 'Courage' ? 'selected' : ''}>Courage</option>
+                  <option value="Faith" ${u.block === 'Faith' ? 'selected' : ''}>Faith</option>
+                  <option value="Harmony" ${u.block === 'Harmony' ? 'selected' : ''}>Harmony</option>
+                </select>
+              </div>
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:6px; margin-top:4px;">
+              <button class="btn-cancel-edit btn btn-secondary" style="padding:4px 8px; font-size:11px;">Cancel</button>
+              <button class="btn-save-user btn btn-primary" style="padding:4px 10px; font-size:11px;" data-old-email="${u.email}">Save Changes</button>
+            </div>
+          </div>
+        `;
+        
+        container.appendChild(div);
+        
+        const viewRow = div.querySelector('.user-view-row');
+        const editForm = div.querySelector('.user-edit-form');
+        const editBtn = div.querySelector('.btn-edit-user');
+        const cancelBtn = div.querySelector('.btn-cancel-edit');
+        const saveBtn = div.querySelector('.btn-save-user');
+        const deleteBtn = div.querySelector('.btn-delete-user');
+        
+        if (editBtn && editForm && viewRow) {
+          editBtn.addEventListener('click', () => {
+            editForm.classList.remove('hidden');
+            editForm.style.display = 'flex';
+            viewRow.classList.add('hidden');
+            viewRow.style.display = 'none';
+          });
+        }
+        
+        if (cancelBtn && editForm && viewRow) {
+          cancelBtn.addEventListener('click', () => {
+            editForm.classList.add('hidden');
+            editForm.style.display = 'none';
+            viewRow.classList.remove('hidden');
+            viewRow.style.display = 'flex';
+          });
+        }
+        
+        if (saveBtn && editForm && viewRow) {
+          saveBtn.addEventListener('click', async (e) => {
+            const oldEmail = e.currentTarget.getAttribute('data-old-email');
+            const newUsername = div.querySelector('.edit-user-username').value.trim();
+            const newEmail = div.querySelector('.edit-user-email').value.trim().toLowerCase();
+            const newBlock = div.querySelector('.edit-user-block').value;
+            
+            if (!newUsername || !newEmail) {
+              alert("Username and Email are required.");
+              return;
+            }
+            
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Saving...';
+            
+            try {
+              await MockFirebase.db.adminUpdateUser(oldEmail, newEmail, newUsername, newBlock);
+              alert("Member account updated successfully!");
+              
+              if (currentUser && currentUser.email.toLowerCase() === oldEmail.toLowerCase()) {
+                currentUser.username = newUsername;
+                currentUser.email = newEmail;
+                currentUser.block = newBlock;
+                localStorage.setItem('daimoku_session_user', JSON.stringify(currentUser));
+                
+                const blockBadge = document.getElementById('user-block-badge');
+                if (blockBadge) blockBadge.textContent = `${newBlock} Block`;
+              }
+              
+              await renderUsersList();
+              renderWhitelist();
+              updateUI();
+            } catch (err) {
+              alert("Failed to update user: " + err.message);
+              saveBtn.disabled = false;
+              saveBtn.textContent = 'Save Changes';
+            }
+          });
+        }
+        
+        if (deleteBtn) {
+          deleteBtn.addEventListener('click', async (e) => {
+            const emailToDelete = e.currentTarget.getAttribute('data-email');
+            if (confirm(`Are you sure you want to delete the account for ${emailToDelete}? This will remove their profile and database records.`)) {
+              try {
+                await MockFirebase.db.adminDeleteUser(emailToDelete);
+                alert("Member account deleted successfully!");
+                await renderUsersList();
+                renderWhitelist();
+                updateUI();
+              } catch (err) {
+                alert("Failed to delete user: " + err.message);
+              }
+            }
+          });
+        }
+      });
+    } catch (e) {
+      container.innerHTML = '<div style="font-size:12px; color:var(--accent-danger); padding:10px 0;">Error loading users list.</div>';
+    }
+  }
+
+  // Handle new account pre-creation form
+  const adminCreateUserForm = document.getElementById('admin-create-user-form');
+  if (adminCreateUserForm) {
+    adminCreateUserForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('admin-create-username').value.trim();
+      const email = document.getElementById('admin-create-email').value.trim().toLowerCase();
+      const block = document.getElementById('admin-create-block').value;
+      const btn = adminCreateUserForm.querySelector('button[type="submit"]');
+      
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creating...';
+      
+      try {
+        const code = await MockFirebase.db.adminCreateUser(username, email, block);
+        alert(`Account profile pre-created successfully!\n\nMember: ${username}\nEmail: ${email}\nBlock: ${block}\nRegistration Code: ${code}\n\nThis email has also been added to the whitelist automatically.`);
+        adminCreateUserForm.reset();
+        await renderUsersList();
+        renderWhitelist();
+      } catch (err) {
+        alert("Failed to create profile: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-user-plus"></i> Create Member Profile';
+      }
+    });
+  }
+
+  // Handle custom campaign creation form
+  const adminCreateCampaignForm = document.getElementById('admin-create-campaign-form');
+  if (adminCreateCampaignForm) {
+    adminCreateCampaignForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('campaign-create-name').value.trim();
+      const targetHours = parseInt(document.getElementById('campaign-create-target').value);
+      const start = document.getElementById('campaign-create-start').value;
+      const end = document.getElementById('campaign-create-end').value;
+      const isActive = document.getElementById('campaign-create-active').checked;
+      
+      const btn = adminCreateCampaignForm.querySelector('button[type="submit"]');
+      
+      // Basic validation
+      if (!name) return;
+      const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/(^_+|_+$)/g, '');
+      if (!id) {
+        alert("Please enter a valid title containing alphanumeric characters.");
+        return;
+      }
+      
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creating...';
+      
+      try {
+        await MockFirebase.db.createCampaign(id, name, targetHours, { start, end }, isActive);
+        alert(`Campaign "${name}" created successfully!`);
+        adminCreateCampaignForm.reset();
+        
+        renderCampaignTargetsEditor();
+        renderCampaignDashboard();
+        populateTargetDropdowns();
+        updateCampaignTabVisibility();
+        
+        const calView = document.getElementById('view-calendar');
+        if (calView && calView.classList.contains('active')) {
+          renderCalendar();
+        }
+      } catch (err) {
+        alert("Failed to create campaign: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-bullhorn"></i> Create Campaign';
+      }
     });
   }
 
@@ -4076,14 +4404,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const campaignDates = MockFirebase.db.getCampaignDates();
     container.innerHTML = '';
     
-    const campaigns = [
-      { id: 'youth_division', name: "Youth Division" },
-      { id: 'may_3rd', name: "May 3rd" },
-      { id: 'mens_division', name: "Men's Division" },
-      { id: 'womens_division', name: "Women's Division" },
-      { id: 'july_3rd', name: "July 3rd" },
-      { id: 'november_18th', name: "November 18th" }
-    ];
+    const campaignNames = MockFirebase.db.getCampaignNames();
+    const customCampaigns = MockFirebase.db.getCustomCampaigns();
+    const defaultCampaignIds = ['youth_division', 'may_3rd', 'mens_division', 'womens_division', 'july_3rd', 'november_18th'];
+    const allCampaignIds = [...defaultCampaignIds, ...customCampaigns];
+    
+    const campaigns = allCampaignIds.map(id => {
+      return {
+        id: id,
+        name: campaignNames[id] || id,
+        isCustom: customCampaigns.includes(id)
+      };
+    });
     
     campaigns.forEach(c => {
       const div = document.createElement('div');
@@ -4096,6 +4428,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const isActive = activeCampaigns.includes(c.id);
       const dates = campaignDates[c.id] || { start: '', end: '' };
       
+      const deleteBtnHtml = c.isCustom ? `
+        <button class="btn-delete-campaign" data-id="${c.id}" style="background:transparent; border:none; color:var(--accent-danger); cursor:pointer; padding:4px 6px; font-size:13px;" title="Delete Campaign"><i class="fa-regular fa-trash-can"></i></button>
+      ` : '';
+      
       div.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <span style="font-size:13px; font-weight:600; color:var(--text-main);">${c.name}</span>
@@ -4104,8 +4440,9 @@ document.addEventListener('DOMContentLoaded', () => {
               <input type="checkbox" class="campaign-active-toggle" data-id="${c.id}" ${isActive ? 'checked' : ''} style="accent-color: var(--primary); width:13px; height:13px; margin:0;">
               Active
             </label>
-            <input type="number" class="campaign-target-input" data-id="${c.id}" value="${targets[c.id]}" min="1" max="100000" style="width:60px; padding:6px; border-radius:6px; border:var(--border); background:var(--accent-cream); color:var(--text-main); font-size:12px; text-align:center; outline:none;">
+            <input type="number" class="campaign-target-input" data-id="${c.id}" value="${targets[c.id] || 100}" min="1" max="100000" style="width:60px; padding:6px; border-radius:6px; border:var(--border); background:var(--accent-cream); color:var(--text-main); font-size:12px; text-align:center; outline:none;">
             <span style="font-size:11px; color:var(--text-muted);">hours</span>
+            ${deleteBtnHtml}
           </div>
         </div>
         <div style="display:flex; gap:8px; align-items:center;">
@@ -4174,9 +4511,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         let activeList = MockFirebase.db.getActiveCampaigns();
         if (checked) {
-          if (!activeList.includes(id)) {
-            activeList.push(id);
-          }
+          activeList = [id]; // Set as the ONLY active campaign
         } else {
           activeList = activeList.filter(cid => cid !== id);
         }
@@ -4187,6 +4522,25 @@ document.addEventListener('DOMContentLoaded', () => {
         renderCampaignDashboard();
         populateTargetDropdowns();
       });
+      
+      const deleteBtn = div.querySelector('.btn-delete-campaign');
+      if (deleteBtn) {
+        deleteBtn.addEventListener('click', async (e) => {
+          const id = e.currentTarget.getAttribute('data-id');
+          if (confirm("Are you sure you want to delete this custom campaign? This will remove all target settings and dates.")) {
+            try {
+              await MockFirebase.db.deleteCampaign(id);
+              alert("Campaign deleted successfully!");
+              renderCampaignTargetsEditor();
+              renderCampaignDashboard();
+              populateTargetDropdowns();
+              updateCampaignTabVisibility();
+            } catch (err) {
+              alert("Failed to delete campaign: " + err.message);
+            }
+          }
+        });
+      }
       
       container.appendChild(div);
     });
@@ -4471,18 +4825,7 @@ document.addEventListener('DOMContentLoaded', () => {
       loadUserStateForLoggedInUser(user);
       hideAuthOverlay();
       
-      const adminPanelCard = document.getElementById('admin-panel-card');
-      const adminCalendarCard = document.getElementById('admin-calendar-card');
-      if (user.isAdmin) {
-        if (adminPanelCard) adminPanelCard.classList.remove('hidden');
-        if (adminCalendarCard) adminCalendarCard.classList.remove('hidden');
-        renderWhitelist();
-        renderCampaignTargetsEditor();
-        renderAdminCalendarSchedule();
-      } else {
-        if (adminPanelCard) adminPanelCard.classList.add('hidden');
-        if (adminCalendarCard) adminCalendarCard.classList.add('hidden');
-      }
+      updateAdminCardsVisibility(user.isAdmin);
       
       updateUI();
       renderTargetsList();
@@ -4506,18 +4849,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loadUserStateForLoggedInUser(user);
         hideAuthOverlay();
         
-        const adminPanelCard = document.getElementById('admin-panel-card');
-        const adminCalendarCard = document.getElementById('admin-calendar-card');
-        if (user.isAdmin) {
-          if (adminPanelCard) adminPanelCard.classList.remove('hidden');
-          if (adminCalendarCard) adminCalendarCard.classList.remove('hidden');
-          renderWhitelist();
-          renderCampaignTargetsEditor();
-          renderAdminCalendarSchedule();
-        } else {
-          if (adminPanelCard) adminPanelCard.classList.add('hidden');
-          if (adminCalendarCard) adminCalendarCard.classList.add('hidden');
-        }
+        updateAdminCardsVisibility(user.isAdmin);
         
         updateUI();
         renderTargetsList();
@@ -4553,18 +4885,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loadUserStateForLoggedInUser(user);
         hideAuthOverlay();
         
-        const adminPanelCard = document.getElementById('admin-panel-card');
-        const adminCalendarCard = document.getElementById('admin-calendar-card');
-        if (user.isAdmin) {
-          if (adminPanelCard) adminPanelCard.classList.remove('hidden');
-          if (adminCalendarCard) adminCalendarCard.classList.remove('hidden');
-          renderWhitelist();
-          renderCampaignTargetsEditor();
-          renderAdminCalendarSchedule();
-        } else {
-          if (adminPanelCard) adminPanelCard.classList.add('hidden');
-          if (adminCalendarCard) adminCalendarCard.classList.add('hidden');
-        }
+        updateAdminCardsVisibility(user.isAdmin);
         
         updateUI();
         renderTargetsList();
@@ -4688,11 +5009,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('user-block-badge').classList.add('hidden');
         btnLogoutHeader.classList.add('hidden');
         
-        // Hide admin card
-        const adminPanelCard = document.getElementById('admin-panel-card');
-        const adminCalendarCard = document.getElementById('admin-calendar-card');
-        if (adminPanelCard) adminPanelCard.classList.add('hidden');
-        if (adminCalendarCard) adminCalendarCard.classList.add('hidden');
+        // Hide admin cards
+        updateAdminCardsVisibility(false);
         
         alert("You have logged out successfully.");
       }
@@ -4729,18 +5047,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateCampaignTabVisibility();
     
     // Check admin status
-    const adminPanelCard = document.getElementById('admin-panel-card');
-    const adminCalendarCard = document.getElementById('admin-calendar-card');
-    if (bootUser.isAdmin) {
-      if (adminPanelCard) adminPanelCard.classList.remove('hidden');
-      if (adminCalendarCard) adminCalendarCard.classList.remove('hidden');
-      renderWhitelist();
-      renderCampaignTargetsEditor();
-      renderAdminCalendarSchedule();
-    } else {
-      if (adminPanelCard) adminPanelCard.classList.add('hidden');
-      if (adminCalendarCard) adminCalendarCard.classList.add('hidden');
-    }
+    updateAdminCardsVisibility(bootUser.isAdmin);
   } else {
     showAuthOverlay();
     updateCampaignTabVisibility();
@@ -5080,10 +5387,21 @@ document.addEventListener('DOMContentLoaded', () => {
       tier.textContent = tierText;
       tier.className = `badge-tier ${tierText}`;
       
+      // Dynamic color style for center badge icon container
+      const iconContainer = card.querySelector('.modal-badge-icon');
+      if (iconContainer) {
+        iconContainer.className = `modal-badge-icon ${tierText}`;
+      }
+      
       card.classList.remove('legendary-glow', 'rare-glow', 'milestone-glow');
       if (tierText === 'legendary') card.classList.add('legendary-glow');
       else if (tierText === 'rare') card.classList.add('rare-glow');
       else if (tierText === 'milestone') card.classList.add('milestone-glow');
+
+      // Force restart CSS animation for consecutive modals
+      card.style.animation = 'none';
+      void card.offsetWidth; /* trigger reflow */
+      card.style.animation = '';
 
       modal.style.display = 'flex';
       modal.classList.remove('hidden');
@@ -5150,6 +5468,18 @@ document.addEventListener('DOMContentLoaded', () => {
       if (user) {
         MockFirebase.db.saveUserState(user.email, state);
       }
+    }
+
+    // One-time retroactive badge showcase for the new animation update
+    const hasRetriggered = localStorage.getItem('daimoku_grow_badges_retriggered_v34');
+    if (!hasRetriggered && state.unlockedAchievements.length > 0) {
+      state.unlockedAchievements.forEach(achId => {
+        const ach = ACHIEVEMENTS_LIST.find(x => x.id === achId);
+        if (ach) {
+          queueBadgeCelebration(ach);
+        }
+      });
+      localStorage.setItem('daimoku_grow_badges_retriggered_v34', 'true');
     }
   }
 

@@ -520,6 +520,78 @@
                   <!-- Dynamically populated campaign target inputs -->
                 </div>
               </div>
+
+              <!-- Section 2.5: Create Custom Campaign -->
+              <div class="admin-control-group" style="margin-bottom:14px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:12px;">
+                <h4>Create New Campaign</h4>
+                <form id="admin-create-campaign-form" class="admin-subform" style="display:flex; flex-direction:column; gap:8px;">
+                  <div class="form-group-row" style="margin-bottom:0; gap:8px; flex-wrap:wrap;">
+                    <input type="text" id="campaign-create-name" placeholder="Campaign Title" required style="flex:2; padding:10px; border-radius:10px; border:var(--border); background:var(--accent-cream); color:var(--text-main); font-size:14px; outline:none;">
+                    <input type="number" id="campaign-create-target" placeholder="Target Hours" required min="1" max="100000" style="flex:1; padding:10px; border-radius:10px; border:var(--border); background:var(--accent-cream); color:var(--text-main); font-size:14px; outline:none; text-align:center;">
+                  </div>
+                  <div class="form-group-row" style="margin-bottom:0; gap:8px; flex-wrap:wrap;">
+                    <div style="flex:1; display:flex; flex-direction:column; gap:2px;">
+                      <label style="font-size:10px; font-weight:600; color:var(--text-muted); margin-bottom:0;">Start Date</label>
+                      <input type="date" id="campaign-create-start" required style="padding:10px; border-radius:10px; border:var(--border); background:var(--accent-cream); color:var(--text-main); font-size:14px; outline:none; width: 100%;">
+                    </div>
+                    <div style="flex:1; display:flex; flex-direction:column; gap:2px;">
+                      <label style="font-size:10px; font-weight:600; color:var(--text-muted); margin-bottom:0;">End Date</label>
+                      <input type="date" id="campaign-create-end" required style="padding:10px; border-radius:10px; border:var(--border); background:var(--accent-cream); color:var(--text-main); font-size:14px; outline:none; width: 100%;">
+                    </div>
+                  </div>
+                  <div class="setting-toggle-row" style="padding: 4px 0; margin-bottom: 4px; display:flex; justify-content:space-between; align-items:center;">
+                    <div class="setting-info" style="display:flex; flex-direction:column; gap:2px;">
+                      <span class="setting-title" style="font-size:12px; font-weight:600; color:var(--text-main);">Mark as Active Campaign</span>
+                      <span class="setting-subtitle" style="font-size:10px; color:var(--text-muted);">Enforces only 1 active campaign at a time</span>
+                    </div>
+                    <label class="toggle-switch">
+                      <input type="checkbox" id="campaign-create-active">
+                      <span class="slider"></span>
+                    </label>
+                  </div>
+                  <button type="submit" class="btn btn-primary btn-full" style="padding: 10px 14px; font-size: 13px;"><i class="fa-solid fa-bullhorn"></i> Create Campaign</button>
+                </form>
+              </div>
+            </div>
+          </div>
+
+          <!-- Admin User Management Panel (Collapsible, visible only to admin role) -->
+          <div class="card admin-card collapsible hidden" id="admin-users-card">
+            <button class="admin-panel-header" id="btn-toggle-admin-users">
+              <span><i class="fa-solid fa-users-gear"></i> Member Account Manager</span>
+              <i class="fa-solid fa-chevron-down toggle-arrow"></i>
+            </button>
+            <div id="admin-users-content" class="admin-content collapsed">
+              <p class="admin-desc">Manage existing member accounts, change usernames, emails, or SGI Block assignments.</p>
+              
+              <!-- Section 1: Pre-create Profile -->
+              <div class="admin-control-group" style="margin-bottom:14px;">
+                <h4>Add New Account Profile</h4>
+                <form id="admin-create-user-form" class="admin-subform" style="display:flex; flex-direction:column; gap:8px;">
+                  <div class="form-group-row" style="margin-bottom:0; gap:8px; flex-wrap:wrap;">
+                    <input type="text" id="admin-create-username" placeholder="Username" required style="flex:1; min-width:120px; padding:10px; border-radius:10px; border:var(--border); background:var(--accent-cream); color:var(--text-main); font-size:14px; outline:none;">
+                    <input type="email" id="admin-create-email" placeholder="member@email.com" required style="flex:1.5; min-width:160px; padding:10px; border-radius:10px; border:var(--border); background:var(--accent-cream); color:var(--text-main); font-size:14px; outline:none;">
+                    <select id="admin-create-block" style="flex:1; min-width:100px; padding:10px; border-radius:10px; border:var(--border); background:var(--accent-cream); color:var(--text-main); font-size:14px; outline:none;">
+                      <option value="Wisdom">Wisdom</option>
+                      <option value="Compassion">Compassion</option>
+                      <option value="Courage">Courage</option>
+                      <option value="Faith">Faith</option>
+                      <option value="Harmony">Harmony</option>
+                    </select>
+                  </div>
+                  <button type="submit" class="btn btn-primary btn-full" style="padding: 10px 14px; font-size: 13px;"><i class="fa-solid fa-user-plus"></i> Create Member Profile</button>
+                </form>
+              </div>
+
+              <!-- Section 2: Users List -->
+              <div class="admin-control-group">
+                <h4>Registered Members List</h4>
+                <div class="admin-event-list-container" style="max-height:300px; overflow-y:auto; border:var(--border); border-radius:10px; padding:8px; background:var(--accent-cream);">
+                  <div id="admin-users-list-container" style="display:flex; flex-direction:column; gap:8px;">
+                    <!-- Dynamically populated list of registered users -->
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 

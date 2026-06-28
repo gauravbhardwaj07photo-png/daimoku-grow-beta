@@ -1,4 +1,4 @@
-const CACHE_NAME = 'daimoku-grow-v33';
+const CACHE_NAME = 'daimoku-grow-v35';
 const ASSETS = [
   './',
   './index.html',

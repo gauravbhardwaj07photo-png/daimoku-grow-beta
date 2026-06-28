@@ -102,11 +102,22 @@ const defaultCampaignDates = {
   november_18th: { start: "2026-09-19", end: "2026-11-19" }
 };
 
+const defaultCampaignNames = {
+  youth_division: "Youth Division Campaign",
+  may_3rd: "May 3rd Campaign",
+  mens_division: "Men's Division Campaign",
+  womens_division: "Women's Division Campaign",
+  july_3rd: "July 3rd Campaign",
+  november_18th: "November 18th Campaign"
+};
+
 // --- Real-time Firebase Sync Cache ---
 let cachedWhitelist = [...defaultWhitelist];
 let cachedCampaignTargets = { ...defaultCampaignTargets };
 let cachedCampaignDates = { ...defaultCampaignDates };
 let cachedActiveCampaigns = ['july_3rd'];
+let cachedCampaignNames = { ...defaultCampaignNames };
+let cachedCustomCampaigns = [];
 let cachedContributions = [];
 
 if (isFirebaseConfigured && db) {
@@ -129,13 +140,17 @@ if (isFirebaseConfigured && db) {
       if (data.targets) cachedCampaignTargets = data.targets;
       if (data.dates) cachedCampaignDates = data.dates;
       if (data.active) cachedActiveCampaigns = data.active;
+      if (data.names) cachedCampaignNames = data.names;
+      if (data.customCampaigns) cachedCustomCampaigns = data.customCampaigns;
       window.dispatchEvent(new Event('db-updated'));
     } else {
       // Seed default campaigns configurations document
       db.collection('settings').doc('campaigns').set({
         targets: defaultCampaignTargets,
         dates: defaultCampaignDates,
-        active: ['july_3rd']
+        active: ['july_3rd'],
+        names: defaultCampaignNames,
+        customCampaigns: []
       });
     }
   }, err => console.warn("Firestore Settings listener error:", err));
@@ -431,16 +446,179 @@ const MockFirebase = {
       }
     },
     saveActiveCampaigns(activeList) {
+      // Force only 1 active campaign at a time (take the last one selected)
+      const singleActiveList = activeList.slice(-1);
+      
       if (isFirebaseConfigured && db) {
         try {
-          db.collection('settings').doc('campaigns').update({ active: activeList }).catch(e => {
+          db.collection('settings').doc('campaigns').update({ active: singleActiveList }).catch(e => {
             console.warn("Firestore update active campaigns error:", e);
           });
         } catch (e) {
           console.warn("Firestore update active campaigns sync error:", e);
         }
       } else {
-        localStorage.setItem('daimoku_db_active_campaigns', JSON.stringify(activeList));
+        localStorage.setItem('daimoku_db_active_campaigns', JSON.stringify(singleActiveList));
+        window.dispatchEvent(new Event('db-updated'));
+      }
+    },
+
+    // Get all campaign names
+    getCampaignNames() {
+      if (isFirebaseConfigured) {
+        return cachedCampaignNames;
+      } else {
+        const saved = localStorage.getItem('daimoku_db_campaign_names');
+        if (saved) return JSON.parse(saved);
+        localStorage.setItem('daimoku_db_campaign_names', JSON.stringify(defaultCampaignNames));
+        return defaultCampaignNames;
+      }
+    },
+
+    // Get list of custom campaign IDs
+    getCustomCampaigns() {
+      if (isFirebaseConfigured) {
+        return cachedCustomCampaigns;
+      } else {
+        const saved = localStorage.getItem('daimoku_db_custom_campaigns');
+        return saved ? JSON.parse(saved) : [];
+      }
+    },
+
+    // Create a new campaign (validation ensures only 1 active at a time)
+    async createCampaign(id, name, targetHours, dates, isActive) {
+      if (isFirebaseConfigured && db) {
+        try {
+          const docRef = db.collection('settings').doc('campaigns');
+          const doc = await docRef.get();
+          
+          let targets = { ...defaultCampaignTargets };
+          let campaignDates = { ...defaultCampaignDates };
+          let names = { ...defaultCampaignNames };
+          let customCampaigns = [];
+          let active = ['july_3rd'];
+          
+          if (doc.exists) {
+            const data = doc.data();
+            if (data.targets) targets = data.targets;
+            if (data.dates) campaignDates = data.dates;
+            if (data.names) names = data.names;
+            if (data.customCampaigns) customCampaigns = data.customCampaigns;
+            if (data.active) active = data.active;
+          }
+          
+          // Validation: check if campaign already exists
+          if (targets[id] !== undefined) {
+            throw new Error("A campaign with this ID or name already exists.");
+          }
+          
+          // Add new configurations
+          targets[id] = targetHours;
+          campaignDates[id] = dates;
+          names[id] = name;
+          if (!customCampaigns.includes(id)) {
+            customCampaigns.push(id);
+          }
+          
+          if (isActive) {
+            active = [id]; // Set this as the only active campaign
+          }
+          
+          await docRef.set({
+            targets,
+            dates: campaignDates,
+            names,
+            customCampaigns,
+            active
+          });
+        } catch (e) {
+          console.error("Firestore createCampaign error:", e);
+          throw e;
+        }
+      } else {
+        // Local Mock Mode
+        const targets = this.getCampaignTargets();
+        const campaignDates = this.getCampaignDates();
+        const names = this.getCampaignNames();
+        const customCampaigns = this.getCustomCampaigns();
+        let active = this.getActiveCampaigns();
+        
+        if (targets[id] !== undefined) {
+          throw new Error("A campaign with this ID or name already exists.");
+        }
+        
+        targets[id] = targetHours;
+        campaignDates[id] = dates;
+        names[id] = name;
+        customCampaigns.push(id);
+        
+        if (isActive) {
+          active = [id];
+        }
+        
+        localStorage.setItem('daimoku_db_campaign_targets', JSON.stringify(targets));
+        localStorage.setItem('daimoku_db_campaign_dates', JSON.stringify(campaignDates));
+        localStorage.setItem('daimoku_db_campaign_names', JSON.stringify(names));
+        localStorage.setItem('daimoku_db_custom_campaigns', JSON.stringify(customCampaigns));
+        localStorage.setItem('daimoku_db_active_campaigns', JSON.stringify(active));
+        
+        window.dispatchEvent(new Event('db-updated'));
+      }
+    },
+
+    // Delete a custom campaign
+    async deleteCampaign(id) {
+      if (isFirebaseConfigured && db) {
+        try {
+          const docRef = db.collection('settings').doc('campaigns');
+          const doc = await docRef.get();
+          if (doc.exists) {
+            const data = doc.data();
+            const targets = data.targets || {};
+            const dates = data.dates || {};
+            const names = data.names || {};
+            let customCampaigns = data.customCampaigns || [];
+            let active = data.active || [];
+            
+            // Delete key entries
+            delete targets[id];
+            delete dates[id];
+            delete names[id];
+            customCampaigns = customCampaigns.filter(cid => cid !== id);
+            active = active.filter(cid => cid !== id);
+            
+            await docRef.set({
+              targets,
+              dates,
+              names,
+              customCampaigns,
+              active
+            });
+          }
+        } catch (e) {
+          console.error("Firestore deleteCampaign error:", e);
+          throw e;
+        }
+      } else {
+        // Local Mock Mode
+        const targets = this.getCampaignTargets();
+        const campaignDates = this.getCampaignDates();
+        const names = this.getCampaignNames();
+        let customCampaigns = this.getCustomCampaigns();
+        let active = this.getActiveCampaigns();
+        
+        delete targets[id];
+        delete campaignDates[id];
+        delete names[id];
+        customCampaigns = customCampaigns.filter(cid => cid !== id);
+        active = active.filter(cid => cid !== id);
+        
+        localStorage.setItem('daimoku_db_campaign_targets', JSON.stringify(targets));
+        localStorage.setItem('daimoku_db_campaign_dates', JSON.stringify(campaignDates));
+        localStorage.setItem('daimoku_db_campaign_names', JSON.stringify(names));
+        localStorage.setItem('daimoku_db_custom_campaigns', JSON.stringify(customCampaigns));
+        localStorage.setItem('daimoku_db_active_campaigns', JSON.stringify(active));
+        
         window.dispatchEvent(new Event('db-updated'));
       }
     },
@@ -552,6 +730,223 @@ const MockFirebase = {
           date
         });
         this.saveCampaignContributions(contributions);
+      }
+    },
+    
+    // Admin: Get all registered user profiles
+    async getAllUsers() {
+      if (isFirebaseConfigured && db) {
+        try {
+          const snapshot = await db.collection('users').get();
+          const list = [];
+          snapshot.forEach(doc => {
+            list.push(doc.data());
+          });
+          return list;
+        } catch (e) {
+          console.warn("Firestore getAllUsers error:", e);
+          return [];
+        }
+      } else {
+        const users = JSON.parse(localStorage.getItem('daimoku_db_users') || '[]');
+        return users.map(u => ({ username: u.username, email: u.email, block: u.block, isAdmin: u.isAdmin }));
+      }
+    },
+    
+    // Admin: Update user profile. If email is changed, migrates profile/states/whitelist docs
+    async adminUpdateUser(oldEmail, newEmail, username, block) {
+      const normOld = oldEmail.toLowerCase().trim();
+      const normNew = newEmail.toLowerCase().trim();
+      
+      if (isFirebaseConfigured && db) {
+        try {
+          const batch = db.batch();
+          
+          if (normOld !== normNew) {
+            // 1. Copy user profile
+            const oldUserRef = db.collection('users').doc(normOld);
+            const newUserRef = db.collection('users').doc(normNew);
+            const userDoc = await oldUserRef.get();
+            if (userDoc.exists) {
+              const userData = userDoc.data();
+              userData.email = normNew;
+              userData.username = username;
+              userData.block = block;
+              batch.set(newUserRef, userData);
+              batch.delete(oldUserRef);
+            } else {
+              // If profile doesn't exist, create it fresh
+              batch.set(newUserRef, { email: normNew, username, block, isAdmin: false });
+            }
+            
+            // 2. Copy userState (keeps chanting hours and plant state)
+            const oldStateRef = db.collection('userStates').doc(normOld);
+            const newStateRef = db.collection('userStates').doc(normNew);
+            const stateDoc = await oldStateRef.get();
+            if (stateDoc.exists) {
+              batch.set(newStateRef, stateDoc.data());
+              batch.delete(oldStateRef);
+            }
+            
+            // 3. Move/Update Whitelist entry
+            const oldWhitelistRef = db.collection('whitelist').doc(normOld);
+            const newWhitelistRef = db.collection('whitelist').doc(normNew);
+            const whitelistDoc = await oldWhitelistRef.get();
+            let code = 'WIS-333';
+            if (whitelistDoc.exists) {
+              code = whitelistDoc.data().code;
+              batch.set(newWhitelistRef, whitelistDoc.data());
+              batch.delete(oldWhitelistRef);
+            } else {
+              code = block.substr(0, 3).toUpperCase() + '-' + Math.floor(100 + Math.random() * 900);
+              batch.set(newWhitelistRef, { code });
+            }
+            
+            // 4. Update userEmail in past contributions (do NOT change the block field!)
+            const contributionsSnapshot = await db.collection('contributions')
+              .where('userEmail', '==', normOld)
+              .get();
+              
+            contributionsSnapshot.forEach(doc => {
+              batch.update(doc.ref, { userEmail: normNew });
+            });
+            
+            await batch.commit();
+            console.log("Admin email change completed in Firestore.");
+          } else {
+            // Just update username and block on the existing document (old block data stays in old block logs)
+            const userRef = db.collection('users').doc(normOld);
+            await userRef.update({ username, block });
+            console.log("Admin profile update completed in Firestore (no email change).");
+          }
+        } catch (e) {
+          console.error("Firestore adminUpdateUser error:", e);
+          throw e;
+        }
+      } else {
+        // Local Mock Mode
+        const users = JSON.parse(localStorage.getItem('daimoku_db_users') || '[]');
+        const userIdx = users.findIndex(u => u.email.toLowerCase() === normOld);
+        if (userIdx !== -1) {
+          if (normOld !== normNew) {
+            users[userIdx].email = normNew;
+            
+            // Move state
+            const stateData = localStorage.getItem(`daimoku_db_state_${normOld}`);
+            if (stateData) {
+              localStorage.setItem(`daimoku_db_state_${normNew}`, stateData);
+              localStorage.removeItem(`daimoku_db_state_${normOld}`);
+            }
+            
+            // Move whitelist
+            const whitelist = JSON.parse(localStorage.getItem('daimoku_db_whitelist') || '[]');
+            const wIdx = whitelist.findIndex(w => w.email.toLowerCase() === normOld);
+            if (wIdx !== -1) {
+              whitelist[wIdx].email = normNew;
+              localStorage.setItem('daimoku_db_whitelist', JSON.stringify(whitelist));
+            }
+            
+            // Update email in contributions
+            let contributions = JSON.parse(localStorage.getItem('daimoku_db_campaign_contributions') || '[]');
+            contributions.forEach(c => {
+              if (c.userEmail.toLowerCase() === normOld) {
+                c.userEmail = normNew;
+              }
+            });
+            localStorage.setItem('daimoku_db_campaign_contributions', JSON.stringify(contributions));
+          }
+          users[userIdx].username = username;
+          users[userIdx].block = block;
+          localStorage.setItem('daimoku_db_users', JSON.stringify(users));
+          window.dispatchEvent(new Event('db-updated'));
+        }
+      }
+    },
+    
+    // Admin: Delete user profile, states, whitelist and contributions
+    async adminDeleteUser(email) {
+      const normEmail = email.toLowerCase().trim();
+      if (isFirebaseConfigured && db) {
+        try {
+          const batch = db.batch();
+          batch.delete(db.collection('users').doc(normEmail));
+          batch.delete(db.collection('userStates').doc(normEmail));
+          batch.delete(db.collection('whitelist').doc(normEmail));
+          
+          const contributionsSnapshot = await db.collection('contributions')
+            .where('userEmail', '==', normEmail)
+            .get();
+          contributionsSnapshot.forEach(doc => {
+            batch.delete(doc.ref);
+          });
+          
+          await batch.commit();
+        } catch (e) {
+          console.error("Firestore delete user error:", e);
+          throw e;
+        }
+      } else {
+        const users = JSON.parse(localStorage.getItem('daimoku_db_users') || '[]');
+        const newUsers = users.filter(u => u.email.toLowerCase() !== normEmail);
+        localStorage.setItem('daimoku_db_users', JSON.stringify(newUsers));
+        
+        localStorage.removeItem(`daimoku_db_state_${normEmail}`);
+        
+        const whitelist = JSON.parse(localStorage.getItem('daimoku_db_whitelist') || '[]');
+        const newWhitelist = whitelist.filter(w => w.email.toLowerCase() !== normEmail);
+        localStorage.setItem('daimoku_db_whitelist', JSON.stringify(newWhitelist));
+        
+        let contributions = JSON.parse(localStorage.getItem('daimoku_db_campaign_contributions') || '[]');
+        contributions = contributions.filter(c => c.userEmail.toLowerCase() !== normEmail);
+        localStorage.setItem('daimoku_db_campaign_contributions', JSON.stringify(contributions));
+        window.dispatchEvent(new Event('db-updated'));
+      }
+    },
+    
+    // Admin: Pre-create user profile and whitelist
+    async adminCreateUser(username, email, block) {
+      const normEmail = email.toLowerCase().trim();
+      const code = block.substr(0, 3).toUpperCase() + '-' + Math.floor(100 + Math.random() * 900);
+      
+      if (isFirebaseConfigured && db) {
+        try {
+          // Check if already exists in whitelist or users
+          const whitelistDoc = await db.collection('whitelist').doc(normEmail).get();
+          if (whitelistDoc.exists) {
+            throw new Error("This email is already in the whitelist.");
+          }
+          
+          await db.collection('whitelist').doc(normEmail).set({ code });
+          await db.collection('users').doc(normEmail).set({
+            username,
+            email: normEmail,
+            block,
+            isAdmin: false
+          });
+          return code;
+        } catch (e) {
+          console.error("Firestore adminCreateUser error:", e);
+          throw e;
+        }
+      } else {
+        const whitelist = JSON.parse(localStorage.getItem('daimoku_db_whitelist') || '[]');
+        if (whitelist.some(w => w.email.toLowerCase() === normEmail)) {
+          throw new Error("This email is already in the whitelist.");
+        }
+        whitelist.push({ email: normEmail, code });
+        localStorage.setItem('daimoku_db_whitelist', JSON.stringify(whitelist));
+        
+        const users = JSON.parse(localStorage.getItem('daimoku_db_users') || '[]');
+        users.push({
+          username,
+          email: normEmail,
+          block,
+          password: 'password123',
+          isAdmin: false
+        });
+        localStorage.setItem('daimoku_db_users', JSON.stringify(users));
+        window.dispatchEvent(new Event('db-updated'));
+        return code;
       }
     }
   }
