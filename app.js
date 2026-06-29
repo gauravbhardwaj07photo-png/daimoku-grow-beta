@@ -2111,7 +2111,6 @@ document.addEventListener('DOMContentLoaded', () => {
     state.sessions.unshift(session);
     
     // Recalculate states
-    const now = new Date();
     // If the logged session is the newest session or logged today, reset the water lastChantedDate
     const isNewest = state.sessions.length === 1 || new Date(session.date) > new Date(state.lastChantedDate);
     
