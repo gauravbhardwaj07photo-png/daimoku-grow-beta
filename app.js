@@ -156,6 +156,32 @@ document.addEventListener('DOMContentLoaded', () => {
     { id: 'total_150h', title: "Mount Fuji", desc: "Reach 150 hours of total chanting. Standing unshakeable and majestic, like Mount Fuji, against all adversity.", icon: "fa-mountain", tier: "endeavor", check: (s) => (s.totalSeconds / 3600) >= 150 },
     { id: 'total_200h', title: "Eagle Peak", desc: "Reach 200 hours of total chanting. Standing tall among giants in the global community of practitioners.", icon: "fa-tree", tier: "endeavor", check: (s) => (s.totalSeconds / 3600) >= 200 },
     { id: 'total_333h', title: "Shinichi's Triumph", desc: "Reach 333 hours of total chanting. Fully realizing the majestic tree milestone with President Ikeda's victorious spirit.", icon: "fa-crown", tier: "milestone", check: (s) => (s.totalSeconds / 3600) >= 333 },
+    { id: 'daisado_medal', title: "Daisado Medal", desc: "Conferred when an active campaign in which you are contributing successfully reaches its target.", icon: "fa-medal", tier: "rare", check: (s) => {
+      try {
+        const dbContribs = MockFirebase.db.getCampaignContributions();
+        const dbTargets = MockFirebase.db.getCampaignTargets();
+        const dbCustomCampaigns = MockFirebase.db.getCustomCampaigns();
+        const defaultCampaignIds = ['youth_division', 'may_3rd', 'mens_division', 'womens_division', 'july_3rd', 'november_18th'];
+        const allCampaignIds = [...defaultCampaignIds, ...dbCustomCampaigns];
+        const currentUser = MockFirebase.auth.getCurrentUser();
+        if (!currentUser) return false;
+        
+        return allCampaignIds.some(cid => {
+          const campaignContribs = dbContribs.filter(item => item.campaignId === cid);
+          const globalSeconds = campaignContribs.reduce((sum, item) => sum + item.durationSeconds, 0);
+          const globalHours = globalSeconds / 3600;
+          const targetHours = dbTargets[cid] || 100;
+          
+          if (globalHours >= targetHours) {
+            return campaignContribs.some(item => item.userEmail.toLowerCase() === currentUser.email.toLowerCase());
+          }
+          return false;
+        });
+      } catch (e) {
+        console.error("Error in daisado_medal check:", e);
+        return false;
+      }
+    } },
 
     // --- HABITS ---
     { id: 'early_bird', title: "Dawn Devotion", desc: "Chant before 8:00 AM. Welcoming the day with a clean mind and triumphant determination.", icon: "fa-mug-hot", tier: "endeavor", check: (s) => s.sessions.some(x => {
@@ -286,6 +312,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const isUnlocked = ach.check(state);
       const div = document.createElement('div');
       div.className = `badge-item ${isUnlocked ? 'unlocked' : 'locked'} ${ach.tier || 'endeavor'}`;
+      div.style.cursor = 'pointer';
       
       const tierText = ach.tier || 'endeavor';
       div.innerHTML = `
@@ -300,6 +327,11 @@ document.addEventListener('DOMContentLoaded', () => {
           <span class="badge-desc">${ach.desc}</span>
         </div>
       `;
+      
+      div.addEventListener('click', () => {
+        showBadgePreviewModal(ach, isUnlocked);
+      });
+      
       badgesContainer.appendChild(div);
     });
   }
@@ -325,6 +357,8 @@ document.addEventListener('DOMContentLoaded', () => {
     revivalDates: [], // Dates of consecutive daimoku for revival while dead
     unlockedAchievements: [] // Array of persistently unlocked achievement IDs
   };
+
+  let isCloudStateLoaded = false;
 
   // --- Timer Variables ---
   let timerInterval = null;
@@ -623,6 +657,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function loadUserStateForLoggedInUser(user) {
+    isCloudStateLoaded = false;
     const normalizedEmail = user.email.toLowerCase().trim();
     const localCachedState = localStorage.getItem(`daimoku_db_state_${normalizedEmail}`);
     
@@ -658,6 +693,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       applyLoadedStateSafeguards();
       
+      isCloudStateLoaded = true;
+      
       // Reconcile user state with campaign contributions (self-healing)
       healUserStateFromContributions(user);
       
@@ -670,11 +707,16 @@ document.addEventListener('DOMContentLoaded', () => {
       updateUI();
       console.log("Firebase sync: cloud state fetched and loaded.");
     }).catch(err => {
+      isCloudStateLoaded = true;
       console.warn("Failed to fetch state from Firestore, running on local cache:", err);
     });
   }
 
   function healUserStateFromContributions(user) {
+    if (!isCloudStateLoaded) {
+      console.warn("State is not loaded from cloud yet, skipping self-healing.");
+      return;
+    }
     let stateChanged = false;
     if (!state) state = {};
     if (!state.sessions) state.sessions = [];
@@ -743,6 +785,8 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Save to active local state cache
     localStorage.setItem('daimoku_grow_state', JSON.stringify(state));
+    
+
     
     // Update badge and buttons in header
     const badge = document.getElementById('user-block-badge');
@@ -919,6 +963,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (user) {
       loadUserStateForLoggedInUser(user);
     } else {
+      isCloudStateLoaded = true;
       const saved = localStorage.getItem('daimoku_grow_state');
       if (saved) {
         try {
@@ -964,6 +1009,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function saveState() {
+    if (!isCloudStateLoaded) {
+      console.warn("State is not loaded from cloud yet, skipping saveState to prevent data loss.");
+      return;
+    }
     localStorage.setItem('daimoku_grow_state', JSON.stringify(state));
     
     const user = MockFirebase.auth.getCurrentUser();
@@ -1989,9 +2038,15 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     
-    // Construct manual date (noon of selected day)
-    const selectedDate = new Date(logDateInput.value);
-    selectedDate.setHours(12, 0, 0, 0);
+    // Construct manual date using local time parts and current hours/minutes/seconds
+    const dateParts = logDateInput.value.split('-');
+    const selectedDate = new Date(
+      parseInt(dateParts[0]),
+      parseInt(dateParts[1]) - 1,
+      parseInt(dateParts[2])
+    );
+    const now = new Date();
+    selectedDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
     
     const sessionDateString = selectedDate.toISOString();
     if (sessionDateString === "Invalid Date" || isNaN(selectedDate.getTime())) {
@@ -2282,6 +2337,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
   }
+
+
 
   // --- Diurnal Theme Switcher ---
   function updateDiurnalTheme() {
@@ -4990,6 +5047,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Hide badge and logout button in header
         document.getElementById('user-block-badge').classList.add('hidden');
         btnLogoutHeader.classList.add('hidden');
+
         
         // Hide admin cards
         updateAdminCardsVisibility(false);
@@ -5330,6 +5388,66 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 1500);
   }
 
+  let isManualPreview = false;
+
+  function showBadgePreviewModal(badge, isUnlocked) {
+    const modal = document.getElementById('badge-unlock-modal');
+    const icon = document.getElementById('unlock-badge-icon');
+    const tier = document.getElementById('unlock-badge-tier');
+    const title = document.getElementById('unlock-badge-title');
+    const desc = document.getElementById('unlock-badge-desc');
+    const card = document.querySelector('.badge-unlock-card');
+    const closeBtn = document.getElementById('btn-close-badge-unlock');
+    
+    if (modal && icon && tier && title && desc && card && closeBtn) {
+      isManualPreview = true;
+      
+      icon.className = `fa-solid ${badge.icon}`;
+      title.textContent = badge.title;
+      desc.textContent = badge.desc;
+      
+      const tierText = badge.tier || 'endeavor';
+      tier.textContent = isUnlocked ? tierText : `${tierText} (Pending)`;
+      tier.className = `badge-tier ${tierText}`;
+      
+      // Dynamic color style for center badge icon container
+      const iconContainer = card.querySelector('.modal-badge-icon');
+      if (iconContainer) {
+        iconContainer.className = `modal-badge-icon ${tierText}`;
+        if (!isUnlocked) {
+          iconContainer.style.filter = 'grayscale(1) opacity(0.6)';
+        } else {
+          iconContainer.style.filter = 'none';
+        }
+      }
+      
+      card.classList.remove('legendary-glow', 'rare-glow', 'milestone-glow');
+      card.classList.remove('swirl-anim', 'zoom-anim');
+      
+      if (isUnlocked) {
+        if (tierText === 'legendary') card.classList.add('legendary-glow');
+        else if (tierText === 'rare') card.classList.add('rare-glow');
+        else if (tierText === 'milestone') card.classList.add('milestone-glow');
+        
+        card.classList.add('swirl-anim');
+        closeBtn.textContent = "Awesome! 🎉";
+        
+        startFireworks(tierText);
+      } else {
+        card.classList.add('zoom-anim');
+        closeBtn.textContent = "Close";
+      }
+      
+      // Force restart CSS animation
+      card.style.animation = 'none';
+      void card.offsetWidth; /* trigger reflow */
+      card.style.animation = '';
+      
+      modal.style.display = 'flex';
+      modal.classList.remove('hidden');
+    }
+  }
+
   function queueBadgeCelebration(badge) {
     celebrationQueue.push(badge);
     if (!isCelebrationActive) {
@@ -5343,6 +5461,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     isCelebrationActive = true;
+    isManualPreview = false;
     const badge = celebrationQueue.shift();
     
     const modal = document.getElementById('badge-unlock-modal');
@@ -5351,6 +5470,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const title = document.getElementById('unlock-badge-title');
     const desc = document.getElementById('unlock-badge-desc');
     const card = document.querySelector('.badge-unlock-card');
+    const closeBtn = document.getElementById('btn-close-badge-unlock');
     
     if (modal && icon && tier && title && desc && card) {
       icon.className = `fa-solid ${badge.icon}`;
@@ -5361,22 +5481,31 @@ document.addEventListener('DOMContentLoaded', () => {
       tier.textContent = tierText;
       tier.className = `badge-tier ${tierText}`;
       
+      if (closeBtn) {
+        closeBtn.textContent = "Awesome! 🎉";
+      }
+      
       // Dynamic color style for center badge icon container
       const iconContainer = card.querySelector('.modal-badge-icon');
       if (iconContainer) {
         iconContainer.className = `modal-badge-icon ${tierText}`;
+        iconContainer.style.filter = 'none';
       }
       
       card.classList.remove('legendary-glow', 'rare-glow', 'milestone-glow');
+      card.classList.remove('swirl-anim', 'zoom-anim');
+      
       if (tierText === 'legendary') card.classList.add('legendary-glow');
       else if (tierText === 'rare') card.classList.add('rare-glow');
       else if (tierText === 'milestone') card.classList.add('milestone-glow');
 
+      card.classList.add('swirl-anim');
+ 
       // Force restart CSS animation for consecutive modals
       card.style.animation = 'none';
       void card.offsetWidth; /* trigger reflow */
       card.style.animation = '';
-
+ 
       modal.style.display = 'flex';
       modal.classList.remove('hidden');
       
@@ -5394,8 +5523,13 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       
       stopFireworksGracefully();
-      isCelebrationActive = false;
-      showNextCelebration();
+      
+      if (isManualPreview) {
+        isManualPreview = false;
+      } else {
+        isCelebrationActive = false;
+        showNextCelebration();
+      }
     });
   }
 

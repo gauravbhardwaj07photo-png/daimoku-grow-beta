@@ -129,6 +129,22 @@ if (isFirebaseConfigured && db) {
     });
     if (list.length > 0) {
       cachedWhitelist = list;
+      
+      // Perform whitelist access check asynchronously once cloud whitelist is fetched
+      const saved = localStorage.getItem('daimoku_session_user');
+      if (saved) {
+        try {
+          const user = JSON.parse(saved);
+          const isWhitelisted = list.some(w => w.email.toLowerCase() === user.email.toLowerCase());
+          if (!isWhitelisted) {
+            console.warn("User access revoked via Firestore whitelist.");
+            localStorage.removeItem('daimoku_session_user');
+            if (MockFirebase.auth.currentUser) {
+              MockFirebase.auth.currentUser = null;
+            }
+          }
+        } catch (e) {}
+      }
     }
     window.dispatchEvent(new Event('db-updated'));
   }, err => console.warn("Firestore Whitelist listener error:", err));
@@ -299,13 +315,8 @@ const MockFirebase = {
       if (saved) {
         try {
           const user = JSON.parse(saved);
-          const isWhitelisted = cachedWhitelist.some(w => w.email.toLowerCase() === user.email.toLowerCase());
-          if (isWhitelisted) {
-            this.currentUser = user;
-            return user;
-          } else {
-            localStorage.removeItem('daimoku_session_user');
-          }
+          this.currentUser = user;
+          return user;
         } catch (e) {
           localStorage.removeItem('daimoku_session_user');
         }
