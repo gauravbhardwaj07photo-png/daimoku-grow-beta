@@ -885,10 +885,18 @@ body.theme-forest-dark .dashboard-mini-timer {
   border-color: var(--primary);
 }
 
-.history-grid {
+/* Unified View Grid Layouts */
+.dashboard-grid,
+.chant-grid,
+.targets-grid,
+.history-grid,
+.achievements-grid,
+.settings-grid,
+.campaign-grid,
+.calendar-grid {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 5px;
 }
 
 /* History logs list view */
@@ -1059,12 +1067,7 @@ body.theme-forest-dark .dashboard-mini-timer {
   letter-spacing: 0.5px;
 }
 
-/* Settings Grid Layout */
-.settings-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
+/* Settings Grid Layout has been unified */
 
 /* Settings styling */
 .settings-card h2 {
@@ -1608,12 +1611,7 @@ body.theme-forest-dark .btn-debug-action {
   border-color: var(--primary);
 }
 
-/* Targets View Layout */
-.targets-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
+/* Targets View Layout has been unified */
 
 .targets-list {
   display: flex;
@@ -2037,11 +2035,7 @@ body.theme-forest-dark select {
 /* -------------------------------------------------------------
  * Event Calendar Aesthetics
  * ------------------------------------------------------------- */
-.calendar-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
+/* Calendar Grid Layout has been unified */
 
 .calendar-card {
   padding: 18px;
@@ -2519,12 +2513,7 @@ body.theme-forest-dark select {
   font-size: 16px;
 }
 
-/* Achievements grid */
-.achievements-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
+/* Achievements grid has been unified */
 
 .rank-card {
   background: var(--bg-card);
@@ -2606,9 +2595,8 @@ body.theme-forest-dark select {
 
 .badge-item.locked {
   opacity: 0.45;
-  filter: grayscale(1);
-  background: rgba(var(--primary-rgb), 0.05);
-  border-color: rgba(var(--primary-rgb), 0.1);
+  filter: grayscale(0.25) contrast(0.95);
+  background: rgba(var(--primary-rgb), 0.02);
 }
 
 .badge-item.unlocked {
@@ -3916,36 +3904,82 @@ body.theme-forest-dark .streak-badge {
   box-shadow: 0 0 8px rgba(255, 193, 7, 0.1);
 }
 
-/* Custom glows for list items based on rarity */
-.badge-item.unlocked.legendary {
-  border-color: rgba(255, 193, 7, 0.4) !important;
-  box-shadow: 0 4px 15px rgba(255, 193, 7, 0.08), var(--shadow) !important;
+/* --- Card Borders & Glows by Tier --- */
+/* Endeavor (General / Green) */
+.badge-item.endeavor {
+  border-color: rgba(107, 142, 107, 0.15) !important;
+}
+.badge-item.unlocked.endeavor {
+  border-color: rgba(107, 142, 107, 0.35) !important;
+  box-shadow: 0 4px 15px rgba(107, 142, 107, 0.08), var(--shadow) !important;
 }
 
+/* Rare (Purple) */
+.badge-item.rare {
+  border-color: rgba(103, 58, 183, 0.15) !important;
+}
 .badge-item.unlocked.rare {
   border-color: rgba(103, 58, 183, 0.3) !important;
   box-shadow: 0 4px 15px rgba(103, 58, 183, 0.06), var(--shadow) !important;
 }
 
+/* Milestone (Teal) */
+.badge-item.milestone {
+  border-color: rgba(0, 150, 136, 0.15) !important;
+}
 .badge-item.unlocked.milestone {
   border-color: rgba(0, 150, 136, 0.3) !important;
   box-shadow: 0 4px 15px rgba(0, 150, 136, 0.06), var(--shadow) !important;
 }
 
-/* Custom colors for list item icon boxes based on rarity */
-.badge-item.unlocked.legendary .badge-icon-box {
-  background: linear-gradient(135deg, #d4af37 0%, #ffc107 100%) !important;
-  box-shadow: 0 4px 10px rgba(255, 193, 7, 0.3) !important;
+/* Legendary (Gold) */
+.badge-item.legendary {
+  border-color: rgba(255, 193, 7, 0.2) !important;
+}
+.badge-item.unlocked.legendary {
+  border-color: rgba(255, 193, 7, 0.4) !important;
+  box-shadow: 0 4px 15px rgba(255, 193, 7, 0.08), var(--shadow) !important;
 }
 
-.badge-item.unlocked.rare .badge-icon-box {
+/* --- Icon Box Gradients by Tier --- */
+/* General / Endeavor (Green) */
+.badge-item.endeavor .badge-icon-box {
+  background: linear-gradient(135deg, #6b8e6b 0%, #8ea68e 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+}
+.badge-item.unlocked.endeavor .badge-icon-box {
+  box-shadow: 0 4px 10px rgba(107, 142, 107, 0.3) !important;
+}
+
+/* Rare (Purple) */
+.badge-item.rare .badge-icon-box {
   background: linear-gradient(135deg, #673ab7 0%, #ab47bc 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+}
+.badge-item.unlocked.rare .badge-icon-box {
   box-shadow: 0 4px 10px rgba(103, 58, 183, 0.3) !important;
 }
 
-.badge-item.unlocked.milestone .badge-icon-box {
+/* Milestone (Teal) */
+.badge-item.milestone .badge-icon-box {
   background: linear-gradient(135deg, #009688 0%, #26a69a 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+}
+.badge-item.unlocked.milestone .badge-icon-box {
   box-shadow: 0 4px 10px rgba(0, 150, 136, 0.3) !important;
+}
+
+/* Legendary (Gold) */
+.badge-item.legendary .badge-icon-box {
+  background: linear-gradient(135deg, #d4af37 0%, #ffc107 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+}
+.badge-item.unlocked.legendary .badge-icon-box {
+  box-shadow: 0 4px 10px rgba(255, 193, 7, 0.3) !important;
 }
 
 /* Organic Wind Sway for active plant canvas tree rendering */

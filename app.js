@@ -132,7 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const ACHIEVEMENTS_LIST = [
     // --- STREAK ---
     { id: 'first_daimoku', title: "First Dew", desc: "Chant for the first time. Minimum 1 minute Daimoku recorded", icon: "fa-droplet", tier: "endeavor", check: (s) => s.sessions.some(x => x.durationSeconds >= 60) },
-    { id: 'streak_3', title: "Sprout", desc: "Chant consecutively for 3 days. A quiet commitment begins to form like morning dew on a leaf.", icon: "fa-droplet", tier: "endeavor", check: (s) => s.streak >= 3 },
+    { id: 'streak_3', title: "Sprout", desc: "Chant consecutively for 3 days. A quiet commitment begins to form like morning dew on a leaf.", icon: "fa-clover", tier: "endeavor", check: (s) => s.streak >= 3 },
     { id: 'streak_7', title: "Soka Resolve", desc: "Chant consecutively for 7 days. Your daily rhythm breaks through the soil of routine.", icon: "fa-seedling", tier: "endeavor", check: (s) => s.streak >= 7 },
     { id: 'streak_15', title: "Deepening Roots", desc: "Chant consecutively for 15 days. Standing steady and drawing silent strength from the earth.", icon: "fa-leaf", tier: "endeavor", check: (s) => s.streak >= 15 },
     { id: 'streak_30', title: "Steadfast Ichinen", desc: "Maintain consistency for 30 days. Establishing a powerful, single-minded determination in your daily life.", icon: "fa-fire", tier: "endeavor", check: (s) => s.streak >= 30 },
@@ -145,11 +145,11 @@ document.addEventListener('DOMContentLoaded', () => {
     { id: 'session_30m', title: "Daimoku Thunder", desc: "Log a continuous session of 30 minutes. Your practice flows naturally, building steady momentum.", icon: "fa-water", tier: "endeavor", check: (s) => s.sessions.some(x => x.durationSeconds >= 1800) },
     { id: 'session_1h', title: "Daimoku Rain", desc: "Log a continuous session of 1 hour. Erecting a quiet monument of absolute concentration and peace.", icon: "fa-hourglass-half", tier: "endeavor", check: (s) => s.sessions.some(x => x.durationSeconds >= 3600) },
     { id: 'session_2h', title: "Treasure Tower", desc: "Log a continuous session of 2 hours. Sinking deep into the tranquil, bottomless depths of your own life.", icon: "fa-compass", tier: "endeavor", check: (s) => s.sessions.some(x => x.durationSeconds >= 7200) },
-    { id: 'session_3h20m', title: "Lion's Roar", desc: "Log a continuous session of 3h 20m or more. A powerful, breakthrough chant that clears all obstacles.", icon: "fa-bullhorn", tier: "rare", check: (s) => s.sessions.some(x => x.durationSeconds >= 12000) },
+    { id: 'session_3h20m', title: "Lion's Roar", desc: "Log a continuous session of 3h 20m or more. A powerful, breakthrough chant that clears all obstacles.", icon: "icons/lion-head.png", tier: "rare", check: (s) => s.sessions.some(x => x.durationSeconds >= 12000) },
 
     // --- LIFETIME ---
     { id: 'total_1h', title: "First Leaf", desc: "Chant for the very first time. Planting the seed of Buddhahood and absolute happiness in your life.", icon: "fa-wand-magic-sparkles", tier: "endeavor", check: (s) => (s.totalSeconds / 3600) >= 1 },
-    { id: 'total_10h', title: "Cherry Blossom", desc: "Reach 10 hours of total chanting. A young sapling rises, expressing hope and potential.", icon: "fa-spa", tier: "endeavor", check: (s) => (s.totalSeconds / 3600) >= 10 },
+    { id: 'total_10h', title: "Cherry Blossom", desc: "Reach 10 hours of total chanting. A young sapling rises, expressing hope and potential.", icon: "fa-bahai", tier: "endeavor", check: (s) => (s.totalSeconds / 3600) >= 10 },
     { id: 'total_30h', title: "Sun of Soka", desc: "Reach 30 hours of total chanting. Illumining your life and environment with the radiant light of Soka.", icon: "fa-sun", tier: "endeavor", check: (s) => (s.totalSeconds / 3600) >= 30 },
     { id: 'total_50h', title: "Bodhi Tree", desc: "Reach 50 hours of total chanting. Anchoring deep into the soil of daily discipline, unaffected by any storm.", icon: "fa-anchor", tier: "endeavor", check: (s) => (s.totalSeconds / 3600) >= 50 },
     { id: 'total_100h', title: "Mount Sumeru", desc: "Reach 100 hours of total chanting. Creating a shelter of peace and quiet encouragement for others.", icon: "fa-tree-city", tier: "endeavor", check: (s) => (s.totalSeconds / 3600) >= 100 },
@@ -226,7 +226,7 @@ document.addEventListener('DOMContentLoaded', () => {
     { id: 'first_target', title: "Strong Ichinen", desc: "Create your first prayer target. Planting a deliberate vow in the garden of your life.", icon: "fa-bullseye", tier: "endeavor", check: (s) => s.targets.length >= 1 },
     { id: 'multi_target', title: "Many Vows, One Heart", desc: "Hold 3 active determinations at once - breadth of sincere prayer.", icon: "fa-heart", tier: "endeavor", check: (s) => s.targets.filter(x => !x.completed).length >= 3 },
     { id: 'target_completed', title: "Nanjo's Resolve", desc: "Complete your first prayer target. Watching a resolve bloom into a beautiful, solid reality.", icon: "fa-award", tier: "endeavor", check: (s) => s.targets.some(x => x.completed) },
-    { id: 'victory_arch', title: "Kaneko Medal", desc: "Complete 3 prayer targets. A gorgeous medal of victory, representing gentle persistence and absolute proof.", icon: "fa-medal", tier: "milestone", check: (s) => s.targets.filter(x => x.completed).length >= 3 },
+    { id: 'victory_arch', title: "Kaneko Medal", desc: "Complete 3 prayer targets. A gorgeous medal of victory, representing gentle persistence and absolute proof.", icon: "fa-spa", tier: "milestone", check: (s) => s.targets.filter(x => x.completed).length >= 3 },
 
     // --- CAMPAIGN ---
     { id: 'soka_pioneer', title: "Shijo's Medal", desc: "Contribute to an SGI Campaign target. Embodying loyalty, courage, and global action for humanity's peace.", icon: "fa-users", tier: "endeavor", check: (s) => s.sessions.some(x => x.campaignId || (x.targetId && x.targetId.startsWith('campaign_'))) },
@@ -282,6 +282,33 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  function setBadgeIcon(element, iconStr, isLarge = false) {
+    if (!element) return;
+    if (iconStr && iconStr.startsWith('emoji:')) {
+      element.className = 'badge-emoji-icon';
+      element.innerHTML = iconStr.substring(6);
+      element.style.fontSize = isLarge ? '36px' : '22px';
+      element.style.display = 'inline-block';
+      element.style.lineHeight = '1';
+      element.style.fontStyle = 'normal';
+    } else if (iconStr && (iconStr.startsWith('image:') || iconStr.endsWith('.png') || iconStr.includes('/'))) {
+      const src = iconStr.startsWith('image:') ? iconStr.substring(6) : iconStr;
+      element.className = 'badge-image-icon';
+      element.innerHTML = `<img src="${src}" style="width: ${isLarge ? '70px' : '38px'}; height: ${isLarge ? '70px' : '38px'}; object-fit: contain; border-radius: 50%; display: block;" />`;
+      element.style.fontSize = '';
+      element.style.display = 'block';
+      element.style.lineHeight = '';
+      element.style.fontStyle = '';
+    } else {
+      element.className = `fa-solid ${iconStr}`;
+      element.innerHTML = '';
+      element.style.fontSize = '';
+      element.style.display = '';
+      element.style.lineHeight = '';
+      element.style.fontStyle = '';
+    }
+  }
+
   function renderAchievements() {
     const totalHours = (state.totalSeconds / 3600);
     const rank = getRankDetails(totalHours);
@@ -317,7 +344,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const tierText = ach.tier || 'endeavor';
       div.innerHTML = `
         <div class="badge-icon-box">
-          <i class="fa-solid ${ach.icon}"></i>
+          <i class="badge-icon-target"></i>
         </div>
         <div class="badge-info">
           <div class="badge-title-row">
@@ -327,6 +354,8 @@ document.addEventListener('DOMContentLoaded', () => {
           <span class="badge-desc">${ach.desc}</span>
         </div>
       `;
+      
+      setBadgeIcon(div.querySelector('.badge-icon-target'), ach.icon, false);
       
       div.addEventListener('click', () => {
         showBadgePreviewModal(ach, isUnlocked);
@@ -5401,7 +5430,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (modal && icon && tier && title && desc && card && closeBtn) {
       isManualPreview = true;
       
-      icon.className = `fa-solid ${badge.icon}`;
+      setBadgeIcon(icon, badge.icon, true);
       title.textContent = badge.title;
       desc.textContent = badge.desc;
       
@@ -5414,7 +5443,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (iconContainer) {
         iconContainer.className = `modal-badge-icon ${tierText}`;
         if (!isUnlocked) {
-          iconContainer.style.filter = 'grayscale(1) opacity(0.6)';
+          iconContainer.style.filter = 'grayscale(0.2) opacity(0.8)';
         } else {
           iconContainer.style.filter = 'none';
         }
@@ -5472,7 +5501,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeBtn = document.getElementById('btn-close-badge-unlock');
     
     if (modal && icon && tier && title && desc && card) {
-      icon.className = `fa-solid ${badge.icon}`;
+      setBadgeIcon(icon, badge.icon, true);
       title.textContent = badge.title;
       desc.textContent = badge.desc;
       
