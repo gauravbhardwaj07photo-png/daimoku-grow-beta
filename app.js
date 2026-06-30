@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
   try {
   
   // --- Constants & Database ---
-  const GOAL_HOURS = 333;
+  let GOAL_HOURS = 333;
   const REVIVAL_TARGET_SECONDS = 12000; // 3 hours 20 minutes (200 minutes)
   const DECAY_BUFFER_HOURS = 24; // 24 hours of healthy buffer before decay begins
   const DECAY_DURATION_HOURS = 72; // Takes 72 hours of neglect to go from 100% to 0% health
@@ -379,7 +379,8 @@ document.addEventListener('DOMContentLoaded', () => {
     settings: {
       morningReminder: true,
       eveningReminder: true,
-      potStyle: 'clay'
+      potStyle: 'clay',
+      treeTargetHours: 333
     },
     theme: 'theme-sage-light',
     dismissedAlerts: [], // Array of closed notification IDs
@@ -494,6 +495,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Settings elements
   const settingMorningReminder = document.getElementById('setting-morning-reminder');
   const settingEveningReminder = document.getElementById('setting-evening-reminder');
+  const settingTreeTargetHours = document.getElementById('setting-tree-target-hours');
   const btnRequestNotifications = document.getElementById('btn-request-notifications');
   const btnTestGong = document.getElementById('btn-test-gong');
   const themeButtons = document.querySelectorAll('.theme-btn');
@@ -551,67 +553,27 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         const t = JSON.parse(saved);
         if (t.state === 'running' || t.state === 'paused') {
+          const now = Date.now();
+          const lastActive = t.lastActiveTime || now;
+          const elapsedMs = (t.state === 'running' ? lastActive : t.startTime) - t.startTime + t.accumulated;
+          const elapsedSecs = Math.floor(elapsedMs / 1000);
           
-          // If the timer was running, check if it was interrupted (closed/force killed)
-          if (t.state === 'running') {
-            const now = Date.now();
-            const lastActive = t.lastActiveTime || t.startTime;
-            const timeSinceActive = now - lastActive;
+          if (elapsedSecs >= 5) {
+            // Restore target selections so the auto-saved session is credited correctly
+            timerPersonalSelect.value = t.personalTargetId || '';
+            timerCampaignSelect.value = t.campaignId || '';
+            saveChantSession(elapsedSecs, t.type);
+            timerPersonalSelect.value = ''; // Reset selection
+            timerCampaignSelect.value = '';
             
-            if (timeSinceActive > 15000) { // Closed/suspended for > 15 seconds
-              const elapsedMs = lastActive - t.startTime + t.accumulated;
-              const elapsedSecs = Math.floor(elapsedMs / 1000);
-              
-              if (elapsedSecs >= 5) {
-                // Restore target ID selections so the session is credited correctly
-                timerPersonalSelect.value = t.personalTargetId || '';
-                timerCampaignSelect.value = t.campaignId || '';
-                saveChantSession(elapsedSecs, t.type);
-                timerPersonalSelect.value = ''; // Reset selection
-                timerCampaignSelect.value = '';
-                
-                const mins = Math.floor(elapsedSecs / 60);
-                const secs = elapsedSecs % 60;
-                const timeStr = mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
-                alert(`Your previous chanting session was closed or interrupted. We have automatically saved your progress of ${timeStr}! 🙏`);
-              }
-              
-              localStorage.removeItem('daimoku_active_timer');
-              resetTimerControls();
-              return;
-            }
-          }
-          
-          // Otherwise, load normally (either brief interruption or paused state)
-          timerType = t.type;
-          timerStartTime = t.startTime;
-          timerAccumulatedPaused = t.accumulated;
-          countdownTargetSeconds = t.target;
-          timerPersonalSelect.value = t.personalTargetId || '';
-          timerCampaignSelect.value = t.campaignId || '';
-          
-          if (timerType === 'countdown') {
-            btnTimerCountdown.click();
-          } else {
-            btnTimerStopwatch.click();
-          }
-          
-          if (t.state === 'running') {
-            resumeTimer();
-          } else {
-            timerState = 'paused';
-            timerStateLabel.textContent = 'Paused';
-            btnTimerPause.classList.add('hidden');
-            btnTimerStart.classList.remove('hidden');
-            
-            if (timerType === 'stopwatch') {
-              timerTimeDisplay.textContent = formatDuration(Math.floor(timerAccumulatedPaused / 1000));
-            } else {
-              const remaining = countdownTargetSeconds - Math.floor(timerAccumulatedPaused / 1000);
-              timerTimeDisplay.textContent = formatDuration(Math.max(0, remaining));
-            }
+            const mins = Math.floor(elapsedSecs / 60);
+            const secs = elapsedSecs % 60;
+            const timeStr = mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+            alert(`Your previous chanting session was closed or interrupted. We have automatically saved your progress of ${timeStr}! 🙏`);
           }
         }
+        localStorage.removeItem('daimoku_active_timer');
+        resetTimerControls();
       } catch(e) {
         console.error("Error reloading active timer:", e);
       }
@@ -641,7 +603,9 @@ document.addEventListener('DOMContentLoaded', () => {
         lastNotifiedThreshold: 0,
         settings: {
           morningReminder: true,
-          eveningReminder: true
+          eveningReminder: true,
+          potStyle: 'clay',
+          treeTargetHours: 333
         },
         theme: 'theme-sage-light',
         dismissedAlerts: []
@@ -800,7 +764,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (state.dismissedAlerts === undefined) state.dismissedAlerts = [];
     if (state.revivalDates === undefined) state.revivalDates = [];
     if (state.theme === undefined) state.theme = 'theme-sage-light';
-    if (state.settings === undefined) state.settings = { morningReminder: true, eveningReminder: true, potStyle: 'clay' };
+    if (state.settings === undefined) {
+      state.settings = { morningReminder: true, eveningReminder: true, potStyle: 'clay', treeTargetHours: 333 };
+    } else {
+      if (state.settings.treeTargetHours === undefined) state.settings.treeTargetHours = 333;
+    }
     if (state.unlockedAchievements === undefined) state.unlockedAchievements = [];
     
     // Apply saved theme
@@ -1397,6 +1365,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- Rendering UI States ---
   function updateUI() {
+    GOAL_HOURS = (state && state.settings && state.settings.treeTargetHours) ? state.settings.treeTargetHours : 333;
+    const statTargetHours = document.getElementById('stat-target-hours');
+    if (statTargetHours) {
+      statTargetHours.textContent = GOAL_HOURS;
+    }
     rebuildRevivalDates();
     const decimalHours = state.totalSeconds / 3600;
     const progressPercent = Math.min(100, Math.round((decimalHours / GOAL_HOURS) * 100));
@@ -1505,7 +1478,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateDiurnalTheme();
     
     // Trigger canvas state updates
-    PlantRenderer.updateState(decimalHours, state.health, state.isDead, timerState === 'running');
+    PlantRenderer.updateState(decimalHours, state.health, state.isDead, timerState === 'running', state.settings.treeTargetHours || 333);
     
     // Update pot style in PlantRenderer
     if (state.settings && state.settings.potStyle) {
@@ -1523,6 +1496,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Settings switches
     settingMorningReminder.checked = state.settings.morningReminder;
     settingEveningReminder.checked = state.settings.eveningReminder;
+    if (settingTreeTargetHours) {
+      settingTreeTargetHours.value = state.settings.treeTargetHours || 333;
+    }
     
     // Update theme toggle buttons highlights
     themeButtons.forEach(btn => {
@@ -1752,12 +1728,14 @@ document.addEventListener('DOMContentLoaded', () => {
   // Start Chanting Timer
   if (btnTimerStart) {
     btnTimerStart.addEventListener('click', () => {
-      resumeTimer();
+      resumeTimer(false);
     });
   }
 
-  function resumeTimer() {
-    playGong(); // Play gong on start
+  function resumeTimer(isBoot = false) {
+    if (!isBoot) {
+      playGong(); // Play gong on start
+    }
     timerState = 'running';
     timerStartTime = Date.now();
     
@@ -1779,7 +1757,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     const totalHours = (state.totalSeconds / 3600).toFixed(1);
-    PlantRenderer.updateState(parseFloat(totalHours), state.health, state.isDead, true);
+    PlantRenderer.updateState(parseFloat(totalHours), state.health, state.isDead, true, state.settings.treeTargetHours || 333);
     saveActiveTimer();
     
     timerInterval = setInterval(() => {
@@ -1837,7 +1815,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     const totalHours = (state.totalSeconds / 3600).toFixed(1);
-    PlantRenderer.updateState(parseFloat(totalHours), state.health, state.isDead, false);
+    PlantRenderer.updateState(parseFloat(totalHours), state.health, state.isDead, false, state.settings.treeTargetHours || 333);
     saveActiveTimer();
   }
 
@@ -1885,7 +1863,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     const totalHours = (state.totalSeconds / 3600).toFixed(1);
-    PlantRenderer.updateState(parseFloat(totalHours), state.health, state.isDead, false);
+    PlantRenderer.updateState(parseFloat(totalHours), state.health, state.isDead, false, state.settings.treeTargetHours || 333);
     saveActiveTimer();
     resetTimerDisplay();
   }
@@ -2503,6 +2481,15 @@ document.addEventListener('DOMContentLoaded', () => {
     settingEveningReminder.addEventListener('change', (e) => {
       state.settings.eveningReminder = e.target.checked;
       saveState();
+    });
+  }
+
+  if (settingTreeTargetHours) {
+    settingTreeTargetHours.addEventListener('change', (e) => {
+      const val = Math.max(1, parseInt(e.target.value) || 333);
+      state.settings.treeTargetHours = val;
+      saveState();
+      updateUI();
     });
   }
 
@@ -5776,7 +5763,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const newWorker = reg.installing;
             newWorker.addEventListener('statechange', () => {
               if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                console.log("New service worker version detected!");
+                console.log("New service worker version detected! Reloading to apply update...");
+                window.location.reload();
               }
             });
           });
@@ -5837,6 +5825,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     updateUI();
   });
+
+  function handleTimerExitAutoSave() {
+    if (timerState === 'running' || timerState === 'paused') {
+      const now = Date.now();
+      const elapsedMs = (timerState === 'running' ? now : timerStartTime) - timerStartTime + timerAccumulatedPaused;
+      const elapsedSecs = Math.floor(elapsedMs / 1000);
+      if (elapsedSecs >= 5) {
+        saveChantSession(elapsedSecs, timerType);
+      }
+      localStorage.removeItem('daimoku_active_timer');
+    }
+  }
+
+  window.addEventListener('pagehide', handleTimerExitAutoSave);
+  window.addEventListener('beforeunload', handleTimerExitAutoSave);
 
   } catch (err) {
     console.error("Initialization Error:", err);

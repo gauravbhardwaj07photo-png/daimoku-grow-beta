@@ -98,6 +98,7 @@ const PlantRenderer = (function() {
   let currentHealth = 100;
   let isDead = false;
   let isChanting = false;
+  let targetHours = 333;
   
   // Drifting Clouds State
   let clouds = [
@@ -197,11 +198,12 @@ const PlantRenderer = (function() {
   /**
    * Set the plant parameters and queue a redraw
    */
-  function updateState(hours, health, deadState, chantingState) {
+  function updateState(hours, health, deadState, chantingState, targetHoursParam = 333) {
     currentHours = hours;
     currentHealth = health;
     isDead = deadState || (health <= 0);
     isChanting = !!chantingState;
+    targetHours = Math.max(1, targetHoursParam);
   }
 
   /**
@@ -257,11 +259,12 @@ const PlantRenderer = (function() {
    * Determine the current growth stage based on chanting hours
    */
   function getGrowthStage(hours) {
+    const T = targetHours;
     if (hours <= 0) return { stage: 1, name: 'Seed' };
-    if (hours <= 10) return { stage: 2, name: 'Sprout' };
-    if (hours <= 50) return { stage: 3, name: 'Seedling' };
-    if (hours <= 150) return { stage: 4, name: 'Young Plant' };
-    if (hours <= 332) return { stage: 5, name: 'Mature Shrub' };
+    if (hours <= T * (10 / 333)) return { stage: 2, name: 'Sprout' };
+    if (hours <= T * (50 / 333)) return { stage: 3, name: 'Seedling' };
+    if (hours <= T * (150 / 333)) return { stage: 4, name: 'Young Plant' };
+    if (hours <= T * (332 / 333)) return { stage: 5, name: 'Mature Shrub' };
     return { stage: 6, name: 'Majestic Tree' };
   }
 
@@ -494,12 +497,34 @@ const PlantRenderer = (function() {
       skyGrad.addColorStop(1, '#d4a5b8'); // Lavender base
       ctx.fillStyle = skyGrad;
       ctx.fillRect(0, 0, w, h);
+
+      // Drifting Mist/Fog for Sunrise
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+      for (let i = 0; i < 3; i++) {
+        const y = h * 0.45 + i * 45 + Math.sin(windTime * 0.4 + i) * 8;
+        const xOffset = (windTime * (12 + i * 4)) % (w + 400) - 200;
+        ctx.beginPath();
+        ctx.ellipse(xOffset, y, 160, 20, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
     } else if (phase === 'day') {
       const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
       skyGrad.addColorStop(0, '#e8f0fe'); // Light sky blue
       skyGrad.addColorStop(1, '#faf7f2'); // Soft cream base
       ctx.fillStyle = skyGrad;
       ctx.fillRect(0, 0, w, h);
+
+      // Rising Golden flares/beams for Day
+      ctx.fillStyle = 'rgba(255, 223, 128, 0.08)';
+      for (let i = 0; i < 6; i++) {
+        const speed = 8 + i * 3;
+        const size = 12 + i * 4;
+        const x = (i * 75 + Math.sin(windTime * 0.4 + i) * 15) % w;
+        const y = (h - (windTime * speed) % (h + 80));
+        ctx.beginPath();
+        ctx.arc(x, y, size, 0, Math.PI * 2);
+        ctx.fill();
+      }
     } else if (phase === 'sunset') {
       const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
       skyGrad.addColorStop(0, '#a88be8'); // Sunset violet
@@ -507,6 +532,18 @@ const PlantRenderer = (function() {
       skyGrad.addColorStop(1, '#fec85a'); // Golden glow
       ctx.fillStyle = skyGrad;
       ctx.fillRect(0, 0, w, h);
+
+      // Sunset twilight rays
+      ctx.fillStyle = 'rgba(254, 200, 90, 0.04)';
+      for (let i = 0; i < 4; i++) {
+        const angle = 0.15 + i * 0.35 + Math.sin(windTime * 0.15) * 0.04;
+        ctx.beginPath();
+        ctx.moveTo(w * 0.85, h * 0.25);
+        ctx.lineTo(w * 0.85 + Math.cos(angle - 0.12) * 550, h * 0.25 + Math.sin(angle - 0.12) * 550);
+        ctx.lineTo(w * 0.85 + Math.cos(angle + 0.12) * 550, h * 0.25 + Math.sin(angle + 0.12) * 550);
+        ctx.closePath();
+        ctx.fill();
+      }
     } else { // Night
       const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
       skyGrad.addColorStop(0, '#0b0f19'); // Dark midnight sky
@@ -703,23 +740,30 @@ const PlantRenderer = (function() {
     
     // Master plant scale based on continuous growth logic (grows smoothly with each hour of Daimoku)
     let stageScale = 1.0;
+    const T = targetHours;
     if (currentHours <= 0) {
       stageScale = 0;
-    } else if (currentHours <= 10) {
+    } else if (currentHours <= T * (10 / 333)) {
       // Sprout stage: grow smoothly from 0.40 to 0.80
-      stageScale = 0.40 + 0.40 * (currentHours / 10);
-    } else if (currentHours <= 50) {
+      stageScale = 0.40 + 0.40 * (currentHours / (T * (10 / 333)));
+    } else if (currentHours <= T * (50 / 333)) {
       // Seedling stage: grow smoothly from 0.80 to 0.95
-      stageScale = 0.80 + 0.15 * ((currentHours - 10) / 40);
-    } else if (currentHours <= 150) {
+      const lower = T * (10 / 333);
+      const upper = T * (50 / 333);
+      stageScale = 0.80 + 0.15 * ((currentHours - lower) / (upper - lower));
+    } else if (currentHours <= T * (150 / 333)) {
       // Young Plant stage: grow smoothly from 0.95 to 1.05
-      stageScale = 0.95 + 0.10 * ((currentHours - 50) / 100);
-    } else if (currentHours <= 333) {
+      const lower = T * (50 / 333);
+      const upper = T * (150 / 333);
+      stageScale = 0.95 + 0.10 * ((currentHours - lower) / (upper - lower));
+    } else if (currentHours <= T) {
       // Mature Shrub stage: grow smoothly from 1.05 to 1.25
-      stageScale = 1.05 + 0.20 * ((currentHours - 150) / 183);
+      const lower = T * (150 / 333);
+      const upper = T;
+      stageScale = 1.05 + 0.20 * ((currentHours - lower) / (upper - lower));
     } else {
       // Majestic Tree stage: grow smoothly from 2.10 up to 2.50 based on next milestones
-      stageScale = 2.10 + Math.min(0.40, 0.40 * ((currentHours - 333) / 667));
+      stageScale = 2.10 + Math.min(0.40, 0.40 * ((currentHours - T) / (T * 2)));
     }
     
     const masterScale = stageScale * healthScale;
@@ -1012,6 +1056,55 @@ const PlantRenderer = (function() {
           } else {
             drawLeaf(lx, ly, leafSize, leafSize * 0.55, finalAngle, leafColor);
           }
+        }
+      }
+
+      // Draw apples if total chanting is greater than 333 hours
+      if (currentHours > 333 && tips.length > 0) {
+        const additionalHours = currentHours - 333;
+        const applesCount = Math.min(60, Math.floor(additionalHours / 3.3333)); // cap at 60 apples to prevent cluttering
+        
+        for (let i = 1; i <= applesCount; i++) {
+          // Use deterministic random selection based on index so it is stable per frame
+          const tipIndex = Math.floor(seededRandom(i * 999.99) * tips.length);
+          const tip = tips[tipIndex];
+          if (!tip) continue;
+          
+          // Place apple hanging slightly lower than the tip
+          const ax = tip.x + (seededRandom(i * 123.4) - 0.5) * 16 * masterScale;
+          const ay = tip.y + (12 + seededRandom(i * 567.8) * 12) * masterScale;
+          
+          ctx.save();
+          
+          // 1. Stem
+          ctx.beginPath();
+          ctx.moveTo(ax, ay - 3 * masterScale);
+          ctx.quadraticCurveTo(ax + 2 * masterScale, ay - 6 * masterScale, ax + 3 * masterScale, ay - 7 * masterScale);
+          ctx.strokeStyle = '#5c4033'; // Deep brown stem
+          ctx.lineWidth = 1 * masterScale;
+          ctx.stroke();
+          
+          // 2. Leaf on stem
+          ctx.beginPath();
+          ctx.ellipse(ax + 1.8 * masterScale, ay - 5.5 * masterScale, 2 * masterScale, 1 * masterScale, Math.PI / 4, 0, Math.PI * 2);
+          ctx.fillStyle = '#459c45'; // Leaf green
+          ctx.fill();
+          
+          // 3. Apple body (triple overlapping circles for heart shape)
+          ctx.beginPath();
+          ctx.arc(ax - 1.8 * masterScale, ay, 3.2 * masterScale, 0, Math.PI * 2);
+          ctx.arc(ax + 1.8 * masterScale, ay, 3.2 * masterScale, 0, Math.PI * 2);
+          ctx.arc(ax, ay + 1.8 * masterScale, 3.2 * masterScale, 0, Math.PI * 2);
+          ctx.fillStyle = '#d32f2f'; // Premium apple red
+          ctx.fill();
+          
+          // 4. White shine highlight
+          ctx.beginPath();
+          ctx.arc(ax - 1.2 * masterScale, ay - 1.2 * masterScale, 1 * masterScale, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+          ctx.fill();
+          
+          ctx.restore();
         }
       }
     }
