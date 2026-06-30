@@ -5792,6 +5792,16 @@ document.addEventListener('DOMContentLoaded', () => {
         })
         .catch(err => console.error('Service Worker registration failed:', err));
     });
+
+    // Handle instant controllerchange reload for PWAs
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!refreshing) {
+        refreshing = true;
+        console.log("Service Worker controller changed. Reloading page to apply updates...");
+        window.location.reload();
+      }
+    });
   }
 
   // --- Auto Fullscreen ---
