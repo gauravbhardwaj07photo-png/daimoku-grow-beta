@@ -161,8 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const dbContribs = MockFirebase.db.getCampaignContributions();
         const dbTargets = MockFirebase.db.getCampaignTargets();
         const dbCustomCampaigns = MockFirebase.db.getCustomCampaigns();
-        const defaultCampaignIds = ['youth_division', 'may_3rd', 'mens_division', 'womens_division', 'july_3rd', 'november_18th'];
-        const allCampaignIds = [...defaultCampaignIds, ...dbCustomCampaigns];
+        const allCampaignIds = [...dbCustomCampaigns];
         const currentUser = MockFirebase.auth.getCurrentUser();
         if (!currentUser) return false;
         
@@ -230,7 +229,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- CAMPAIGN ---
     { id: 'soka_pioneer', title: "Shijo's Medal", desc: "Contribute to an SGI Campaign target. Embodying loyalty, courage, and global action for humanity's peace.", icon: "fa-users", tier: "endeavor", check: (s) => s.sessions.some(x => x.campaignId || (x.targetId && x.targetId.startsWith('campaign_'))) },
-    { id: 'campaign_pillar', title: "Osaka Medal", desc: "Never miss a campaign - unwavering dedication to the collective vow across all seasons.", icon: "fa-globe", tier: "legendary", check: (s) => ['youth_division', 'may_3rd', 'mens_division', 'womens_division', 'july_3rd', 'november_18th'].every(id => s.sessions.some(x => x.campaignId === id)) },
+    { id: 'campaign_pillar', title: "Osaka Medal", desc: "Contribute to at least 3 distinct SGI campaigns over time - unwavering dedication to the collective vow.", icon: "fa-globe", tier: "legendary", check: (s) => {
+      const ids = [...new Set(s.sessions.map(x => x.campaignId || (x.targetId && x.targetId.startsWith('campaign_') ? x.targetId.replace('campaign_', '') : null)).filter(Boolean))];
+      return ids.length >= 3;
+    } },
 
     // --- REVIVAL ---
     { id: 'self_healing', title: "Hossaku Kempon", desc: "Resume chanting after a break - love and attention always heals. Return after a 7-day gap.", icon: "fa-hand-holding-heart", tier: "endeavor", check: (s) => {
@@ -408,6 +410,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let celebrationCanvas = null;
   let celebrationCtx = null;
   let celebrationDurationTimeout = null;
+  let isManualPreview = false;
+  let editingCampaignId = null;
 
   // --- DOM Elements ---
   const views = document.querySelectorAll('.content-view');
@@ -679,6 +683,80 @@ document.addEventListener('DOMContentLoaded', () => {
     // 2. Fetch from cloud asynchronously to revalidate and sync
     MockFirebase.db.getUserState(user.email).then(cloudState => {
       if (cloudState) {
+        let merged = false;
+        
+        if (!cloudState.sessions) cloudState.sessions = [];
+        if (!cloudState.targets) cloudState.targets = [];
+        if (!cloudState.unlockedAchievements) cloudState.unlockedAchievements = [];
+
+        // Reconcile locally saved sessions (e.g. exit auto-saves)
+        if (state && state.sessions) {
+          state.sessions.forEach(localSess => {
+            const existsInCloud = cloudState.sessions.some(cloudSess => 
+              cloudSess.id === localSess.id || 
+              (cloudSess.date === localSess.date && cloudSess.durationSeconds === localSess.durationSeconds)
+            );
+            if (!existsInCloud) {
+              cloudState.sessions.push(localSess);
+              merged = true;
+              console.log("Merge: Uploading local offline session to cloud:", localSess);
+              
+              // Upload campaign contribution if applicable
+              if (localSess.targetId && localSess.targetId.startsWith('campaign_')) {
+                const campaignId = localSess.targetId.replace('campaign_', '');
+                const contributions = MockFirebase.db.getCampaignContributions();
+                const contribExists = contributions.some(c => 
+                  c.userEmail === user.email && 
+                  c.date === localSess.date && 
+                  c.durationSeconds === localSess.durationSeconds
+                );
+                if (!contribExists) {
+                  contributions.push({
+                    id: localSess.id || (Date.now().toString() + '_' + Math.random().toString(36).substr(2, 5)),
+                    userEmail: user.email,
+                    username: user.username,
+                    block: user.block,
+                    campaignId: campaignId,
+                    durationSeconds: localSess.durationSeconds,
+                    date: localSess.date
+                  });
+                  MockFirebase.db.saveCampaignContributions(contributions);
+                }
+              }
+            }
+          });
+          
+          // Re-sort sessions descending by date
+          cloudState.sessions.sort((a, b) => new Date(b.date) - new Date(a.date));
+        }
+
+        // Reconcile locally saved determinations/targets
+        if (state && state.targets) {
+          state.targets.forEach(localTarget => {
+            const cloudTargetIdx = cloudState.targets.findIndex(cloudT => cloudT.id === localTarget.id);
+            if (cloudTargetIdx === -1) {
+              cloudState.targets.push(localTarget);
+              merged = true;
+            } else {
+              const cloudT = cloudState.targets[cloudTargetIdx];
+              if (localTarget.completed && !cloudT.completed) {
+                cloudState.targets[cloudTargetIdx] = localTarget;
+                merged = true;
+              } else if (localTarget.accumulatedSeconds > cloudT.accumulatedSeconds) {
+                cloudState.targets[cloudTargetIdx] = localTarget;
+                merged = true;
+              }
+            }
+          });
+        }
+
+        if (merged) {
+          // Re-calculate total seconds on merged state
+          cloudState.totalSeconds = cloudState.sessions.reduce((acc, s) => acc + s.durationSeconds, 0);
+          MockFirebase.db.saveUserState(user.email, cloudState);
+          console.log("Merge: Synced merged offline progress back to Firestore.");
+        }
+        
         state = cloudState;
       } else {
         // First time cloud user: migrate local state to cloud
@@ -1471,6 +1549,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
+
     // Update goal milestone estimate
     updateMilestoneEstimate();
 
@@ -1478,7 +1557,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateDiurnalTheme();
     
     // Trigger canvas state updates
-    PlantRenderer.updateState(decimalHours, state.health, state.isDead, timerState === 'running', state.settings.treeTargetHours || 333);
+    PlantRenderer.updateState(decimalHours, state.health, state.isDead, timerState === 'running', state.settings.treeTargetHours || 333, state.targets.filter(t => !t.completed));
     
     // Update pot style in PlantRenderer
     if (state.settings && state.settings.potStyle) {
@@ -1757,7 +1836,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     const totalHours = (state.totalSeconds / 3600).toFixed(1);
-    PlantRenderer.updateState(parseFloat(totalHours), state.health, state.isDead, true, state.settings.treeTargetHours || 333);
+    PlantRenderer.updateState(parseFloat(totalHours), state.health, state.isDead, true, state.settings.treeTargetHours || 333, state.targets.filter(t => !t.completed));
     saveActiveTimer();
     
     timerInterval = setInterval(() => {
@@ -1815,7 +1894,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     const totalHours = (state.totalSeconds / 3600).toFixed(1);
-    PlantRenderer.updateState(parseFloat(totalHours), state.health, state.isDead, false, state.settings.treeTargetHours || 333);
+    PlantRenderer.updateState(parseFloat(totalHours), state.health, state.isDead, false, state.settings.treeTargetHours || 333, state.targets.filter(t => !t.completed));
     saveActiveTimer();
   }
 
@@ -1863,7 +1942,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     const totalHours = (state.totalSeconds / 3600).toFixed(1);
-    PlantRenderer.updateState(parseFloat(totalHours), state.health, state.isDead, false, state.settings.treeTargetHours || 333);
+    PlantRenderer.updateState(parseFloat(totalHours), state.health, state.isDead, false, state.settings.treeTargetHours || 333, state.targets.filter(t => !t.completed));
     saveActiveTimer();
     resetTimerDisplay();
   }
@@ -1905,6 +1984,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (campaignId) {
       const currentUser = MockFirebase.auth.getCurrentUser();
       if (currentUser) {
+        const targets = MockFirebase.db.getCampaignTargets();
+        const contributions = MockFirebase.db.getCampaignContributions();
+        const targetHours = targets[campaignId] || 100;
+        
+        const preSeconds = contributions
+          .filter(item => item.campaignId === campaignId)
+          .reduce((sum, item) => sum + item.durationSeconds, 0);
+        const preHours = preSeconds / 3600;
+        
         MockFirebase.db.addCampaignContribution(
           currentUser.email,
           currentUser.username,
@@ -1913,6 +2001,15 @@ document.addEventListener('DOMContentLoaded', () => {
           actualDuration,
           now.toISOString()
         );
+        
+        const postHours = preHours + (actualDuration / 3600);
+        
+        if (preHours < targetHours && postHours >= targetHours) {
+          setTimeout(() => {
+            playGong();
+            alert(`🎉 VICTORY! Our collective SGI campaign has reached 100% of its target! Thank you for your victorious chanting! 🌸`);
+          }, 600);
+        }
       }
     }
     
@@ -2094,6 +2191,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (campaignId) {
       const currentUser = MockFirebase.auth.getCurrentUser();
       if (currentUser) {
+        const targets = MockFirebase.db.getCampaignTargets();
+        const contributions = MockFirebase.db.getCampaignContributions();
+        const targetHours = targets[campaignId] || 100;
+        
+        const preSeconds = contributions
+          .filter(item => item.campaignId === campaignId)
+          .reduce((sum, item) => sum + item.durationSeconds, 0);
+        const preHours = preSeconds / 3600;
+        
         MockFirebase.db.addCampaignContribution(
           currentUser.email,
           currentUser.username,
@@ -2102,6 +2208,15 @@ document.addEventListener('DOMContentLoaded', () => {
           totalSecs,
           sessionDateString
         );
+        
+        const postHours = preHours + (totalSecs / 3600);
+        
+        if (preHours < targetHours && postHours >= targetHours) {
+          setTimeout(() => {
+            playGong();
+            alert(`🎉 VICTORY! Our collective SGI campaign has reached 100% of its target! Thank you for your victorious chanting! 🌸`);
+          }, 600);
+        }
       }
     }
     
@@ -2281,6 +2396,8 @@ document.addEventListener('DOMContentLoaded', () => {
       logsListContainer.appendChild(section);
     });
   }
+
+
 
   // --- Goal Milestone Estimator ---
   function updateMilestoneEstimate() {
@@ -3014,8 +3131,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const campaignNames = MockFirebase.db.getCampaignNames();
     const customCampaigns = MockFirebase.db.getCustomCampaigns();
-    const defaultCampaignIds = ['youth_division', 'may_3rd', 'mens_division', 'womens_division', 'july_3rd', 'november_18th'];
-    const allCampaignIds = [...defaultCampaignIds, ...customCampaigns];
+    const allCampaignIds = [...customCampaigns];
     
     const allCampaigns = allCampaignIds.map(id => {
       const name = campaignNames[id] || id;
@@ -3116,6 +3232,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         let progressText = "Open-ended target";
         let progressBar = "";
+        let plannerText = "";
         
         if (t.type === 'hours') {
           const accHours = (t.accumulatedSeconds / 3600).toFixed(1);
@@ -3127,6 +3244,36 @@ document.addEventListener('DOMContentLoaded', () => {
               <div class="progress-bar-fill" style="width: ${percent}%;"></div>
             </div>
           `;
+          
+          if (t.deadline) {
+            const deadlineDate = new Date(t.deadline + 'T23:59:59');
+            const now = new Date();
+            const diffMs = deadlineDate.getTime() - now.getTime();
+            const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+            
+            if (diffDays > 0) {
+              const remainingHours = Math.max(0, (t.targetSeconds - t.accumulatedSeconds) / 3600);
+              const minutesNeeded = Math.round((remainingHours * 60) / diffDays);
+              
+              if (remainingHours <= 0) {
+                plannerText = `<span style="color:#4caf50; font-weight:600;"><i class="fa-solid fa-check"></i> Goal reached!</span>`;
+              } else if (minutesNeeded > 1440) {
+                plannerText = `<span style="color:var(--accent-danger); font-weight:600;"><i class="fa-solid fa-triangle-exclamation"></i> Requires > 24 hours/day!</span>`;
+              } else if (minutesNeeded > 0) {
+                const formatMins = minutesNeeded >= 60 ? `${Math.floor(minutesNeeded / 60)}h ${minutesNeeded % 60}m` : `${minutesNeeded}m`;
+                plannerText = `<i class="fa-regular fa-calendar-check" style="margin-right:4px;"></i> Chant <strong style="color:var(--text-main);">${formatMins}/day</strong> to reach by ${t.deadline}`;
+              } else {
+                plannerText = `Goal achieved!`;
+              }
+            } else {
+              const remainingHours = Math.max(0, (t.targetSeconds - t.accumulatedSeconds) / 3600);
+              if (remainingHours <= 0) {
+                plannerText = `<span style="color:#4caf50; font-weight:600;"><i class="fa-solid fa-check"></i> Completed!</span>`;
+              } else {
+                plannerText = `<span style="color:var(--accent-danger); font-weight:600;"><i class="fa-solid fa-circle-exclamation"></i> Deadline passed! (${remainingHours.toFixed(1)}h left)</span>`;
+              }
+            }
+          }
         }
         
         item.innerHTML = `
@@ -3137,8 +3284,9 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
           <div class="target-content-box">
             <span class="target-title">${t.text}</span>
-            <div class="target-meta-row">
+            <div class="target-meta-row" style="display:flex; flex-direction:column; gap:4px; margin-top:4px;">
               <span class="target-progress-text">${progressText}</span>
+              ${plannerText ? `<span class="target-planner-text" style="font-size:10.5px; color:var(--text-muted);">${plannerText}</span>` : ''}
             </div>
             ${progressBar}
           </div>
@@ -3743,10 +3891,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   
   function hasActiveCampaignToday() {
-    const defaultCampaignIds = ['youth_division', 'may_3rd', 'mens_division', 'womens_division', 'july_3rd', 'november_18th'];
-    const customCampaignIds = MockFirebase.db.getCustomCampaigns();
-    const allCampaignIds = [...defaultCampaignIds, ...customCampaignIds];
-    return allCampaignIds.some(id => isCampaignActiveToday(id));
+    const activeList = MockFirebase.db.getActiveCampaigns();
+    return activeList.length > 0;
   }
   
   function updateCampaignTabVisibility() {
@@ -3764,11 +3910,31 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     
-    const hasActive = hasActiveCampaignToday();
-    if (hasActive) {
+    const activeList = MockFirebase.db.getActiveCampaigns();
+    const campaignDates = MockFirebase.db.getCampaignDates();
+    
+    if (activeList.length > 0) {
       navCampaign.classList.remove('hidden');
-      if (timerCampaignContainer) timerCampaignContainer.classList.remove('hidden');
-      if (manualCampaignContainer) manualCampaignContainer.classList.remove('hidden');
+      
+      // Check if active campaign is currently running (not expired)
+      const activeId = activeList[0];
+      const dates = campaignDates[activeId];
+      let isRunning = true;
+      if (dates && dates.end) {
+        const endT = new Date(dates.end + 'T23:59:59').getTime();
+        const now = Date.now();
+        if (now > endT) {
+          isRunning = false;
+        }
+      }
+      
+      if (isRunning) {
+        if (timerCampaignContainer) timerCampaignContainer.classList.remove('hidden');
+        if (manualCampaignContainer) manualCampaignContainer.classList.remove('hidden');
+      } else {
+        if (timerCampaignContainer) timerCampaignContainer.classList.add('hidden');
+        if (manualCampaignContainer) manualCampaignContainer.classList.add('hidden');
+      }
     } else {
       navCampaign.classList.add('hidden');
       if (timerCampaignContainer) timerCampaignContainer.classList.add('hidden');
@@ -3807,25 +3973,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const campaignNames = MockFirebase.db.getCampaignNames();
     const customCampaigns = MockFirebase.db.getCustomCampaigns();
     
-    const defaultCampaigns = [
-      { id: 'youth_division', name: "Youth Division Campaign", icon: "fa-child-reaching" },
-      { id: 'may_3rd', name: "May 3rd Campaign", icon: "fa-sun" },
-      { id: 'mens_division', name: "Men's Division Campaign", icon: "fa-user-tie" },
-      { id: 'womens_division', name: "Women's Division Campaign", icon: "fa-user-dress" },
-      { id: 'july_3rd', name: "July 3rd Campaign", icon: "fa-users-line" },
-      { id: 'november_18th', name: "November 18th Campaign", icon: "fa-tree" }
-    ];
+    const defaultCampaigns = [];
     
-    const iconMap = {
-      youth_division: "fa-child-reaching",
-      may_3rd: "fa-sun",
-      mens_division: "fa-user-tie",
-      womens_division: "fa-user-dress",
-      july_3rd: "fa-users-line",
-      november_18th: "fa-tree"
-    };
+    const iconMap = {};
     
-    const allCampaignIds = [...defaultCampaigns.map(c => c.id), ...customCampaigns];
+    const allCampaignIds = [...customCampaigns];
     const campaigns = allCampaignIds
       .filter(id => isCampaignActiveToday(id))
       .map(id => {
@@ -4090,16 +4242,20 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Centered helper to update all admin panels visibility
   function updateAdminCardsVisibility(isAdmin) {
     const pCard = document.getElementById('admin-panel-card');
     const cCard = document.getElementById('admin-calendar-card');
     const uCard = document.getElementById('admin-users-card');
+    const debugCard = document.querySelector('.debug-card');
     
     if (isAdmin) {
       if (pCard) pCard.classList.remove('hidden');
       if (cCard) cCard.classList.remove('hidden');
       if (uCard) uCard.classList.remove('hidden');
+      if (debugCard) {
+        debugCard.classList.remove('hidden');
+        debugCard.style.display = '';
+      }
       renderWhitelist();
       renderCampaignTargetsEditor();
       renderAdminCalendarSchedule();
@@ -4108,6 +4264,10 @@ document.addEventListener('DOMContentLoaded', () => {
       if (pCard) pCard.classList.add('hidden');
       if (cCard) cCard.classList.add('hidden');
       if (uCard) uCard.classList.add('hidden');
+      if (debugCard) {
+        debugCard.classList.add('hidden');
+        debugCard.style.display = 'none';
+      }
     }
   }
 
@@ -4297,6 +4457,26 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  function resetCampaignFormState() {
+    editingCampaignId = null;
+    if (adminCreateCampaignForm) {
+      adminCreateCampaignForm.reset();
+      const formTitle = adminCreateCampaignForm.previousElementSibling;
+      if (formTitle && formTitle.tagName === 'H4') {
+        formTitle.textContent = "Create New Campaign";
+      }
+      const submitBtn = adminCreateCampaignForm.querySelector('button[type="submit"]');
+      if (submitBtn) {
+        submitBtn.innerHTML = '<i class="fa-solid fa-bullhorn"></i> Create Campaign';
+        submitBtn.disabled = false;
+      }
+      const cancelBtn = adminCreateCampaignForm.querySelector('.btn-cancel-edit');
+      if (cancelBtn) {
+        cancelBtn.remove();
+      }
+    }
+  }
+
   // Handle custom campaign creation form
   const adminCreateCampaignForm = document.getElementById('admin-create-campaign-form');
   if (adminCreateCampaignForm) {
@@ -4312,19 +4492,29 @@ document.addEventListener('DOMContentLoaded', () => {
       
       // Basic validation
       if (!name) return;
-      const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/(^_+|_+$)/g, '');
-      if (!id) {
-        alert("Please enter a valid title containing alphanumeric characters.");
-        return;
-      }
       
       btn.disabled = true;
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creating...';
       
       try {
-        await MockFirebase.db.createCampaign(id, name, targetHours, { start, end }, isActive);
-        alert(`Campaign "${name}" created successfully!`);
-        adminCreateCampaignForm.reset();
+        if (editingCampaignId) {
+          // Editing mode
+          btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+          await MockFirebase.db.editCampaign(editingCampaignId, name, targetHours, { start, end }, isActive);
+          alert(`Campaign "${name}" updated successfully!`);
+          resetCampaignFormState();
+        } else {
+          // Creation mode
+          const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/(^_+|_+$)/g, '');
+          if (!id) {
+            alert("Please enter a valid title containing alphanumeric characters.");
+            btn.disabled = false;
+            return;
+          }
+          btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creating...';
+          await MockFirebase.db.createCampaign(id, name, targetHours, { start, end }, isActive);
+          alert(`Campaign "${name}" created successfully!`);
+          adminCreateCampaignForm.reset();
+        }
         
         renderCampaignTargetsEditor();
         renderCampaignDashboard();
@@ -4336,10 +4526,14 @@ document.addEventListener('DOMContentLoaded', () => {
           renderCalendar();
         }
       } catch (err) {
-        alert("Failed to create campaign: " + err.message);
+        alert("Operation failed: " + err.message);
       } finally {
         btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-bullhorn"></i> Create Campaign';
+        if (editingCampaignId) {
+          btn.innerHTML = '<i class="fa-solid fa-save"></i> Save Changes';
+        } else {
+          btn.innerHTML = '<i class="fa-solid fa-bullhorn"></i> Create Campaign';
+        }
       }
     });
   }
@@ -4460,16 +4654,20 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const campaignNames = MockFirebase.db.getCampaignNames();
     const customCampaigns = MockFirebase.db.getCustomCampaigns();
-    const defaultCampaignIds = ['youth_division', 'may_3rd', 'mens_division', 'womens_division', 'july_3rd', 'november_18th'];
-    const allCampaignIds = [...defaultCampaignIds, ...customCampaigns];
+    const allCampaignIds = [...customCampaigns];
     
     const campaigns = allCampaignIds.map(id => {
       return {
         id: id,
         name: campaignNames[id] || id,
-        isCustom: customCampaigns.includes(id)
+        isCustom: true
       };
     });
+    
+    if (campaigns.length === 0) {
+      container.innerHTML = '<div style="font-size:12px; color:var(--text-muted); padding:10px 0; text-align:center;">No custom campaigns created yet.</div>';
+      return;
+    }
     
     campaigns.forEach(c => {
       const div = document.createElement('div');
@@ -4482,10 +4680,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const isActive = activeCampaigns.includes(c.id);
       const dates = campaignDates[c.id] || { start: '', end: '' };
       
-      const deleteBtnHtml = c.isCustom ? `
-        <button class="btn-delete-campaign" data-id="${c.id}" style="background:transparent; border:none; color:var(--accent-danger); cursor:pointer; padding:4px 6px; font-size:13px;" title="Delete Campaign"><i class="fa-regular fa-trash-can"></i></button>
-      ` : '';
-      
       div.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <span style="font-size:13px; font-weight:600; color:var(--text-main);">${c.name}</span>
@@ -4494,69 +4688,60 @@ document.addEventListener('DOMContentLoaded', () => {
               <input type="checkbox" class="campaign-active-toggle" data-id="${c.id}" ${isActive ? 'checked' : ''} style="accent-color: var(--primary); width:13px; height:13px; margin:0;">
               Active
             </label>
-            <input type="number" class="campaign-target-input" data-id="${c.id}" value="${targets[c.id] || 100}" min="1" max="100000" style="width:60px; padding:6px; border-radius:6px; border:var(--border); background:var(--accent-cream); color:var(--text-main); font-size:12px; text-align:center; outline:none;">
+            <input type="number" class="campaign-target-input" data-id="${c.id}" value="${targets[c.id] || 100}" min="1" max="100000" style="width:60px; padding:6px; border-radius:6px; border:var(--border); background:var(--accent-cream); color:var(--text-main); font-size:12px; text-align:center; outline:none;" disabled>
             <span style="font-size:11px; color:var(--text-muted);">hours</span>
-            ${deleteBtnHtml}
+            <button class="btn-edit-campaign" data-id="${c.id}" style="background:transparent; border:none; color:var(--text-main); cursor:pointer; padding:4px 6px; font-size:13px;" title="Edit Campaign"><i class="fa-solid fa-pen-to-square"></i></button>
+            <button class="btn-delete-campaign" data-id="${c.id}" style="background:transparent; border:none; color:var(--accent-danger); cursor:pointer; padding:4px 6px; font-size:13px;" title="Delete Campaign"><i class="fa-regular fa-trash-can"></i></button>
           </div>
         </div>
-        <div style="display:flex; gap:8px; align-items:center;">
-          <div style="flex:1; display:flex; flex-direction:column; gap:2px;">
-            <label style="font-size:10px; font-weight:600; color:var(--text-muted); margin-bottom:0;">Start Date</label>
-            <input type="date" class="campaign-start-input" data-id="${c.id}" value="${dates.start || ''}" style="padding:6px; border-radius:6px; border:var(--border); background:var(--accent-cream); color:var(--text-main); font-size:12px; outline:none; width: 100%;">
-          </div>
-          <div style="flex:1; display:flex; flex-direction:column; gap:2px;">
-            <label style="font-size:10px; font-weight:600; color:var(--text-muted); margin-bottom:0;">End Date</label>
-            <input type="date" class="campaign-end-input" data-id="${c.id}" value="${dates.end || ''}" style="padding:6px; border-radius:6px; border:var(--border); background:var(--accent-cream); color:var(--text-main); font-size:12px; outline:none; width: 100%;">
-          </div>
+        <div style="font-size:11px; color:var(--text-muted);">
+          <span>Period: ${dates.start || 'N/A'} to ${dates.end || 'N/A'}</span>
         </div>
       `;
       
-      const targetInput = div.querySelector('.campaign-target-input');
-      if (targetInput) targetInput.addEventListener('change', (e) => {
-        const val = parseInt(e.target.value || 100);
-        const id = e.target.getAttribute('data-id');
-        
-        const allTargets = MockFirebase.db.getCampaignTargets();
-        allTargets[id] = val;
-        MockFirebase.db.saveCampaignTargets(allTargets);
-        renderCampaignDashboard();
-      });
-      
-      const startInput = div.querySelector('.campaign-start-input');
-      if (startInput) startInput.addEventListener('change', (e) => {
-        const val = e.target.value;
-        const id = e.target.getAttribute('data-id');
-        
-        const allDates = MockFirebase.db.getCampaignDates();
-        if (!allDates[id]) allDates[id] = { start: '', end: '' };
-        allDates[id].start = val;
-        MockFirebase.db.saveCampaignDates(allDates);
-        
-        renderCampaignDashboard();
-        const calView = document.getElementById('view-calendar');
-        if (calView && calView.classList.contains('active')) {
-          renderCalendar();
-        }
-        populateTargetDropdowns();
-      });
-      
-      const endInput = div.querySelector('.campaign-end-input');
-      if (endInput) endInput.addEventListener('change', (e) => {
-        const val = e.target.value;
-        const id = e.target.getAttribute('data-id');
-        
-        const allDates = MockFirebase.db.getCampaignDates();
-        if (!allDates[id]) allDates[id] = { start: '', end: '' };
-        allDates[id].end = val;
-        MockFirebase.db.saveCampaignDates(allDates);
-        
-        renderCampaignDashboard();
-        const calView = document.getElementById('view-calendar');
-        if (calView && calView.classList.contains('active')) {
-          renderCalendar();
-        }
-        populateTargetDropdowns();
-      });
+      // Edit button handler
+      const editBtn = div.querySelector('.btn-edit-campaign');
+      if (editBtn) {
+        editBtn.addEventListener('click', (e) => {
+          const id = e.currentTarget.getAttribute('data-id');
+          editingCampaignId = id;
+          
+          document.getElementById('campaign-create-name').value = c.name;
+          document.getElementById('campaign-create-target').value = targets[c.id] || 100;
+          document.getElementById('campaign-create-start').value = dates.start || '';
+          document.getElementById('campaign-create-end').value = dates.end || '';
+          document.getElementById('campaign-create-active').checked = isActive;
+          
+          const formTitle = adminCreateCampaignForm.previousElementSibling;
+          if (formTitle && formTitle.tagName === 'H4') {
+            formTitle.textContent = "Edit Campaign: " + c.name;
+          }
+          const submitBtn = adminCreateCampaignForm.querySelector('button[type="submit"]');
+          if (submitBtn) {
+            submitBtn.innerHTML = '<i class="fa-solid fa-save"></i> Save Changes';
+            
+            // Add Cancel button if not already present
+            let cancelBtn = adminCreateCampaignForm.querySelector('.btn-cancel-edit');
+            if (!cancelBtn) {
+              cancelBtn = document.createElement('button');
+              cancelBtn.type = 'button';
+              cancelBtn.className = 'btn btn-secondary btn-cancel-edit';
+              cancelBtn.style.marginTop = '6px';
+              cancelBtn.style.padding = '10px 14px';
+              cancelBtn.style.fontSize = '13px';
+              cancelBtn.style.width = '100%';
+              cancelBtn.innerHTML = '<i class="fa-solid fa-xmark"></i> Cancel Edit';
+              cancelBtn.addEventListener('click', () => {
+                resetCampaignFormState();
+              });
+              submitBtn.parentNode.appendChild(cancelBtn);
+            }
+          }
+          
+          // Scroll form into view
+          adminCreateCampaignForm.scrollIntoView({ behavior: 'smooth' });
+        });
+      }
       
       const activeToggle = div.querySelector('.campaign-active-toggle');
       if (activeToggle) activeToggle.addEventListener('change', (e) => {
@@ -4583,6 +4768,9 @@ document.addEventListener('DOMContentLoaded', () => {
           const id = e.currentTarget.getAttribute('data-id');
           if (confirm("Are you sure you want to delete this custom campaign? This will remove all target settings and dates.")) {
             try {
+              if (editingCampaignId === id) {
+                resetCampaignFormState();
+              }
               await MockFirebase.db.deleteCampaign(id);
               alert("Campaign deleted successfully!");
               renderCampaignTargetsEditor();
@@ -4764,6 +4952,7 @@ document.addEventListener('DOMContentLoaded', () => {
     authOverlay.classList.remove('hidden');
     authOverlay.style.display = 'flex';
     showAuthForm(loginForm);
+    updateAdminCardsVisibility(false);
     // Stop animation when user is locked/logged out
     if (typeof PlantRenderer.stopAnimation === 'function') {
       PlantRenderer.stopAnimation();
@@ -5402,8 +5591,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }, 1500);
   }
-
-  let isManualPreview = false;
 
   function showBadgePreviewModal(badge, isUnlocked) {
     const modal = document.getElementById('badge-unlock-modal');

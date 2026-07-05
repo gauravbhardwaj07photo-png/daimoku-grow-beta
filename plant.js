@@ -100,6 +100,16 @@ const PlantRenderer = (function() {
   let isChanting = false;
   let targetHours = 333;
   
+  // Ambient Glowing Particles
+  let ambientParticles = [];
+
+  // Swipe & Tap Sway Physics
+  let userWindForce = 0;
+  let plantSwayAngle = 0;
+  let plantSwayVelocity = 0;
+  let isPointerActive = false;
+  let lastPointerX = 0;
+  
   // Drifting Clouds State
   let clouds = [
     { x: 50, y: 50, speed: 0.08, scale: 0.95, opacity: 0.65 },
@@ -165,6 +175,44 @@ const PlantRenderer = (function() {
     } else {
       window.addEventListener('resize', resizeCanvas);
     }
+
+    // Setup Pointer Listeners for Swipe / Tap Physics
+    canvas.style.cursor = 'grab';
+    canvas.addEventListener('pointerdown', (e) => {
+      isPointerActive = true;
+      lastPointerX = e.clientX;
+      canvas.style.cursor = 'grabbing';
+      
+      // Tap impact on plants (temporary velocity impulse)
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      
+      // If tap is near the center tree trunk/pot
+      const clickDistX = Math.abs(x - rect.width / 2);
+      if (clickDistX < 85 && y > rect.height * 0.35) {
+        plantSwayVelocity += (x < rect.width / 2 ? 0.04 : -0.04);
+      }
+    });
+
+    canvas.addEventListener('pointermove', (e) => {
+      if (!isPointerActive) return;
+      const deltaX = e.clientX - lastPointerX;
+      lastPointerX = e.clientX;
+      
+      // Convert swipe speed to wind force
+      userWindForce += deltaX * 0.0015;
+    });
+
+    canvas.addEventListener('pointerup', () => {
+      isPointerActive = false;
+      canvas.style.cursor = 'grab';
+    });
+
+    canvas.addEventListener('pointercancel', () => {
+      isPointerActive = false;
+      canvas.style.cursor = 'grab';
+    });
     
     // Start the physics/sway loop
     startAnimation();
@@ -198,12 +246,14 @@ const PlantRenderer = (function() {
   /**
    * Set the plant parameters and queue a redraw
    */
-  function updateState(hours, health, deadState, chantingState, targetHoursParam = 333) {
+  function updateState(hours, health, deadState, chantingState, targetHoursParam = 333, targetsList = []) {
     currentHours = hours;
     currentHealth = health;
     isDead = deadState || (health <= 0);
     isChanting = !!chantingState;
     targetHours = Math.max(1, targetHoursParam);
+    ambientParticles = ambientParticles || []; // safeguard
+    activeTargets = targetsList || [];
   }
 
   /**
@@ -217,6 +267,12 @@ const PlantRenderer = (function() {
         // Wind speed increases slightly if the plant is happy
         const windSpeed = isDead ? 0.005 : (currentHealth > 70 ? 0.02 : 0.012);
         windTime += windSpeed;
+        
+        // Update user swipe wind sway spring physics
+        const accel = -0.045 * plantSwayAngle - 0.085 * plantSwayVelocity + userWindForce;
+        plantSwayVelocity += accel;
+        plantSwayAngle += plantSwayVelocity;
+        userWindForce *= 0.88; // dampen user wind force
         
         // Update clouds drift physics
         const w = canvas ? canvas.width / (window.devicePixelRatio || 1) : 400;
@@ -310,29 +366,42 @@ const PlantRenderer = (function() {
     return ['#388e3c', '#4caf50', '#2e7d32', '#81c784'];
   }
 
-  /**
-   * Helper: Draw a single leaf
-   */
   function drawLeaf(x, y, length, width, angle, color) {
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(angle);
     
+    // Smooth drop shadow for leaf depth
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.12)';
+    ctx.shadowBlur = 3;
+    ctx.shadowOffsetX = 1;
+    ctx.shadowOffsetY = 1;
+    
     ctx.beginPath();
     ctx.moveTo(0, 0);
-    // Draw leaf shape using two bezier curves
     ctx.quadraticCurveTo(length / 2, -width / 2, length, 0);
     ctx.quadraticCurveTo(length / 2, width / 2, 0, 0);
     ctx.closePath();
     
-    ctx.fillStyle = color;
+    // Leaf gradient from base color to a warm highlight tip
+    const leafGrad = ctx.createLinearGradient(0, 0, length, 0);
+    leafGrad.addColorStop(0, color);
+    leafGrad.addColorStop(1, '#a2cc97');
+    
+    ctx.fillStyle = leafGrad;
     ctx.fill();
+    
+    // Reset shadow for vein drawing
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
     
     // Soft center vein
     ctx.beginPath();
     ctx.moveTo(0, 0);
     ctx.lineTo(length * 0.8, 0);
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
     ctx.lineWidth = 1;
     ctx.stroke();
     
@@ -347,27 +416,172 @@ const PlantRenderer = (function() {
     ctx.translate(x, y);
     ctx.rotate(angle);
     
+    // Soft drop shadow for leaf depth
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.16)';
+    ctx.shadowBlur = 4;
+    ctx.shadowOffsetX = 1;
+    ctx.shadowOffsetY = 2;
+    
     ctx.beginPath();
     ctx.moveTo(0, 0);
-    // Left side curve (upwards in Y)
     ctx.bezierCurveTo(length * 0.1, -width * 0.5, length * 0.4, -width * 0.6, length * 0.7, -width * 0.1);
-    // Taper into long tail
     ctx.quadraticCurveTo(length * 0.85, 0, length, 0);
-    // Right side curve (downwards in Y)
     ctx.quadraticCurveTo(length * 0.85, 0, length * 0.7, width * 0.1);
     ctx.bezierCurveTo(length * 0.4, width * 0.6, length * 0.1, width * 0.5, 0, 0);
     ctx.closePath();
     
-    ctx.fillStyle = color;
+    // Premium multi-stop gradient for Peepal leaf (base color to glowing lime tip)
+    const leafGrad = ctx.createLinearGradient(0, 0, length, 0);
+    leafGrad.addColorStop(0, color);
+    leafGrad.addColorStop(0.7, '#8bd48b');
+    leafGrad.addColorStop(1, '#a2e3a2');
+    
+    ctx.fillStyle = leafGrad;
     ctx.fill();
+    
+    // Reset shadow for vein drawing
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
     
     // Central vein
     ctx.beginPath();
     ctx.moveTo(0, 0);
     ctx.lineTo(length * 0.8, 0);
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.32)';
     ctx.lineWidth = 1.2;
     ctx.stroke();
+    
+    ctx.restore();
+  }
+
+  /**
+   * Helper: Draw a custom Lotus target seed (Teal progress target)
+   */
+  function drawLotusSeed(x, y, progress, masterScale) {
+    ctx.save();
+    ctx.translate(x, y);
+    
+    // Scale grows with target progress (up to 1.0)
+    const scale = Math.min(1.0, progress) * masterScale;
+    if (scale <= 0.05) {
+      ctx.restore();
+      return;
+    }
+    
+    // 1. Draw teal lotus leaf base pad
+    ctx.fillStyle = '#26a69a';
+    ctx.beginPath();
+    ctx.ellipse(0, 4, 15 * scale, 4.5 * scale, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 2. Draw stem curving slightly
+    ctx.strokeStyle = '#4db6ac';
+    ctx.lineWidth = 2.2 * scale;
+    ctx.beginPath();
+    ctx.moveTo(0, 4);
+    ctx.quadraticCurveTo(-4 * scale, -8 * scale, 0, -18 * scale);
+    ctx.stroke();
+    
+    // Translate to flower bud top
+    ctx.translate(0, -18 * scale);
+    ctx.rotate(plantSwayAngle * 0.45); // slight physics sway
+    
+    // 3. Draw flower
+    ctx.fillStyle = '#ff80ab'; // Pink lotus glow
+    if (progress < 0.25) {
+      // Small bud stage
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 3.5 * scale, 5.5 * scale, 0, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (progress < 0.70) {
+      // Partially open petals
+      for (let i = -1; i <= 1; i++) {
+        ctx.save();
+        ctx.rotate(i * 0.3);
+        ctx.beginPath();
+        ctx.ellipse(0, -2 * scale, 4 * scale, 7.5 * scale, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    } else {
+      // Full radiant bloom
+      ctx.save();
+      ctx.shadowColor = 'rgba(255, 128, 171, 0.65)';
+      ctx.shadowBlur = 6;
+      
+      // Outer petals
+      for (let i = -2; i <= 2; i++) {
+        ctx.save();
+        ctx.rotate(i * 0.42);
+        ctx.beginPath();
+        ctx.ellipse(0, -3 * scale, 4.5 * scale, 9.5 * scale, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+      
+      // Golden center core
+      ctx.beginPath();
+      ctx.arc(0, -4.5 * scale, 3.5 * scale, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffd54f';
+      ctx.fill();
+      ctx.restore();
+    }
+    
+    ctx.restore();
+  }
+
+  /**
+   * Helper: Draw a custom Bamboo target seed (Coral/Gold progress target)
+   */
+  function drawBambooSeed(x, y, progress, masterScale) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(plantSwayAngle * 0.35); // sway slightly with touch/wind
+    
+    const scale = Math.min(1.0, progress) * masterScale;
+    if (scale <= 0.05) {
+      ctx.restore();
+      return;
+    }
+    
+    const maxSegments = Math.max(1, Math.floor(progress * 4.5));
+    const segmentH = 9 * masterScale;
+    
+    ctx.strokeStyle = '#66bb6a';
+    ctx.fillStyle = '#81c784';
+    ctx.lineWidth = 3.8 * scale;
+    
+    let currentY = 0;
+    for (let i = 0; i < maxSegments; i++) {
+      // Segment body
+      ctx.beginPath();
+      ctx.moveTo(0, currentY);
+      ctx.lineTo(0, currentY - segmentH);
+      ctx.stroke();
+      
+      // Segment node bulge ring
+      ctx.beginPath();
+      ctx.arc(0, currentY - segmentH, 2.8 * scale, 0, Math.PI * 2);
+      ctx.fillStyle = '#4caf50';
+      ctx.fill();
+      
+      // Sprouts alternate sides
+      if (i > 0) {
+        ctx.save();
+        ctx.translate(0, currentY - segmentH / 2);
+        ctx.rotate(i % 2 === 0 ? 0.75 : -0.75);
+        ctx.beginPath();
+        ctx.quadraticCurveTo(9 * scale, -2 * scale, 13 * scale, 0);
+        ctx.quadraticCurveTo(7 * scale, 2 * scale, 0, 0);
+        ctx.fillStyle = '#66bb6a';
+        ctx.fill();
+        ctx.restore();
+      }
+      
+      currentY -= segmentH;
+    }
     
     ctx.restore();
   }
@@ -458,6 +672,53 @@ const PlantRenderer = (function() {
     ctx.closePath();
     ctx.fill();
     
+    ctx.restore();
+  }
+
+  function updateAndDrawAmbientParticles(w, h) {
+    const potX = w / 2;
+    const potY = h - 98;
+    const rimH = 14;
+    const soilY = potY + rimH - 3;
+    
+    const maxParticles = isChanting ? 35 : 20;
+    const spawnChance = isChanting ? 0.35 : 0.15;
+    
+    if (ambientParticles.length < maxParticles && Math.random() < spawnChance && !isDead) {
+      ambientParticles.push({
+        x: potX + (Math.random() - 0.5) * 140,
+        y: soilY - 5,
+        vy: -0.35 - Math.random() * 0.6,
+        vx: (Math.random() - 0.5) * 0.4,
+        size: 1.0 + Math.random() * 2.0,
+        alpha: 0.3 + Math.random() * 0.6,
+        fadeSpeed: 0.0018 + Math.random() * 0.0025,
+        color: Math.random() > 0.4 ? '255, 215, 0' : '162, 227, 162'
+      });
+    }
+    
+    ctx.save();
+    for (let i = ambientParticles.length - 1; i >= 0; i--) {
+      const p = ambientParticles[i];
+      p.y += p.vy;
+      p.x += p.vx + Math.sin(windTime * 0.8 + p.y * 0.015) * 0.22;
+      p.alpha -= p.fadeSpeed;
+      
+      if (p.y < 20 || p.alpha <= 0) {
+        ambientParticles.splice(i, 1);
+        continue;
+      }
+      
+      ctx.beginPath();
+      const grad = ctx.createRadialGradient(p.x, p.y, 0.1, p.x, p.y, p.size * 3.5);
+      grad.addColorStop(0, `rgba(${p.color}, ${p.alpha})`);
+      grad.addColorStop(0.5, `rgba(${p.color}, ${p.alpha * 0.4})`);
+      grad.addColorStop(1, `rgba(${p.color}, 0)`);
+      
+      ctx.fillStyle = grad;
+      ctx.arc(p.x, p.y, p.size * 3.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
     ctx.restore();
   }
 
@@ -796,6 +1057,13 @@ const PlantRenderer = (function() {
 
     // 3. Draw Pot Body
     ctx.save();
+    
+    // Beautiful pot drop shadow
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.18)';
+    ctx.shadowBlur = 8;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 4;
+    
     ctx.beginPath();
     ctx.moveTo(potX - bodyTopW, potY + rimH);
     ctx.lineTo(potX + bodyTopW, potY + rimH);
@@ -819,6 +1087,13 @@ const PlantRenderer = (function() {
     
     ctx.fillStyle = potGrad;
     ctx.fill();
+    
+    // Reset shadow
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+    
     ctx.strokeStyle = activePot.accent;
     ctx.lineWidth = 1.5;
     ctx.stroke();
@@ -926,10 +1201,24 @@ const PlantRenderer = (function() {
       const tips = [];
       
       ctx.save();
-      // Translate to soil center
       ctx.translate(potX, potY + rimH - 3);
       
-      const windAngle = Math.sin(windTime) * 0.04 * (isDead ? 0.2 : (currentHealth / 100 + 0.3));
+      // Draw custom target plants (Lotus and Bamboo) next to main tree
+      if (activeTargets && activeTargets.length > 0) {
+        // Target 1: Lotus (left)
+        const t1 = activeTargets[0];
+        const progress1 = t1.type === 'hours' ? (t1.targetSeconds > 0 ? (t1.accumulatedSeconds / t1.targetSeconds) : 0) : 0.5;
+        drawLotusSeed(-32, 0, progress1, masterScale);
+        
+        // Target 2: Bamboo (right)
+        if (activeTargets.length > 1) {
+          const t2 = activeTargets[1];
+          const progress2 = t2.type === 'hours' ? (t2.targetSeconds > 0 ? (t2.accumulatedSeconds / t2.targetSeconds) : 0) : 0.5;
+          drawBambooSeed(32, 0, progress2, masterScale);
+        }
+      }
+      
+      const windAngle = Math.sin(windTime) * 0.04 * (isDead ? 0.2 : (currentHealth / 100 + 0.3)) + plantSwayAngle;
       const leafColors = getLeafColors(currentHealth, isDead);
       const woodColor = isDead ? colors.wood.dead : (currentHealth <= 40 ? colors.wood.dry : colors.wood.healthy);
       
@@ -1411,6 +1700,7 @@ const PlantRenderer = (function() {
       ctx.restore();
     }
 
+    updateAndDrawAmbientParticles(w, h);
     ctx.restore();
     
     // 7. Special Stage 1 — seed only, nothing above soil
