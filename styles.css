@@ -1376,7 +1376,8 @@ body.theme-forest-dark .btn-debug-action {
   padding: 0;
 }
 
-.admin-card.open .toggle-arrow {
+.admin-card.open .toggle-arrow,
+.collapsible.open .toggle-arrow {
   transform: rotate(180deg);
 }
 

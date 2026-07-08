@@ -1570,7 +1570,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateDiurnalTheme();
     
     // Trigger canvas state updates
-    PlantRenderer.updateState(decimalHours, state.health, state.isDead, timerState === 'running', state.settings.treeTargetHours || 333, state.targets.filter(t => !t.completed), state.settings.skyBackground || 'diurnal');
+    PlantRenderer.updateState(decimalHours, state.health, state.isDead, timerState === 'running', state.settings.treeTargetHours || 333, state.targets.filter(t => !t.completed), state.settings.skyBackground || 'diurnal', state.streak || 0);
     
     // Update pot style in PlantRenderer
     if (state.settings && state.settings.potStyle) {
@@ -1859,7 +1859,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     const totalHours = (state.totalSeconds / 3600).toFixed(1);
-    PlantRenderer.updateState(parseFloat(totalHours), state.health, state.isDead, true, state.settings.treeTargetHours || 333, state.targets.filter(t => !t.completed), state.settings.skyBackground || 'diurnal');
+    PlantRenderer.updateState(parseFloat(totalHours), state.health, state.isDead, true, state.settings.treeTargetHours || 333, state.targets.filter(t => !t.completed), state.settings.skyBackground || 'diurnal', state.streak || 0);
     saveActiveTimer();
     
     timerInterval = setInterval(() => {
@@ -1917,7 +1917,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     const totalHours = (state.totalSeconds / 3600).toFixed(1);
-    PlantRenderer.updateState(parseFloat(totalHours), state.health, state.isDead, false, state.settings.treeTargetHours || 333, state.targets.filter(t => !t.completed), state.settings.skyBackground || 'diurnal');
+    PlantRenderer.updateState(parseFloat(totalHours), state.health, state.isDead, false, state.settings.treeTargetHours || 333, state.targets.filter(t => !t.completed), state.settings.skyBackground || 'diurnal', state.streak || 0);
     saveActiveTimer();
   }
 
@@ -1965,7 +1965,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     const totalHours = (state.totalSeconds / 3600).toFixed(1);
-    PlantRenderer.updateState(parseFloat(totalHours), state.health, state.isDead, false, state.settings.treeTargetHours || 333, state.targets.filter(t => !t.completed), state.settings.skyBackground || 'diurnal');
+    PlantRenderer.updateState(parseFloat(totalHours), state.health, state.isDead, false, state.settings.treeTargetHours || 333, state.targets.filter(t => !t.completed), state.settings.skyBackground || 'diurnal', state.streak || 0);
     saveActiveTimer();
     resetTimerDisplay();
   }
@@ -6101,6 +6101,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
   window.addEventListener('pagehide', handleTimerExitAutoSave);
   window.addEventListener('beforeunload', handleTimerExitAutoSave);
+
+  // Encyclopedia Collapsible
+  const btnToggleEncyclopedia = document.getElementById('btn-toggle-encyclopedia');
+  const encyclopediaContent = document.getElementById('encyclopedia-content');
+  const encyclopediaCard = document.getElementById('encyclopedia-card');
+  if (btnToggleEncyclopedia && encyclopediaContent && encyclopediaCard) {
+    btnToggleEncyclopedia.addEventListener('click', () => {
+      encyclopediaContent.classList.toggle('collapsed');
+      encyclopediaCard.classList.toggle('open');
+    });
+  }
 
   } catch (err) {
     console.error("Initialization Error:", err);

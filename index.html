@@ -158,8 +158,6 @@
               </div>
             </div>
 
-
-
             <!-- Daily Guidance by Daisaku Ikeda Card -->
             <div class="card guidance-card">
               <div class="guidance-header">
@@ -171,6 +169,72 @@
               </div>
               <p id="guidance-text">"Even one daimoku can pervade the entire universe. Truly heartfelt and determined daimoku, therefore, has the power to move everything."</p>
               <span id="guidance-author">— Daisaku Ikeda</span>
+            </div>
+
+            <!-- Interactive Garden Encyclopedia Card (Styled typography to match Daily Guidance and collapsed height to match Session Logs) -->
+            <div class="card collapsible" id="encyclopedia-card" style="margin-bottom: 24px;">
+              <button class="encyclopedia-header" id="btn-toggle-encyclopedia" style="width: 100%; display: flex; justify-content: space-between; align-items: center; background: none; border: none; padding: 0; cursor: pointer; outline: none; text-align: left;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span class="guidance-icon" style="background: rgba(38, 166, 154, 0.15); color: #26a69a; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px;"><i class="fa-solid fa-book-open"></i></span>
+                  <h2 style="margin: 0; font-family: var(--font-serif); font-size: 18px; font-weight: 700; color: var(--text-main);">Garden Encyclopedia</h2>
+                </div>
+                <i class="fa-solid fa-chevron-down toggle-arrow" style="font-size: 14px; color: var(--text-muted); transition: transform 0.3s ease;"></i>
+              </button>
+              <div id="encyclopedia-content" class="admin-content collapsed" style="margin-top: 14px;">
+                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.55;">
+                  Discover the spiritual symbolism behind your growing virtual garden. Consistent daily chanting brings these elements to life in your pot.
+                </p>
+                <div style="display: flex; flex-direction: column; gap: 16px;">
+                  <!-- Item 1: Peepal Tree -->
+                  <div style="display: flex; gap: 12px; align-items: flex-start;">
+                    <div style="background: rgba(86, 172, 86, 0.15); color: #2e7d32; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px;">
+                      <i class="fa-solid fa-tree"></i>
+                    </div>
+                    <div style="flex: 1;">
+                      <h4 style="margin: 0 0 3px 0; font-size: 13.5px; color: var(--text-main); font-weight: 600;">The Peepal Tree (Main Practice)</h4>
+                      <p style="margin: 0; font-size: 12px; color: var(--text-muted); line-height: 1.45;">
+                        Known as the Bodhi tree under which Shakyamuni attained enlightenment. It represents your main daily practice. Grows from a tiny Seed to a Majestic Tree based on your progress towards your tree target hours.
+                      </p>
+                    </div>
+                  </div>
+                  <!-- Item 2: Lotus Flower -->
+                  <div style="display: flex; gap: 12px; align-items: flex-start;">
+                    <div style="background: rgba(255, 128, 171, 0.15); color: #c2185b; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px;">
+                      <i class="fa-solid fa-seedling"></i>
+                    </div>
+                    <div style="flex: 1;">
+                      <h4 style="margin: 0 0 3px 0; font-size: 13.5px; color: var(--text-main); font-weight: 600;">The Lotus Flower (First Active Target)</h4>
+                      <p style="margin: 0; font-size: 12px; color: var(--text-muted); line-height: 1.45;">
+                        Sprouts on the left soil. Symbolizes the principle of "simultaneity of cause and effect" and the ability to bloom pure and beautiful out of muddy waters. Grows, opens, and blooms as you complete Target 1.
+                      </p>
+                    </div>
+                  </div>
+                  <!-- Item 3: Bamboo Shoot -->
+                  <div style="display: flex; gap: 12px; align-items: flex-start;">
+                    <div style="background: rgba(38, 166, 154, 0.15); color: #00796b; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px;">
+                      <i class="fa-solid fa-leaf"></i>
+                    </div>
+                    <div style="flex: 1;">
+                      <h4 style="margin: 0 0 3px 0; font-size: 13.5px; color: var(--text-main); font-weight: 600;">The Bamboo Shoot (Second Active Target)</h4>
+                      <p style="margin: 0; font-size: 12px; color: var(--text-muted); line-height: 1.45;">
+                        Sprouts on the right soil. Represents resilience, flexibility, and rapid growth—bending gracefully in the wind but never breaking. Grows tall and sprouts sections as you complete Target 2.
+                      </p>
+                    </div>
+                  </div>
+                  <!-- Item 4: Red Apples -->
+                  <div style="display: flex; gap: 12px; align-items: flex-start;">
+                    <div style="background: rgba(229, 115, 115, 0.15); color: #d32f2f; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px;">
+                      <i class="fa-solid fa-apple-whole"></i>
+                    </div>
+                    <div style="flex: 1;">
+                      <h4 style="margin: 0 0 3px 0; font-size: 13.5px; color: var(--text-main); font-weight: 600;">Red Apple Fruits (Advanced Milestones)</h4>
+                      <p style="margin: 0; font-size: 12px; color: var(--text-muted); line-height: 1.45;">
+                        Grow on the outer branches of the Majestic Tree once you surpass your target hours (1 apple per 3 hours 20 mins). Symbolizes the actual proof, benefits, and fruits of your long-term practice.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
           </div>
