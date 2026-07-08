@@ -2924,7 +2924,7 @@ body.theme-forest-dark select {
   margin-top: 10px;
 }
 
-.pot-btn {
+.pot-btn, .sky-btn {
   background: var(--bg-card);
   border: var(--border);
   border-radius: 12px;
@@ -2939,12 +2939,12 @@ body.theme-forest-dark select {
   transition: all 0.2s ease;
 }
 
-.pot-btn:hover {
+.pot-btn:hover, .sky-btn:hover {
   background: var(--bg-card-hover);
   transform: translateY(-1px);
 }
 
-.pot-btn.active {
+.pot-btn.active, .sky-btn.active {
   border-color: var(--primary);
   background: var(--primary-light);
   color: var(--primary);

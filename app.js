@@ -382,7 +382,8 @@ document.addEventListener('DOMContentLoaded', () => {
       morningReminder: true,
       eveningReminder: true,
       potStyle: 'clay',
-      treeTargetHours: 333
+      treeTargetHours: 333,
+      skyBackground: 'diurnal'
     },
     theme: 'theme-sage-light',
     dismissedAlerts: [], // Array of closed notification IDs
@@ -483,6 +484,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const targetTypeSelect = document.getElementById('target-type-select');
   const targetHoursInputGroup = document.getElementById('target-hours-input-group');
   const targetHoursInput = document.getElementById('target-hours');
+  const targetDeadlineInput = document.getElementById('target-deadline');
+  const targetDeadlineInputGroup = document.getElementById('target-deadline-input-group');
   const activeTargetsList = document.getElementById('active-targets-list');
   const completedTargetsList = document.getElementById('completed-targets-list');
   const completedTargetsCount = document.getElementById('completed-targets-count');
@@ -609,7 +612,8 @@ document.addEventListener('DOMContentLoaded', () => {
           morningReminder: true,
           eveningReminder: true,
           potStyle: 'clay',
-          treeTargetHours: 333
+          treeTargetHours: 333,
+          skyBackground: 'diurnal'
         },
         theme: 'theme-sage-light',
         dismissedAlerts: []
@@ -843,9 +847,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (state.revivalDates === undefined) state.revivalDates = [];
     if (state.theme === undefined) state.theme = 'theme-sage-light';
     if (state.settings === undefined) {
-      state.settings = { morningReminder: true, eveningReminder: true, potStyle: 'clay', treeTargetHours: 333 };
+      state.settings = { morningReminder: true, eveningReminder: true, potStyle: 'clay', treeTargetHours: 333, skyBackground: 'diurnal' };
     } else {
       if (state.settings.treeTargetHours === undefined) state.settings.treeTargetHours = 333;
+      if (state.settings.skyBackground === undefined) state.settings.skyBackground = 'diurnal';
     }
     if (state.unlockedAchievements === undefined) state.unlockedAchievements = [];
     
@@ -1066,8 +1071,16 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeUnlockedAchievements(true);
     
     // Set manual form default date to today
-    const today = new Date().toISOString().split('T')[0];
+    const localNow = new Date();
+    const lYear = localNow.getFullYear();
+    const lMonth = String(localNow.getMonth() + 1).padStart(2, '0');
+    const lDay = String(localNow.getDate()).padStart(2, '0');
+    const today = `${lYear}-${lMonth}-${lDay}`;
     logDateInput.value = today;
+    logDateInput.max = today;
+    if (targetDeadlineInput) {
+      targetDeadlineInput.min = today;
+    }
     
     // Rebuild revival dates (self-healing)
     rebuildRevivalDates();
@@ -1557,7 +1570,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateDiurnalTheme();
     
     // Trigger canvas state updates
-    PlantRenderer.updateState(decimalHours, state.health, state.isDead, timerState === 'running', state.settings.treeTargetHours || 333, state.targets.filter(t => !t.completed));
+    PlantRenderer.updateState(decimalHours, state.health, state.isDead, timerState === 'running', state.settings.treeTargetHours || 333, state.targets.filter(t => !t.completed), state.settings.skyBackground || 'diurnal');
     
     // Update pot style in PlantRenderer
     if (state.settings && state.settings.potStyle) {
@@ -1592,6 +1605,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const potButtons = document.querySelectorAll('.pot-btn');
     potButtons.forEach(btn => {
       if (btn.getAttribute('data-pot') === ((state.settings && state.settings.potStyle) || 'clay')) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+
+    // Update sky customizer buttons highlights
+    const skyButtons = document.querySelectorAll('.sky-btn');
+    skyButtons.forEach(btn => {
+      if (btn.getAttribute('data-sky') === ((state.settings && state.settings.skyBackground) || 'diurnal')) {
         btn.classList.add('active');
       } else {
         btn.classList.remove('active');
@@ -1836,7 +1859,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     const totalHours = (state.totalSeconds / 3600).toFixed(1);
-    PlantRenderer.updateState(parseFloat(totalHours), state.health, state.isDead, true, state.settings.treeTargetHours || 333, state.targets.filter(t => !t.completed));
+    PlantRenderer.updateState(parseFloat(totalHours), state.health, state.isDead, true, state.settings.treeTargetHours || 333, state.targets.filter(t => !t.completed), state.settings.skyBackground || 'diurnal');
     saveActiveTimer();
     
     timerInterval = setInterval(() => {
@@ -1894,7 +1917,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     const totalHours = (state.totalSeconds / 3600).toFixed(1);
-    PlantRenderer.updateState(parseFloat(totalHours), state.health, state.isDead, false, state.settings.treeTargetHours || 333, state.targets.filter(t => !t.completed));
+    PlantRenderer.updateState(parseFloat(totalHours), state.health, state.isDead, false, state.settings.treeTargetHours || 333, state.targets.filter(t => !t.completed), state.settings.skyBackground || 'diurnal');
     saveActiveTimer();
   }
 
@@ -1942,7 +1965,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     const totalHours = (state.totalSeconds / 3600).toFixed(1);
-    PlantRenderer.updateState(parseFloat(totalHours), state.health, state.isDead, false, state.settings.treeTargetHours || 333, state.targets.filter(t => !t.completed));
+    PlantRenderer.updateState(parseFloat(totalHours), state.health, state.isDead, false, state.settings.treeTargetHours || 333, state.targets.filter(t => !t.completed), state.settings.skyBackground || 'diurnal');
     saveActiveTimer();
     resetTimerDisplay();
   }
@@ -2143,13 +2166,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // Construct manual date using local time parts and current hours/minutes/seconds
+    const now = new Date();
+    
+    // Prevent future date logs
+    const lYear = now.getFullYear();
+    const lMonth = String(now.getMonth() + 1).padStart(2, '0');
+    const lDay = String(now.getDate()).padStart(2, '0');
+    const todayLocalYMD = `${lYear}-${lMonth}-${lDay}`;
+    
+    if (logDateInput.value > todayLocalYMD) {
+      alert("You cannot log chanting sessions for a future date!");
+      return;
+    }
+    
     const dateParts = logDateInput.value.split('-');
     const selectedDate = new Date(
       parseInt(dateParts[0]),
       parseInt(dateParts[1]) - 1,
       parseInt(dateParts[2])
     );
-    const now = new Date();
     selectedDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
     
     const sessionDateString = selectedDate.toISOString();
@@ -2691,6 +2726,20 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  // Sky Customizer Swapper
+  const skyButtons = document.querySelectorAll('.sky-btn');
+  skyButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const skyBg = btn.getAttribute('data-sky');
+      if (!state.settings) {
+        state.settings = { morningReminder: true, eveningReminder: true, potStyle: 'clay', treeTargetHours: 333 };
+      }
+      state.settings.skyBackground = skyBg;
+      saveState();
+      updateUI();
+    });
+  });
+
   // Helper to draw lotus path on canvas
   function drawLotusWatermark(canvasCtx, cx, cy, size, color) {
     canvasCtx.save();
@@ -3055,13 +3104,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- Targets & Determinations Manager ---
   
-  // Toggle form input hours visibility
+  // Toggle form input hours & deadline visibility
   if (targetTypeSelect) {
     targetTypeSelect.addEventListener('change', (e) => {
       if (e.target.value === 'hours') {
         if (targetHoursInputGroup) targetHoursInputGroup.classList.remove('hidden');
+        if (targetDeadlineInputGroup) targetDeadlineInputGroup.classList.remove('hidden');
       } else {
         if (targetHoursInputGroup) targetHoursInputGroup.classList.add('hidden');
+        if (targetDeadlineInputGroup) targetDeadlineInputGroup.classList.add('hidden');
       }
     });
   }
@@ -3073,8 +3124,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const text = targetText.value.trim();
     const type = targetTypeSelect.value;
     const hours = parseInt(targetHoursInput.value || 10);
+    const deadlineVal = targetDeadlineInput ? targetDeadlineInput.value : '';
     
     if (!text) return;
+    
+    // Prevent setting a target deadline in the past
+    if (type === 'hours' && deadlineVal) {
+      const now = new Date();
+      const lYear = now.getFullYear();
+      const lMonth = String(now.getMonth() + 1).padStart(2, '0');
+      const lDay = String(now.getDate()).padStart(2, '0');
+      const todayLocalYMD = `${lYear}-${lMonth}-${lDay}`;
+      
+      if (deadlineVal < todayLocalYMD) {
+        alert("The target deadline cannot be in the past!");
+        return;
+      }
+    }
     
     const newTarget = {
       id: Date.now().toString(),
@@ -3082,7 +3148,8 @@ document.addEventListener('DOMContentLoaded', () => {
       type: type,
       targetSeconds: type === 'hours' ? hours * 3600 : 0,
       accumulatedSeconds: 0,
-      completed: false
+      completed: false,
+      deadline: type === 'hours' && deadlineVal ? deadlineVal : null
     };
     
     state.targets.push(newTarget);
@@ -3092,7 +3159,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Reset form
     targetText.value = '';
     targetTypeSelect.value = 'none';
-    targetHoursInputGroup.classList.add('hidden');
+    if (targetHoursInputGroup) targetHoursInputGroup.classList.add('hidden');
+    if (targetDeadlineInputGroup) targetDeadlineInputGroup.classList.add('hidden');
+    if (targetDeadlineInput) targetDeadlineInput.value = '';
     
     renderTargetsList();
     alert("New determination created successfully!");
@@ -4492,6 +4561,11 @@ document.addEventListener('DOMContentLoaded', () => {
       
       // Basic validation
       if (!name) return;
+      
+      if (start && end && end < start) {
+        alert("The campaign end date cannot be earlier than the start date!");
+        return;
+      }
       
       btn.disabled = true;
       

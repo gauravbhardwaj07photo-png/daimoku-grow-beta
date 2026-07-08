@@ -99,6 +99,7 @@ const PlantRenderer = (function() {
   let isDead = false;
   let isChanting = false;
   let targetHours = 333;
+  let skyBackgroundSetting = 'diurnal';
   
   // Ambient Glowing Particles
   let ambientParticles = [];
@@ -246,7 +247,7 @@ const PlantRenderer = (function() {
   /**
    * Set the plant parameters and queue a redraw
    */
-  function updateState(hours, health, deadState, chantingState, targetHoursParam = 333, targetsList = []) {
+  function updateState(hours, health, deadState, chantingState, targetHoursParam = 333, targetsList = [], skyBg = 'diurnal') {
     currentHours = hours;
     currentHealth = health;
     isDead = deadState || (health <= 0);
@@ -254,6 +255,7 @@ const PlantRenderer = (function() {
     targetHours = Math.max(1, targetHoursParam);
     ambientParticles = ambientParticles || []; // safeguard
     activeTargets = targetsList || [];
+    skyBackgroundSetting = skyBg || 'diurnal';
   }
 
   /**
@@ -734,18 +736,19 @@ const PlantRenderer = (function() {
     // Clear canvas
     ctx.clearRect(0, 0, w, h);
 
-    const nowHour = new Date().getHours();
-    
     // Determine Diurnal Phase: Sunrise (5-9), Day (9-17), Sunset (17-20), Night (20-5)
-    let phase = 'day';
-    if (nowHour >= 5 && nowHour < 9) {
-      phase = 'sunrise';
-    } else if (nowHour >= 9 && nowHour < 17) {
-      phase = 'day';
-    } else if (nowHour >= 17 && nowHour < 20) {
-      phase = 'sunset';
-    } else {
-      phase = 'night';
+    let phase = skyBackgroundSetting || 'diurnal';
+    if (phase === 'diurnal') {
+      const nowHour = new Date().getHours();
+      if (nowHour >= 5 && nowHour < 9) {
+        phase = 'sunrise';
+      } else if (nowHour >= 9 && nowHour < 17) {
+        phase = 'day';
+      } else if (nowHour >= 17 && nowHour < 20) {
+        phase = 'sunset';
+      } else {
+        phase = 'night';
+      }
     }
     
     const isNight = phase === 'night';

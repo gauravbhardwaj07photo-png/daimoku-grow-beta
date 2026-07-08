@@ -300,6 +300,10 @@
                     <label for="target-hours">Target Hours</label>
                     <input type="number" id="target-hours" min="1" max="10000" value="10">
                   </div>
+                  <div class="form-group hidden" id="target-deadline-input-group">
+                    <label for="target-deadline">Target Deadline (Optional)</label>
+                    <input type="date" id="target-deadline">
+                  </div>
                 </div>
                 <button type="submit" class="btn btn-secondary btn-full"><i class="fa-solid fa-plus"></i> Create Target</button>
               </form>
@@ -486,6 +490,34 @@
                   <span class="pot-dot" style="background: #62c382; border: 2px solid #1a4a27;"></span>
                   Imperial Jade
                 </button>
+              </div>
+            </div>
+
+            <div class="settings-section">
+              <h3>Garden Sky Ambiance</h3>
+              <p class="settings-desc">Choose the sky backdrop for your virtual garden.</p>
+              <div class="sky-options" style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px;">
+                <button class="sky-btn active" data-sky="diurnal">
+                  <i class="fa-solid fa-clock-rotate-left"></i>
+                  Diurnal
+                </button>
+                <button class="sky-btn" data-sky="sunrise">
+                  <i class="fa-solid fa-sun-rising" style="color: #ffa726;"></i>
+                  Sunrise
+                </button>
+                <button class="sky-btn" data-sky="day">
+                  <i class="fa-solid fa-sun" style="color: #fbc02d;"></i>
+                  Day
+                </button>
+                <button class="sky-btn" data-sky="sunset">
+                  <i class="fa-solid fa-mountain-sun" style="color: #ff7043;"></i>
+                  Sunset
+                </button>
+                <button class="sky-btn" data-sky="night">
+                  <i class="fa-solid fa-moon" style="color: #90caf9;"></i>
+                  Night
+                </button>
+              </div>
             </div>
 
             <div class="settings-section">
