@@ -392,6 +392,8 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   let isCloudStateLoaded = false;
+  let editingTargetId = null;
+  const expandedTargetIds = new Set();
 
   // --- Timer Variables ---
   let timerInterval = null;
@@ -1509,24 +1511,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (state.isDead) {
       revivalProgressContainer.classList.remove('hidden');
       
-      let daysCount = 0;
-      if (state.revivalDates && state.revivalDates.length > 0) {
-        const sorted = [...state.revivalDates].sort();
-        const timestamps = sorted.map(d => new Date(d + 'T12:00:00').getTime());
-        const oneDayMs = 24 * 60 * 60 * 1000;
-        let maxStreak = 1;
-        let currentStreak = 1;
-        for (let i = 0; i < timestamps.length - 1; i++) {
-          const diff = timestamps[i+1] - timestamps[i];
-          if (diff === oneDayMs) {
-            currentStreak++;
-            if (currentStreak > maxStreak) maxStreak = currentStreak;
-          } else if (diff > oneDayMs) {
-            currentStreak = 1;
-          }
-        }
-        daysCount = Math.min(3, maxStreak);
-      }
+      let daysCount = getActiveRevivalStreak(state.revivalDates);
       
       revivalTimeLabel.textContent = `${daysCount} / 3 days completed`;
       
@@ -1561,7 +1546,6 @@ document.addEventListener('DOMContentLoaded', () => {
         dashboardStreakBadge.classList.add('hidden');
       }
     }
-
 
     // Update goal milestone estimate
     updateMilestoneEstimate();
@@ -1644,6 +1628,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const diffHours = diffMs / (1000 * 60 * 60);
     
     let activeAlert = null;
+
+    // Check if an active campaign is announced today (High-Priority Alert Banner)
+    const activeList = MockFirebase.db.getActiveCampaigns();
+    if (activeList.length > 0 && isCampaignActiveToday(activeList[0])) {
+      const activeId = activeList[0];
+      const campaignNames = MockFirebase.db.getCampaignNames();
+      const campaignName = campaignNames[activeId] || "New Campaign";
+      const alertId = `campaign_announce_${activeId}`;
+      if (!state.dismissedAlerts.includes(alertId)) {
+        activeAlert = {
+          id: alertId,
+          type: 'info',
+          message: `📢 Active Campaign Announced: "${campaignName}"! Visit the Campaign tab to see target goals and log hours to support the campaign! 🎯`
+        };
+      }
+    }
     
     if (state.isDead) {
       if (diffHours >= 720) { // 30 days
@@ -3276,6 +3276,91 @@ document.addEventListener('DOMContentLoaded', () => {
     timerCampaignSelect.value = prevTimerCampaign;
     manualPersonalSelect.value = prevManualPersonal;
     manualCampaignSelect.value = prevManualCampaign;
+    
+    updateTargetPaceHint('timer-personal-select', 'timer-target-pace-tip');
+    updateTargetPaceHint('manual-personal-select', 'manual-target-pace-tip');
+  }
+
+  function updateTargetPaceHint(selectId, tipId) {
+    const select = document.getElementById(selectId);
+    const tip = document.getElementById(tipId);
+    if (!select || !tip) return;
+    
+    const targetId = select.value;
+    if (!targetId) {
+      tip.style.display = 'none';
+      tip.textContent = '';
+      return;
+    }
+    
+    const t = state.targets.find(item => item.id === targetId);
+    if (!t || t.type !== 'hours') {
+      tip.style.display = 'none';
+      tip.textContent = '';
+      return;
+    }
+    
+    if (t.deadline) {
+      const deadlineDate = new Date(t.deadline + 'T23:59:59');
+      const now = new Date();
+      const diffMs = deadlineDate.getTime() - now.getTime();
+      const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+      
+      if (diffDays > 0) {
+        const remainingHours = Math.max(0, (t.targetSeconds - t.accumulatedSeconds) / 3600);
+        const minutesNeeded = Math.round((remainingHours * 60) / diffDays);
+        
+        if (remainingHours <= 0) {
+          tip.style.display = 'block';
+          tip.style.color = '#4caf50';
+          tip.innerHTML = `<i class="fa-solid fa-check"></i> Goal reached!`;
+        } else if (minutesNeeded > 1440) {
+          tip.style.display = 'block';
+          tip.style.color = 'var(--accent-danger)';
+          tip.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Requires >24h/day`;
+        } else if (minutesNeeded > 0) {
+          const formatMins = minutesNeeded >= 60 ? `${Math.floor(minutesNeeded / 60)}h ${minutesNeeded % 60}m` : `${minutesNeeded}m`;
+          
+          const todayStr = new Date().toISOString().split('T')[0];
+          const chantedTodaySeconds = state.sessions
+            .filter(s => (s.personalTargetId === t.id || s.targetId === t.id) && s.date.split('T')[0] === todayStr)
+            .reduce((sum, s) => sum + s.durationSeconds, 0);
+          const chantedTodayMinutes = Math.round(chantedTodaySeconds / 60);
+          const remainingMinutesToday = Math.max(0, minutesNeeded - chantedTodayMinutes);
+          
+          tip.style.display = 'block';
+          tip.style.color = 'var(--primary)';
+          if (remainingMinutesToday <= 0) {
+            tip.innerHTML = `<i class="fa-solid fa-circle-check"></i> Today's target (${formatMins}) met! 🎉`;
+          } else {
+            tip.innerHTML = `<i class="fa-regular fa-clock"></i> Target: ${formatMins}/day (${remainingMinutesToday}m left today)`;
+          }
+        } else {
+          tip.style.display = 'none';
+        }
+      } else {
+        const remainingHours = Math.max(0, (t.targetSeconds - t.accumulatedSeconds) / 3600);
+        tip.style.display = 'block';
+        if (remainingHours <= 0) {
+          tip.style.color = '#4caf50';
+          tip.innerHTML = `<i class="fa-solid fa-check"></i> Completed!`;
+        } else {
+          tip.style.color = 'var(--accent-danger)';
+          tip.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> Deadline passed! (${remainingHours.toFixed(1)}h left)`;
+        }
+      }
+    } else {
+      tip.style.display = 'block';
+      tip.style.color = 'var(--text-muted)';
+      
+      const createdTime = parseInt(t.id);
+      const daysElapsed = Math.max(1, Math.ceil((Date.now() - createdTime) / (24 * 60 * 60 * 1000)));
+      const averageSecondsPerDay = t.accumulatedSeconds / daysElapsed;
+      const avgMinutesPerDay = Math.round(averageSecondsPerDay / 60);
+      let avgText = avgMinutesPerDay >= 60 ? `${Math.floor(avgMinutesPerDay / 60)}h ${avgMinutesPerDay % 60}m/day` : `${avgMinutesPerDay}m/day`;
+      
+      tip.innerHTML = `<i class="fa-solid fa-circle-info"></i> Pace: ${avgText} (No deadline set)`;
+    }
   }
 
   // Render Targets View lists
@@ -3314,6 +3399,36 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
           `;
           
+          // Calculate average rate
+          const createdTime = parseInt(t.id);
+          const daysElapsed = Math.max(1, Math.ceil((Date.now() - createdTime) / (24 * 60 * 60 * 1000)));
+          const averageSecondsPerDay = t.accumulatedSeconds / daysElapsed;
+          const avgMinutesPerDay = Math.round(averageSecondsPerDay / 60);
+          
+          let avgText = "";
+          if (avgMinutesPerDay >= 60) {
+            const h = Math.floor(avgMinutesPerDay / 60);
+            const m = avgMinutesPerDay % 60;
+            avgText = `${h}h ${m}m/day`;
+          } else {
+            avgText = `${avgMinutesPerDay}m/day`;
+          }
+          
+          // Calculate estimated completion
+          let estCompletionText = "Est. Completion: Not started yet";
+          if (averageSecondsPerDay > 0) {
+            const remainingSeconds = Math.max(0, t.targetSeconds - t.accumulatedSeconds);
+            if (remainingSeconds <= 0) {
+              estCompletionText = "Goal achieved!";
+            } else {
+              const daysRemaining = Math.ceil(remainingSeconds / averageSecondsPerDay);
+              const estCompletionDate = new Date(Date.now() + daysRemaining * 24 * 60 * 60 * 1000);
+              const estDateString = estCompletionDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+              estCompletionText = `Est. Completion: <strong>${estDateString}</strong> at current pace (${avgText})`;
+            }
+          }
+          
+          let paceBadge = "";
           if (t.deadline) {
             const deadlineDate = new Date(t.deadline + 'T23:59:59');
             const now = new Date();
@@ -3325,55 +3440,214 @@ document.addEventListener('DOMContentLoaded', () => {
               const minutesNeeded = Math.round((remainingHours * 60) / diffDays);
               
               if (remainingHours <= 0) {
-                plannerText = `<span style="color:#4caf50; font-weight:600;"><i class="fa-solid fa-check"></i> Goal reached!</span>`;
+                paceBadge = `
+                  <div style="background: rgba(76,175,80,0.08); border: 1px solid rgba(76,175,80,0.2); color: #2e7d32; padding: 6px 10px; border-radius: 8px; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 6px; margin-top: 6px;">
+                    <i class="fa-solid fa-circle-check"></i> Goal reached! Completed in time!
+                  </div>
+                `;
               } else if (minutesNeeded > 1440) {
-                plannerText = `<span style="color:var(--accent-danger); font-weight:600;"><i class="fa-solid fa-triangle-exclamation"></i> Requires > 24 hours/day!</span>`;
+                paceBadge = `
+                  <div style="background: rgba(217,83,79,0.08); border: 1px solid rgba(217,83,79,0.2); color: var(--accent-danger); padding: 6px 10px; border-radius: 8px; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 6px; margin-top: 6px;">
+                    <i class="fa-solid fa-triangle-exclamation"></i> Requires > 24 hours/day!
+                  </div>
+                `;
               } else if (minutesNeeded > 0) {
                 const formatMins = minutesNeeded >= 60 ? `${Math.floor(minutesNeeded / 60)}h ${minutesNeeded % 60}m` : `${minutesNeeded}m`;
-                plannerText = `<i class="fa-regular fa-calendar-check" style="margin-right:4px;"></i> Chant <strong style="color:var(--text-main);">${formatMins}/day</strong> to reach by ${t.deadline}`;
-              } else {
-                plannerText = `Goal achieved!`;
+                paceBadge = `
+                  <div style="background: var(--primary-light); border: 1px solid rgba(var(--primary-rgb), 0.2); color: var(--primary); padding: 6px 10px; border-radius: 8px; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 6px; margin-top: 6px; width: 100%;">
+                    <i class="fa-regular fa-clock"></i> Chant <strong style="color:var(--text-main); font-weight:700; margin-left: 2px; margin-right: 2px;">${formatMins}/day</strong> to complete in time (by ${t.deadline})
+                  </div>
+                `;
               }
             } else {
               const remainingHours = Math.max(0, (t.targetSeconds - t.accumulatedSeconds) / 3600);
               if (remainingHours <= 0) {
-                plannerText = `<span style="color:#4caf50; font-weight:600;"><i class="fa-solid fa-check"></i> Completed!</span>`;
+                paceBadge = `
+                  <div style="background: rgba(76,175,80,0.08); border: 1px solid rgba(76,175,80,0.2); color: #2e7d32; padding: 6px 10px; border-radius: 8px; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 6px; margin-top: 6px;">
+                    <i class="fa-solid fa-circle-check"></i> Completed in time!
+                  </div>
+                `;
               } else {
-                plannerText = `<span style="color:var(--accent-danger); font-weight:600;"><i class="fa-solid fa-circle-exclamation"></i> Deadline passed! (${remainingHours.toFixed(1)}h left)</span>`;
+                paceBadge = `
+                  <div style="background: rgba(217,83,79,0.08); border: 1px solid rgba(217,83,79,0.2); color: var(--accent-danger); padding: 6px 10px; border-radius: 8px; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 6px; margin-top: 6px;">
+                    <i class="fa-solid fa-circle-exclamation"></i> Deadline passed! (${remainingHours.toFixed(1)}h left)
+                  </div>
+                `;
               }
             }
+          } else {
+            paceBadge = `
+              <div style="background: var(--bg-card-header); border: 1px solid var(--border-color); color: var(--text-muted); padding: 6px 10px; border-radius: 8px; font-size: 11px; display: flex; align-items: center; gap: 6px; margin-top: 6px; width: 100%;">
+                <i class="fa-solid fa-circle-info"></i> Set a deadline to track daily pace required to complete in time.
+              </div>
+            `;
           }
+          
+          plannerText = `
+            <div class="target-stats-row" style="display:flex; flex-direction:column; gap:4px; margin-top:6px; font-size:11px; border-top:1px dashed rgba(0,0,0,0.05); padding-top:6px;">
+              <span class="est-completion-text" style="color:var(--text-muted); margin-bottom: 2px;"><i class="fa-solid fa-chart-line" style="margin-right:4px;"></i> ${estCompletionText}</span>
+              ${paceBadge}
+            </div>
+          `;
         }
         
-        item.innerHTML = `
-          <div class="target-checkbox-container">
-            <div class="target-checkbox" title="Mark Completed">
-              <i class="fa-solid fa-check"></i>
-            </div>
-          </div>
-          <div class="target-content-box">
-            <span class="target-title">${t.text}</span>
-            <div class="target-meta-row" style="display:flex; flex-direction:column; gap:4px; margin-top:4px;">
-              <span class="target-progress-text">${progressText}</span>
-              ${plannerText ? `<span class="target-planner-text" style="font-size:10.5px; color:var(--text-muted);">${plannerText}</span>` : ''}
-            </div>
-            ${progressBar}
-          </div>
-          <button class="btn-delete-target" data-id="${t.id}" title="Delete Target"><i class="fa-regular fa-trash-can"></i></button>
-        `;
+        const isEditing = (editingTargetId === t.id);
+        item.style.flexDirection = 'column';
+        item.style.alignItems = 'stretch';
+        item.style.gap = '0';
         
-        const checkbox = item.querySelector('.target-checkbox');
-        if (checkbox) {
-          checkbox.addEventListener('click', () => {
-            toggleTargetCompleted(t.id);
+        if (isEditing) {
+          item.innerHTML = `
+            <div class="edit-target-form" style="display:flex; flex-direction:column; gap:10px; width:100%; padding: 4px;">
+              <!-- Goal Text -->
+              <div class="form-group" style="margin-bottom:0;">
+                <label style="font-size:11px; font-weight:600; color:var(--text-muted); margin-bottom:4px; display:block;"><i class="fa-solid fa-bullseye"></i> Goal / Determination</label>
+                <input type="text" class="edit-target-text-input" value="${t.text}" style="width: 100%; border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 10px; font-size: 13.5px; background: var(--bg-card); color: var(--text-main); font-weight: 600; outline: none; box-sizing: border-box;" placeholder="e.g. Family health..." required>
+              </div>
+              
+              ${t.type === 'hours' ? `
+                <div style="display:flex; gap:10px;">
+                  <div style="flex:1;">
+                    <label style="font-size:11px; font-weight:600; color:var(--text-muted); margin-bottom:4px; display:block;"><i class="fa-solid fa-clock"></i> Target Hours</label>
+                    <input type="number" class="edit-target-hours-input" value="${Math.round(t.targetSeconds / 3600)}" min="1" max="10000" style="width: 100%; border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 10px; font-size: 13.5px; background: var(--bg-card); color: var(--text-main); font-weight: 600; outline: none; box-sizing: border-box;">
+                  </div>
+                  <div style="flex:1;">
+                    <label style="font-size:11px; font-weight:600; color:var(--text-muted); margin-bottom:4px; display:block;"><i class="fa-solid fa-calendar"></i> Deadline Date</label>
+                    <input type="date" class="edit-target-deadline-input" value="${t.deadline || ''}" style="width: 100%; border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 10px; font-size: 13.5px; background: var(--bg-card); color: var(--text-main); font-weight: 600; outline: none; box-sizing: border-box;">
+                  </div>
+                </div>
+              ` : ''}
+              
+              <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:4px;">
+                <button class="btn btn-secondary btn-cancel-target" style="padding: 6px 12px; font-size: 12px; height:auto; margin:0; line-height:1;" data-id="${t.id}"><i class="fa-solid fa-xmark"></i> Cancel</button>
+                <button class="btn btn-primary btn-save-target" style="padding: 6px 12px; font-size: 12px; height:auto; margin:0; line-height:1;" data-id="${t.id}"><i class="fa-solid fa-check"></i> Save Details</button>
+              </div>
+            </div>
+          `;
+          
+          const saveBtn = item.querySelector('.btn-save-target');
+          if (saveBtn) {
+            saveBtn.addEventListener('click', () => {
+              const textInput = item.querySelector('.edit-target-text-input');
+              const newText = textInput.value.trim();
+              if (!newText) {
+                alert("Goal text cannot be empty!");
+                return;
+              }
+              
+              let newHours = "";
+              let newDeadline = "";
+              if (t.type === 'hours') {
+                const hoursInput = item.querySelector('.edit-target-hours-input');
+                const deadlineInput = item.querySelector('.edit-target-deadline-input');
+                newHours = hoursInput.value.trim();
+                newDeadline = deadlineInput.value;
+              }
+              
+              updateTargetDetails(t.id, newText, newHours, newDeadline);
+            });
+          }
+          const cancelBtn = item.querySelector('.btn-cancel-target');
+          if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => {
+              editingTargetId = null;
+              renderTargetsList();
+            });
+          }
+          const editInput = item.querySelector('.edit-target-text-input');
+          if (editInput) {
+            editInput.addEventListener('keydown', (e) => {
+              if (e.key === 'Enter') {
+                saveBtn.click();
+              } else if (e.key === 'Escape') {
+                editingTargetId = null;
+                renderTargetsList();
+              }
+            });
+            setTimeout(() => {
+              editInput.focus();
+              editInput.select();
+            }, 50);
+          }
+        } else {
+          const isExpanded = expandedTargetIds.has(t.id);
+          
+          item.innerHTML = `
+            <div class="target-header" style="display:flex; justify-content:space-between; align-items:center; cursor:pointer; width:100%; padding: 4px 0; user-select: none;">
+              <div style="display:flex; align-items:center; gap:8px; flex:1; min-width: 0;">
+                <i class="fa-solid fa-chevron-right target-chevron" style="font-size:10px; color:var(--text-muted); transition: transform 0.2s; transform: ${isExpanded ? 'rotate(90deg)' : 'rotate(0deg)'}; flex-shrink: 0;"></i>
+                <span class="target-title" style="font-weight:600; color:var(--text-main); font-size:13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${t.text}</span>
+              </div>
+              ${t.type === 'hours' ? `
+                <span style="font-size:10.5px; font-weight:700; background:var(--primary-light); color:var(--primary); padding:2px 8px; border-radius:12px; margin-left:8px; flex-shrink:0;">${Math.min(100, Math.round((t.accumulatedSeconds / t.targetSeconds) * 100))}%</span>
+              ` : ''}
+            </div>
+            
+            <div class="target-expandable-content" style="display: ${isExpanded ? 'flex' : 'none'}; flex-direction:column; gap:10px; border-top:1px dashed rgba(0,0,0,0.05); margin-top:8px; padding-top:8px; width:100%;">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <div class="target-checkbox-container" style="margin:0; flex-shrink:0;">
+                  <div class="target-checkbox" title="Mark Completed">
+                    <i class="fa-solid fa-check"></i>
+                  </div>
+                </div>
+                <div class="target-content-box" style="flex:1; min-width: 0;">
+                  <span class="target-progress-text" style="font-size:11.5px; color:var(--text-main); font-weight:600; display:block;">${progressText}</span>
+                  ${progressBar}
+                </div>
+              </div>
+              
+              ${plannerText}
+              
+              <div class="target-actions" style="display:flex; justify-content:flex-end; gap:8px; margin-top:4px; border-top:1px solid rgba(0,0,0,0.02); padding-top:6px;">
+                <button class="btn btn-secondary btn-edit-target" data-id="${t.id}" style="padding:4px 10px; font-size:11px; height:auto; margin:0; line-height:1.2; display:flex; align-items:center; gap:4px; border: 1px solid var(--border-color); background:transparent; color:var(--text-main);"><i class="fa-regular fa-pen-to-square"></i> Edit Details</button>
+                <button class="btn btn-secondary btn-delete-target" data-id="${t.id}" style="padding:4px 10px; font-size:11px; height:auto; margin:0; line-height:1.2; display:flex; align-items:center; gap:4px; border: 1px solid var(--border-color); background:transparent; color:var(--accent-danger);"><i class="fa-regular fa-trash-can"></i> Delete</button>
+              </div>
+            </div>
+          `;
+          
+          const header = item.querySelector('.target-header');
+          const content = item.querySelector('.target-expandable-content');
+          const chevron = item.querySelector('.target-chevron');
+          
+          header.addEventListener('click', () => {
+            const currentExpanded = (content.style.display === 'flex');
+            if (currentExpanded) {
+              content.style.display = 'none';
+              chevron.style.transform = 'rotate(0deg)';
+              expandedTargetIds.delete(t.id);
+            } else {
+              content.style.display = 'flex';
+              chevron.style.transform = 'rotate(90deg)';
+              expandedTargetIds.add(t.id);
+            }
           });
-        }
-        
-        const deleteBtn = item.querySelector('.btn-delete-target');
-        if (deleteBtn) {
-          deleteBtn.addEventListener('click', () => {
-            deleteTarget(t.id);
-          });
+          
+          const editBtnEl = item.querySelector('.btn-edit-target');
+          if (editBtnEl) {
+            editBtnEl.addEventListener('mouseenter', () => { editBtnEl.style.background = 'var(--primary-light)'; editBtnEl.style.color = 'var(--primary)'; });
+            editBtnEl.addEventListener('mouseleave', () => { editBtnEl.style.background = 'transparent'; editBtnEl.style.color = 'var(--text-main)'; });
+            editBtnEl.addEventListener('click', (e) => {
+              e.stopPropagation();
+              editingTargetId = t.id;
+              renderTargetsList();
+            });
+          }
+          const deleteBtnEl = item.querySelector('.btn-delete-target');
+          if (deleteBtnEl) {
+            deleteBtnEl.addEventListener('mouseenter', () => { deleteBtnEl.style.background = 'rgba(217,83,79,0.08)'; });
+            deleteBtnEl.addEventListener('mouseleave', () => { deleteBtnEl.style.background = 'transparent'; });
+            deleteBtnEl.addEventListener('click', (e) => {
+              e.stopPropagation();
+              deleteTarget(t.id);
+            });
+          }
+          const checkbox = item.querySelector('.target-checkbox');
+          if (checkbox) {
+            checkbox.addEventListener('click', (e) => {
+              e.stopPropagation();
+              toggleTargetCompleted(t.id);
+            });
+          }
         }
         
         activeTargetsList.appendChild(item);
@@ -3451,6 +3725,39 @@ document.addEventListener('DOMContentLoaded', () => {
       state.targets = state.targets.filter(t => t.id !== id);
       saveState();
       renderTargetsList();
+    }
+  }
+
+  function updateTargetDetails(id, newText, newHours, newDeadline) {
+    const target = state.targets.find(t => t.id === id);
+    if (target) {
+      target.text = newText;
+      if (target.type === 'hours') {
+        const hrs = parseInt(newHours);
+        if (!isNaN(hrs) && hrs >= 1) {
+          target.targetSeconds = hrs * 3600;
+        }
+        
+        if (newDeadline) {
+          const now = new Date();
+          const lYear = now.getFullYear();
+          const lMonth = String(now.getMonth() + 1).padStart(2, '0');
+          const lDay = String(now.getDate()).padStart(2, '0');
+          const todayLocalYMD = `${lYear}-${lMonth}-${lDay}`;
+          
+          if (newDeadline < todayLocalYMD) {
+            alert("The target deadline cannot be in the past!");
+            return;
+          }
+          target.deadline = newDeadline;
+        } else {
+          target.deadline = null;
+        }
+      }
+      saveState();
+      editingTargetId = null;
+      renderTargetsList();
+      populateTargetDropdowns();
     }
   }
 
@@ -3982,28 +4289,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const activeList = MockFirebase.db.getActiveCampaigns();
     const campaignDates = MockFirebase.db.getCampaignDates();
     
+    let isRunning = false;
+    let activeId = null;
     if (activeList.length > 0) {
-      navCampaign.classList.remove('hidden');
-      
-      // Check if active campaign is currently running (not expired)
-      const activeId = activeList[0];
+      activeId = activeList[0];
       const dates = campaignDates[activeId];
-      let isRunning = true;
-      if (dates && dates.end) {
+      if (dates && dates.start && dates.end) {
+        const startT = new Date(dates.start + 'T00:00:00').getTime();
         const endT = new Date(dates.end + 'T23:59:59').getTime();
         const now = Date.now();
-        if (now > endT) {
-          isRunning = false;
+        if (now >= startT && now <= endT) {
+          isRunning = true;
         }
       }
-      
-      if (isRunning) {
-        if (timerCampaignContainer) timerCampaignContainer.classList.remove('hidden');
-        if (manualCampaignContainer) manualCampaignContainer.classList.remove('hidden');
-      } else {
-        if (timerCampaignContainer) timerCampaignContainer.classList.add('hidden');
-        if (manualCampaignContainer) manualCampaignContainer.classList.add('hidden');
-      }
+    }
+    
+    if (isRunning) {
+      navCampaign.classList.remove('hidden');
+      if (timerCampaignContainer) timerCampaignContainer.classList.remove('hidden');
+      if (manualCampaignContainer) manualCampaignContainer.classList.remove('hidden');
+      triggerCampaignAnnouncement(activeId);
     } else {
       navCampaign.classList.add('hidden');
       if (timerCampaignContainer) timerCampaignContainer.classList.add('hidden');
@@ -4016,6 +4321,43 @@ document.addEventListener('DOMContentLoaded', () => {
         if (navDashboard) {
           navDashboard.click();
         }
+      }
+    }
+  }
+
+  function triggerCampaignAnnouncement(campaignId) {
+    const key = `daimoku_grow_seen_campaign_${campaignId}`;
+    const alreadySeen = localStorage.getItem(key);
+    if (alreadySeen) return;
+
+    const campaignNames = MockFirebase.db.getCampaignNames();
+    const campaignDates = MockFirebase.db.getCampaignDates();
+    const campaignTargetsMap = MockFirebase.db.getCampaignTargets();
+    
+    const name = campaignNames[campaignId] || "New Campaign";
+    const dates = campaignDates[campaignId] || { start: 'TBD', end: 'TBD' };
+    const target = campaignTargetsMap[campaignId] || 0;
+    
+    const modal = document.getElementById('campaign-announcement-modal');
+    const titleEl = document.getElementById('campaign-announce-title');
+    const durationEl = document.getElementById('campaign-announce-duration');
+    const targetEl = document.getElementById('campaign-announce-target');
+    
+    if (modal && titleEl && durationEl && targetEl) {
+      titleEl.textContent = name;
+      durationEl.textContent = `${dates.start} to ${dates.end}`;
+      targetEl.textContent = `${target} hours`;
+      
+      modal.style.display = 'flex';
+      modal.classList.remove('hidden');
+      
+      const closeBtn = document.getElementById('btn-close-campaign-announce');
+      if (closeBtn) {
+        closeBtn.onclick = () => {
+          modal.style.display = 'none';
+          modal.classList.add('hidden');
+          localStorage.setItem(key, 'true');
+        };
       }
     }
   }
@@ -4530,6 +4872,10 @@ document.addEventListener('DOMContentLoaded', () => {
     editingCampaignId = null;
     if (adminCreateCampaignForm) {
       adminCreateCampaignForm.reset();
+      const activeToggleEl = document.getElementById('campaign-create-active');
+      if (activeToggleEl) {
+        activeToggleEl.disabled = false;
+      }
       const formTitle = adminCreateCampaignForm.previousElementSibling;
       if (formTitle && formTitle.tagName === 'H4') {
         formTitle.textContent = "Create New Campaign";
@@ -4549,6 +4895,30 @@ document.addEventListener('DOMContentLoaded', () => {
   // Handle custom campaign creation form
   const adminCreateCampaignForm = document.getElementById('admin-create-campaign-form');
   if (adminCreateCampaignForm) {
+    const campaignCreateEndInput = document.getElementById('campaign-create-end');
+    const campaignCreateActiveInput = document.getElementById('campaign-create-active');
+    if (campaignCreateEndInput && campaignCreateActiveInput) {
+      const handleEndDateChange = () => {
+        const endVal = campaignCreateEndInput.value;
+        if (endVal) {
+          const endT = new Date(endVal + 'T23:59:59').getTime();
+          if (Date.now() > endT) {
+            campaignCreateActiveInput.checked = false;
+            campaignCreateActiveInput.disabled = true;
+            campaignCreateActiveInput.title = "Cannot mark an expired campaign as active.";
+          } else {
+            campaignCreateActiveInput.disabled = false;
+            campaignCreateActiveInput.title = "";
+          }
+        } else {
+          campaignCreateActiveInput.disabled = false;
+          campaignCreateActiveInput.title = "";
+        }
+      };
+      campaignCreateEndInput.addEventListener('input', handleEndDateChange);
+      campaignCreateEndInput.addEventListener('change', handleEndDateChange);
+    }
+
     adminCreateCampaignForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const name = document.getElementById('campaign-create-name').value.trim();
@@ -4754,12 +5124,20 @@ document.addEventListener('DOMContentLoaded', () => {
       const isActive = activeCampaigns.includes(c.id);
       const dates = campaignDates[c.id] || { start: '', end: '' };
       
+      let isExpired = false;
+      if (dates && dates.end) {
+        const endT = new Date(dates.end + 'T23:59:59').getTime();
+        if (Date.now() > endT) {
+          isExpired = true;
+        }
+      }
+      
       div.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <span style="font-size:13px; font-weight:600; color:var(--text-main);">${c.name}</span>
           <div style="display:flex; align-items:center; gap:8px;">
-            <label style="display:flex; align-items:center; gap:4px; font-size:11px; font-weight:600; color:var(--text-muted); cursor:pointer; margin-bottom:0;">
-              <input type="checkbox" class="campaign-active-toggle" data-id="${c.id}" ${isActive ? 'checked' : ''} style="accent-color: var(--primary); width:13px; height:13px; margin:0;">
+            <label style="display:flex; align-items:center; gap:4px; font-size:11px; font-weight:600; color:var(--text-muted); cursor:${isExpired ? 'not-allowed' : 'pointer'}; margin-bottom:0;">
+              <input type="checkbox" class="campaign-active-toggle" data-id="${c.id}" ${isActive ? 'checked' : ''} ${isExpired ? 'disabled' : ''} style="accent-color: var(--primary); width:13px; height:13px; margin:0; cursor:${isExpired ? 'not-allowed' : 'pointer'};" title="${isExpired ? 'Cannot activate an expired campaign' : ''}">
               Active
             </label>
             <input type="number" class="campaign-target-input" data-id="${c.id}" value="${targets[c.id] || 100}" min="1" max="100000" style="width:60px; padding:6px; border-radius:6px; border:var(--border); background:var(--accent-cream); color:var(--text-main); font-size:12px; text-align:center; outline:none;" disabled>
@@ -4769,7 +5147,7 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
         </div>
         <div style="font-size:11px; color:var(--text-muted);">
-          <span>Period: ${dates.start || 'N/A'} to ${dates.end || 'N/A'}</span>
+          <span>Period: ${dates.start || 'N/A'} to ${dates.end || 'N/A'} ${isExpired ? '<strong style="color:var(--accent-danger);">(Expired)</strong>' : ''}</span>
         </div>
       `;
       
@@ -4784,7 +5162,17 @@ document.addEventListener('DOMContentLoaded', () => {
           document.getElementById('campaign-create-target').value = targets[c.id] || 100;
           document.getElementById('campaign-create-start').value = dates.start || '';
           document.getElementById('campaign-create-end').value = dates.end || '';
-          document.getElementById('campaign-create-active').checked = isActive;
+          
+          const activeToggleEl = document.getElementById('campaign-create-active');
+          activeToggleEl.checked = isActive;
+          if (isExpired) {
+            activeToggleEl.checked = false;
+            activeToggleEl.disabled = true;
+            activeToggleEl.title = "Cannot mark an expired campaign as active.";
+          } else {
+            activeToggleEl.disabled = false;
+            activeToggleEl.title = "";
+          }
           
           const formTitle = adminCreateCampaignForm.previousElementSibling;
           if (formTitle && formTitle.tagName === 'H4') {
@@ -5358,6 +5746,17 @@ document.addEventListener('DOMContentLoaded', () => {
     logDateInput.addEventListener('change', populateTargetDropdowns);
   }
   
+  if (timerPersonalSelect) {
+    timerPersonalSelect.addEventListener('change', () => {
+      updateTargetPaceHint('timer-personal-select', 'timer-target-pace-tip');
+    });
+  }
+  if (manualPersonalSelect) {
+    manualPersonalSelect.addEventListener('change', () => {
+      updateTargetPaceHint('manual-personal-select', 'manual-target-pace-tip');
+    });
+  }
+  
   // Check session status on boot
   const bootUser = MockFirebase.auth.getCurrentUser();
   if (bootUser) {
@@ -5883,6 +6282,49 @@ document.addEventListener('DOMContentLoaded', () => {
     return false;
   }
 
+  function getActiveRevivalDates(validDates) {
+    if (!validDates || validDates.length === 0) return [];
+    
+    const sorted = [...new Set(validDates)].sort();
+    const timestamps = sorted.map(d => new Date(d + 'T12:00:00').getTime());
+    const oneDayMs = 24 * 60 * 60 * 1000;
+    
+    const todayLocalStr = new Date().toISOString().split('T')[0];
+    const yesterdayLocalStr = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const todayT = new Date(todayLocalStr + 'T12:00:00').getTime();
+    const yesterdayT = new Date(yesterdayLocalStr + 'T12:00:00').getTime();
+    
+    let lastIndex = -1;
+    for (let i = timestamps.length - 1; i >= 0; i--) {
+      if (timestamps[i] === todayT || timestamps[i] === yesterdayT) {
+        lastIndex = i;
+        break;
+      }
+    }
+    
+    if (lastIndex === -1) {
+      return [];
+    }
+    
+    const activeList = [sorted[lastIndex]];
+    let expectedT = timestamps[lastIndex] - oneDayMs;
+    
+    for (let i = lastIndex - 1; i >= 0; i--) {
+      if (timestamps[i] === expectedT) {
+        activeList.unshift(sorted[i]);
+        expectedT -= oneDayMs;
+      } else {
+        break; // Gap detected, streak broken
+      }
+    }
+    
+    return activeList;
+  }
+
+  function getActiveRevivalStreak(revivalDates) {
+    return getActiveRevivalDates(revivalDates).length;
+  }
+
   function rebuildRevivalDates() {
     // Recompute totalSeconds from sessions to ensure they are always in sync!
     if (state.sessions) {
@@ -5936,18 +6378,9 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // 4. If the plant is dead, populate revivalDates with the most recent consecutive/active dates
+    // 4. If the plant is dead, populate revivalDates with only active consecutive streak dates
     if (state.isDead) {
-      const recentDates = [];
-      const nowMs = Date.now();
-      const fifteenDaysAgoStr = new Date(nowMs - 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-      
-      validDates.forEach(d => {
-        if (d >= fifteenDaysAgoStr && !recentDates.includes(d)) {
-          recentDates.push(d);
-        }
-      });
-      state.revivalDates = recentDates;
+      state.revivalDates = getActiveRevivalDates(validDates);
     } else {
       state.revivalDates = [];
     }
@@ -5969,6 +6402,9 @@ document.addEventListener('DOMContentLoaded', () => {
         state.revivalDates.sort();
       }
     }
+    
+    // Enforce active consecutive streak filter on current revival progress dates
+    state.revivalDates = getActiveRevivalDates(state.revivalDates);
     
     if (checkThreeConsecutiveDays(state.revivalDates)) {
       state.isDead = false;

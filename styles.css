@@ -243,6 +243,18 @@ body.theme-forest-dark .notification-banner.thirsty {
   border: 1px solid rgba(96, 165, 250, 0.2);
 }
 
+.notification-banner.info {
+  background: #f3e8ff;
+  color: #581c87;
+  box-shadow: 0 4px 12px rgba(168, 85, 247, 0.2);
+}
+
+body.theme-forest-dark .notification-banner.info {
+  background: #25123e;
+  color: #c084fc;
+  border: 1px solid rgba(192, 132, 252, 0.2);
+}
+
 .notification-banner.dying, .notification-banner.dead {
   background: #fee2e2;
   color: #991b1b;

@@ -283,6 +283,7 @@
                 <select id="timer-personal-select" style="width:100%; border:var(--border); border-radius:10px; padding:10px; background:var(--accent-cream); color:var(--text-main); font-size:13px; outline:none;">
                   <option value="">-- General Chanting (None) --</option>
                 </select>
+                <span id="timer-target-pace-tip" style="font-size: 10px; color: var(--primary); font-weight: 600; display: none; margin-top: 2px;"></span>
               </div>
               <div id="timer-campaign-select-container" style="flex:1; display:flex; flex-direction:column; gap:4px;">
                 <label for="timer-campaign-select" style="font-size:11px; font-weight:600; color:var(--text-muted);"><i class="fa-solid fa-bullhorn"></i> SGI Campaign:</label>
@@ -325,6 +326,7 @@
                   <select id="manual-personal-select" style="width:100%;">
                     <option value="">-- General Chanting (None) --</option>
                   </select>
+                  <span id="manual-target-pace-tip" style="font-size: 10px; color: var(--primary); font-weight: 600; display: none; margin-top: 2px;"></span>
                 </div>
                 <div id="manual-campaign-select-container" class="form-group" style="flex:1; margin-bottom:0;">
                   <label for="manual-campaign-select"><i class="fa-solid fa-bullhorn"></i> SGI Campaign</label>
@@ -849,7 +851,7 @@
         <i class="fa-solid fa-trophy"></i>
         <span>Badges</span>
       </button>
-      <button id="nav-campaign" class="nav-item">
+      <button id="nav-campaign" class="nav-item hidden">
         <i class="fa-solid fa-bullhorn"></i>
         <span>Campaign</span>
       </button>
@@ -1005,6 +1007,34 @@
       <h3 id="unlock-badge-title">Shinichi's Vow</h3>
       <p id="unlock-badge-desc">Embodying the mentor-disciple spirit with an unbroken daily commitment to absolute victory.</p>
       <button id="btn-close-badge-unlock" class="btn btn-primary btn-full">Awesome! 🎉</button>
+    </div>
+  </div>
+
+  <!-- Campaign Announcement Modal -->
+  <div id="campaign-announcement-modal" class="modal-overlay hidden" style="display: none;">
+    <div class="modal-card card badge-unlock-card" style="text-align: center;">
+      <div class="modal-badge-icon" style="background: rgba(var(--primary-rgb), 0.15); color: var(--primary); margin: 0 auto 16px auto; width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px;">
+        <i class="fa-solid fa-bullhorn"></i>
+      </div>
+      <div class="badge-tier legendary" style="text-transform: uppercase; font-size: 11px; font-weight: 700; letter-spacing: 1px; color: var(--primary); margin-bottom: 8px;">New Campaign Active!</div>
+      <h3 id="campaign-announce-title" style="font-family: var(--font-serif); font-size: 22px; margin: 0 0 12px 0; color: var(--text-main);">Block Daimoku Campaign</h3>
+      
+      <!-- Campaign Details Box -->
+      <div style="background: rgba(0,0,0,0.02); border: 1px solid rgba(0,0,0,0.04); border-radius: 8px; padding: 14px; margin-bottom: 18px; text-align: left; display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; justify-content: space-between; font-size: 12.5px;">
+          <span style="color: var(--text-muted);"><i class="fa-regular fa-calendar-days"></i> Duration:</span>
+          <span id="campaign-announce-duration" style="font-weight: 600; color: var(--text-main);">-- to --</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 12.5px;">
+          <span style="color: var(--text-muted);"><i class="fa-solid fa-circle-check"></i> Target:</span>
+          <span id="campaign-announce-target" style="font-weight: 600; color: var(--text-main);">-- hours</span>
+        </div>
+      </div>
+      
+      <p id="campaign-announce-msg" style="font-size: 13.5px; color: var(--text-muted); line-height: 1.5; margin: 0 0 20px 0;">
+        Let's chant together and do our best to accumulate daimoku for the success of this block campaign!
+      </p>
+      <button id="btn-close-campaign-announce" class="btn btn-primary btn-full">Let's Do Our Best! 🎯</button>
     </div>
   </div>
 
