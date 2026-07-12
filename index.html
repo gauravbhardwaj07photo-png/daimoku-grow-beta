@@ -599,31 +599,16 @@
             </div>
           </div>
 
-          <!-- Admin Control Panel (Collapsible, visible only to admin role) -->
+          <!-- Campaign Manager Panel (Collapsible, visible only to admin role) -->
           <div class="card admin-card collapsible" id="admin-panel-card">
             <button class="admin-panel-header" id="btn-toggle-admin">
-              <span><i class="fa-solid fa-user-shield"></i> Administrator Control Panel</span>
+              <span><i class="fa-solid fa-bullhorn"></i> Campaign Manager</span>
               <i class="fa-solid fa-chevron-down toggle-arrow"></i>
             </button>
             <div id="admin-panel-content" class="admin-content collapsed">
-              <p class="admin-desc">Manage block member emails, set target campaign hours, and view registration lists.</p>
+              <p class="admin-desc">Manage active campaigns, set campaign target hours, and create new campaigns.</p>
               
-              <!-- Section 1: Whitelist Manager -->
-              <div class="admin-control-group">
-                <h4>Member Whitelist Manager</h4>
-                <form id="admin-whitelist-form" class="admin-subform" style="display:flex; flex-direction:column; gap:8px;">
-                  <div class="form-group-row" style="margin-bottom:0; gap:8px;">
-                    <input type="email" id="whitelist-email-input" placeholder="new.member@email.com" required style="flex:2;">
-                    <input type="text" id="whitelist-code-input" placeholder="Code (optional)" style="flex:1; padding:10px 14px; border-radius:10px; border:var(--border); background:var(--accent-cream); color:var(--text-main); font-size:14px; outline:none;">
-                  </div>
-                  <button type="submit" class="btn btn-primary btn-full" style="padding: 10px 14px; font-size: 13px;"><i class="fa-solid fa-plus"></i> Whitelist Member</button>
-                </form>
-                <div class="whitelist-list" id="whitelist-list-container">
-                  <!-- Dynamically populated list of whitelisted emails with Delete buttons -->
-                </div>
-              </div>
-
-              <!-- Section 2: Campaign Target Editor -->
+              <!-- Section 1: Campaign Target Editor -->
               <div class="admin-control-group">
                 <h4>Campaign Target Hours</h4>
                 <div class="campaign-targets-editor" id="campaign-targets-container">
@@ -631,7 +616,7 @@
                 </div>
               </div>
 
-              <!-- Section 2.5: Create Custom Campaign -->
+              <!-- Section 2: Create Custom Campaign -->
               <div class="admin-control-group" style="margin-bottom:14px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:12px;">
                 <h4>Create New Campaign</h4>
                 <form id="admin-create-campaign-form" class="admin-subform" style="display:flex; flex-direction:column; gap:8px;">
@@ -672,9 +657,24 @@
               <i class="fa-solid fa-chevron-down toggle-arrow"></i>
             </button>
             <div id="admin-users-content" class="admin-content collapsed">
-              <p class="admin-desc">Manage existing member accounts, change usernames, emails, or SGI Block assignments.</p>
+              <p class="admin-desc">Manage whitelisted member access, create new account profiles, and view registered members.</p>
               
-              <!-- Section 1: Pre-create Profile -->
+              <!-- Section 1: Whitelist Manager -->
+              <div class="admin-control-group" style="margin-bottom:14px; border-bottom:1px dashed rgba(255,255,255,0.1); padding-bottom:12px;">
+                <h4>Member Whitelist Manager</h4>
+                <form id="admin-whitelist-form" class="admin-subform" style="display:flex; flex-direction:column; gap:8px;">
+                  <div class="form-group-row" style="margin-bottom:0; gap:8px;">
+                    <input type="email" id="whitelist-email-input" placeholder="new.member@email.com" required style="flex:2;">
+                    <input type="text" id="whitelist-code-input" placeholder="Code (optional)" style="flex:1; padding:10px 14px; border-radius:10px; border:var(--border); background:var(--accent-cream); color:var(--text-main); font-size:14px; outline:none;">
+                  </div>
+                  <button type="submit" class="btn btn-primary btn-full" style="padding: 10px 14px; font-size: 13px;"><i class="fa-solid fa-plus"></i> Whitelist Member</button>
+                </form>
+                <div class="whitelist-list" id="whitelist-list-container">
+                  <!-- Dynamically populated list of whitelisted emails with Delete buttons -->
+                </div>
+              </div>
+              
+              <!-- Section 2: Pre-create Profile -->
               <div class="admin-control-group" style="margin-bottom:14px;">
                 <h4>Add New Account Profile</h4>
                 <form id="admin-create-user-form" class="admin-subform" style="display:flex; flex-direction:column; gap:8px;">
@@ -689,11 +689,21 @@
                       <option value="Harmony">Harmony</option>
                     </select>
                   </div>
+                  <div class="setting-toggle-row" style="padding: 4px 0; margin-bottom: 4px; display:flex; justify-content:space-between; align-items:center; border-top: 1px dashed rgba(255,255,255,0.05); padding-top: 8px; margin-top: 8px;">
+                    <div class="setting-info" style="display:flex; flex-direction:column; gap:2px;">
+                      <span class="setting-title" style="font-size:12px; font-weight:600; color:var(--text-main);">Mark as Administrator</span>
+                      <span class="setting-subtitle" style="font-size:10px; color:var(--text-muted);">Grants full access to the admin panels</span>
+                    </div>
+                    <label class="toggle-switch">
+                      <input type="checkbox" id="admin-create-is-admin">
+                      <span class="slider"></span>
+                    </label>
+                  </div>
                   <button type="submit" class="btn btn-primary btn-full" style="padding: 10px 14px; font-size: 13px;"><i class="fa-solid fa-user-plus"></i> Create Member Profile</button>
                 </form>
               </div>
 
-              <!-- Section 2: Users List -->
+              <!-- Section 3: Users List -->
               <div class="admin-control-group">
                 <h4>Registered Members List</h4>
                 <div class="admin-event-list-container" style="max-height:300px; overflow-y:auto; border:var(--border); border-radius:10px; padding:8px; background:var(--accent-cream);">

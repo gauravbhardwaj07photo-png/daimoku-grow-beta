@@ -828,7 +828,7 @@ const MockFirebase = {
     },
     
     // Admin: Update user profile. If email is changed, migrates profile/states/whitelist docs
-    async adminUpdateUser(oldEmail, newEmail, username, block) {
+    async adminUpdateUser(oldEmail, newEmail, username, block, isAdmin) {
       const normOld = oldEmail.toLowerCase().trim();
       const normNew = newEmail.toLowerCase().trim();
       
@@ -846,11 +846,12 @@ const MockFirebase = {
               userData.email = normNew;
               userData.username = username;
               userData.block = block;
+              if (isAdmin !== undefined) userData.isAdmin = !!isAdmin;
               batch.set(newUserRef, userData);
               batch.delete(oldUserRef);
             } else {
               // If profile doesn't exist, create it fresh
-              batch.set(newUserRef, { email: normNew, username, block, isAdmin: false });
+              batch.set(newUserRef, { email: normNew, username, block, isAdmin: !!isAdmin });
             }
             
             // 2. Copy userState (keeps chanting hours and plant state)
@@ -888,9 +889,11 @@ const MockFirebase = {
             await batch.commit();
             console.log("Admin email change completed in Firestore.");
           } else {
-            // Just update username and block on the existing document (old block data stays in old block logs)
+            // Just update username, block, and role on the existing document
             const userRef = db.collection('users').doc(normOld);
-            await userRef.update({ username, block });
+            const updates = { username, block };
+            if (isAdmin !== undefined) updates.isAdmin = !!isAdmin;
+            await userRef.update(updates);
             console.log("Admin profile update completed in Firestore (no email change).");
           }
         } catch (e) {
@@ -931,6 +934,7 @@ const MockFirebase = {
           }
           users[userIdx].username = username;
           users[userIdx].block = block;
+          if (isAdmin !== undefined) users[userIdx].isAdmin = !!isAdmin;
           localStorage.setItem('daimoku_db_users', JSON.stringify(users));
           window.dispatchEvent(new Event('db-updated'));
         }
@@ -978,7 +982,7 @@ const MockFirebase = {
     },
     
     // Admin: Pre-create user profile and whitelist
-    async adminCreateUser(username, email, block) {
+    async adminCreateUser(username, email, block, isAdmin = false) {
       const normEmail = email.toLowerCase().trim();
       const code = block.substr(0, 3).toUpperCase() + '-' + Math.floor(100 + Math.random() * 900);
       
@@ -995,7 +999,7 @@ const MockFirebase = {
             username,
             email: normEmail,
             block,
-            isAdmin: false
+            isAdmin: !!isAdmin
           });
           return code;
         } catch (e) {
@@ -1016,7 +1020,7 @@ const MockFirebase = {
           email: normEmail,
           block,
           password: 'password123',
-          isAdmin: false
+          isAdmin: !!isAdmin
         });
         localStorage.setItem('daimoku_db_users', JSON.stringify(users));
         window.dispatchEvent(new Event('db-updated'));

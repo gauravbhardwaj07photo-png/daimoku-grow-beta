@@ -4744,6 +4744,13 @@ document.addEventListener('DOMContentLoaded', () => {
                   <option value="Harmony" ${u.block === 'Harmony' ? 'selected' : ''}>Harmony</option>
                 </select>
               </div>
+              <div style="flex:1; min-width:100px;">
+                <label style="font-size:10px; font-weight:700; color:var(--text-muted);">Role</label>
+                <select class="edit-user-role" style="width:100%; padding:6px; border-radius:6px; border:var(--border); font-size:12px; background:var(--accent-cream); color:var(--text-main);">
+                  <option value="member" ${!u.isAdmin ? 'selected' : ''}>Member</option>
+                  <option value="admin" ${u.isAdmin ? 'selected' : ''}>Admin</option>
+                </select>
+              </div>
             </div>
             <div style="display:flex; justify-content:flex-end; gap:6px; margin-top:4px;">
               <button class="btn-cancel-edit btn btn-secondary" style="padding:4px 8px; font-size:11px;">Cancel</button>
@@ -4785,6 +4792,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const newUsername = div.querySelector('.edit-user-username').value.trim();
             const newEmail = div.querySelector('.edit-user-email').value.trim().toLowerCase();
             const newBlock = div.querySelector('.edit-user-block').value;
+            const newIsAdmin = (div.querySelector('.edit-user-role').value === 'admin');
             
             if (!newUsername || !newEmail) {
               alert("Username and Email are required.");
@@ -4795,7 +4803,7 @@ document.addEventListener('DOMContentLoaded', () => {
             saveBtn.textContent = 'Saving...';
             
             try {
-              await MockFirebase.db.adminUpdateUser(oldEmail, newEmail, newUsername, newBlock);
+              await MockFirebase.db.adminUpdateUser(oldEmail, newEmail, newUsername, newBlock, newIsAdmin);
               alert("Member account updated successfully!");
               
               if (currentUser && currentUser.email.toLowerCase() === oldEmail.toLowerCase()) {
@@ -4849,14 +4857,15 @@ document.addEventListener('DOMContentLoaded', () => {
       const username = document.getElementById('admin-create-username').value.trim();
       const email = document.getElementById('admin-create-email').value.trim().toLowerCase();
       const block = document.getElementById('admin-create-block').value;
+      const isAdminChecked = document.getElementById('admin-create-is-admin').checked;
       const btn = adminCreateUserForm.querySelector('button[type="submit"]');
       
       btn.disabled = true;
       btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creating...';
       
       try {
-        const code = await MockFirebase.db.adminCreateUser(username, email, block);
-        alert(`Account profile pre-created successfully!\n\nMember: ${username}\nEmail: ${email}\nBlock: ${block}\nRegistration Code: ${code}\n\nThis email has also been added to the whitelist automatically.`);
+        const code = await MockFirebase.db.adminCreateUser(username, email, block, isAdminChecked);
+        alert(`Account profile pre-created successfully!\n\nMember: ${username}\nEmail: ${email}\nBlock: ${block}\nRole: ${isAdminChecked ? 'Administrator' : 'Member'}\nRegistration Code: ${code}\n\nThis email has also been added to the whitelist automatically.`);
         adminCreateUserForm.reset();
         await renderUsersList();
         renderWhitelist();
