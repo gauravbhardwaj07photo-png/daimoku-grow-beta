@@ -84,38 +84,17 @@ const defaultWhitelist = [
   { email: 'compassion@email.com', code: 'COM-666' }
 ];
 
-const defaultCampaignTargets = {
-  youth_division: 500,
-  may_3rd: 1000,
-  mens_division: 500,
-  womens_division: 800,
-  july_3rd: 50,
-  november_18th: 1200
-};
+const defaultCampaignTargets = {};
 
-const defaultCampaignDates = {
-  youth_division: { start: "2026-01-16", end: "2026-03-19" },
-  may_3rd: { start: "2026-04-07", end: "2026-05-07" },
-  mens_division: { start: "2026-01-16", end: "2026-03-19" },
-  womens_division: { start: "2026-04-07", end: "2026-05-07" },
-  july_3rd: { start: "2026-06-19", end: "2026-11-19" },
-  november_18th: { start: "2026-09-19", end: "2026-11-19" }
-};
+const defaultCampaignDates = {};
 
-const defaultCampaignNames = {
-  youth_division: "Youth Division Campaign",
-  may_3rd: "May 3rd Campaign",
-  mens_division: "Men's Division Campaign",
-  womens_division: "Women's Division Campaign",
-  july_3rd: "July 3rd Campaign",
-  november_18th: "November 18th Campaign"
-};
+const defaultCampaignNames = {};
 
 // --- Real-time Firebase Sync Cache ---
 let cachedWhitelist = [...defaultWhitelist];
 let cachedCampaignTargets = { ...defaultCampaignTargets };
 let cachedCampaignDates = { ...defaultCampaignDates };
-let cachedActiveCampaigns = ['july_3rd'];
+let cachedActiveCampaigns = [];
 let cachedCampaignNames = { ...defaultCampaignNames };
 let cachedCustomCampaigns = [];
 let cachedContributions = [];
@@ -164,7 +143,7 @@ if (isFirebaseConfigured && db) {
       db.collection('settings').doc('campaigns').set({
         targets: defaultCampaignTargets,
         dates: defaultCampaignDates,
-        active: ['july_3rd'],
+        active: [],
         names: defaultCampaignNames,
         customCampaigns: []
       });
@@ -446,15 +425,21 @@ const MockFirebase = {
     
     // Shared Active Campaigns
     getActiveCampaigns() {
+      let activeList = [];
       if (isFirebaseConfigured) {
-        return cachedActiveCampaigns;
+        activeList = cachedActiveCampaigns;
       } else {
         const saved = localStorage.getItem('daimoku_db_active_campaigns');
-        if (saved) return JSON.parse(saved);
-        const defaults = ['july_3rd'];
-        localStorage.setItem('daimoku_db_active_campaigns', JSON.stringify(defaults));
-        return defaults;
+        if (saved) {
+          activeList = JSON.parse(saved);
+        } else {
+          const defaults = [];
+          localStorage.setItem('daimoku_db_active_campaigns', JSON.stringify(defaults));
+          activeList = defaults;
+        }
       }
+      const customCampaigns = this.getCustomCampaigns();
+      return activeList.filter(id => customCampaigns.includes(id));
     },
     saveActiveCampaigns(activeList) {
       // Force only 1 active campaign at a time (take the last one selected)
@@ -507,7 +492,7 @@ const MockFirebase = {
           let campaignDates = { ...defaultCampaignDates };
           let names = { ...defaultCampaignNames };
           let customCampaigns = [];
-          let active = ['july_3rd'];
+          let active = [];
           
           if (doc.exists) {
             const data = doc.data();
@@ -565,6 +550,84 @@ const MockFirebase = {
         
         if (isActive) {
           active = [id];
+        }
+        
+        localStorage.setItem('daimoku_db_campaign_targets', JSON.stringify(targets));
+        localStorage.setItem('daimoku_db_campaign_dates', JSON.stringify(campaignDates));
+        localStorage.setItem('daimoku_db_campaign_names', JSON.stringify(names));
+        localStorage.setItem('daimoku_db_custom_campaigns', JSON.stringify(customCampaigns));
+        localStorage.setItem('daimoku_db_active_campaigns', JSON.stringify(active));
+        
+        window.dispatchEvent(new Event('db-updated'));
+      }
+    },
+
+    // Edit an existing campaign
+    async editCampaign(id, name, targetHours, dates, isActive) {
+      if (isFirebaseConfigured && db) {
+        try {
+          const docRef = db.collection('settings').doc('campaigns');
+          const doc = await docRef.get();
+          
+          let targets = {};
+          let campaignDates = {};
+          let names = {};
+          let customCampaigns = [];
+          let active = [];
+          
+          if (doc.exists) {
+            const data = doc.data();
+            if (data.targets) targets = data.targets;
+            if (data.dates) campaignDates = data.dates;
+            if (data.names) names = data.names;
+            if (data.customCampaigns) customCampaigns = data.customCampaigns;
+            if (data.active) active = data.active;
+          }
+          
+          targets[id] = targetHours;
+          campaignDates[id] = dates;
+          names[id] = name;
+          
+          if (!customCampaigns.includes(id)) {
+            customCampaigns.push(id);
+          }
+          
+          if (isActive) {
+            active = [id]; // Set this as the only active campaign
+          } else {
+            active = active.filter(cid => cid !== id);
+          }
+          
+          await docRef.set({
+            targets,
+            dates: campaignDates,
+            names,
+            customCampaigns,
+            active
+          });
+        } catch (e) {
+          console.error("Firestore editCampaign error:", e);
+          throw e;
+        }
+      } else {
+        const targets = this.getCampaignTargets();
+        const campaignDates = this.getCampaignDates();
+        const names = this.getCampaignNames();
+        const customCampaigns = this.getCustomCampaigns();
+        let active = this.getActiveCampaigns();
+        
+        targets[id] = targetHours;
+        campaignDates[id] = dates;
+        names[id] = name;
+        
+        if (!customCampaigns.includes(id)) {
+          customCampaigns.push(id);
+        }
+        
+        if (isActive) {
+          active = [id];
+        } else {
+          active = active.filter(cid => cid !== id);
         }
         
         localStorage.setItem('daimoku_db_campaign_targets', JSON.stringify(targets));
@@ -963,76 +1026,8 @@ const MockFirebase = {
   }
 };
 
-// Database Migration for July 3rd Campaign Sync (Local Storage Mock Mode Only)
 function migrateDatabase() {
-  try {
-    const versionKey = 'daimoku_db_migration_version';
-    const currentVersion = parseInt(localStorage.getItem(versionKey) || '0');
-    
-    if (currentVersion < 1) {
-      let activeCampaigns = [];
-      try {
-        const savedActive = localStorage.getItem('daimoku_db_active_campaigns');
-        activeCampaigns = savedActive ? JSON.parse(savedActive) : [];
-      } catch (e) {}
-      if (!activeCampaigns) activeCampaigns = [];
-      
-      if (!activeCampaigns.includes('july_3rd')) {
-        activeCampaigns.push('july_3rd');
-        localStorage.setItem('daimoku_db_active_campaigns', JSON.stringify(activeCampaigns));
-      }
-      
-      let campaignDates = {};
-      try {
-        const savedDates = localStorage.getItem('daimoku_db_campaign_dates');
-        campaignDates = savedDates ? JSON.parse(savedDates) : {};
-      } catch (e) {}
-      if (!campaignDates) campaignDates = {};
-      
-      if (!campaignDates.july_3rd || campaignDates.july_3rd.start !== '2026-06-19') {
-        campaignDates.july_3rd = { start: '2026-06-19', end: '2026-11-19' };
-        localStorage.setItem('daimoku_db_campaign_dates', JSON.stringify(campaignDates));
-      }
-      
-      let campaignTargets = {};
-      try {
-        const savedTargets = localStorage.getItem('daimoku_db_campaign_targets');
-        campaignTargets = savedTargets ? JSON.parse(savedTargets) : {};
-      } catch (e) {}
-      if (!campaignTargets) campaignTargets = {};
-      
-      if (!campaignTargets.july_3rd || campaignTargets.july_3rd !== 50) {
-        campaignTargets.july_3rd = 50;
-        localStorage.setItem('daimoku_db_campaign_targets', JSON.stringify(campaignTargets));
-      }
-      
-      let contributions = [];
-      try {
-        const savedContribs = localStorage.getItem('daimoku_db_campaign_contributions');
-        contributions = savedContribs ? JSON.parse(savedContribs) : [];
-      } catch (e) {}
-      if (!contributions) contributions = [];
-      
-      const hasWisdomContrib = contributions.some(c => c.campaignId === 'july_3rd' && c.userEmail === 'wisdom@email.com');
-      if (!hasWisdomContrib) {
-        contributions.push({
-          id: 'migration_seeded_wisdom_july3rd',
-          userEmail: 'wisdom@email.com',
-          username: 'Wisdom Member',
-          block: 'Wisdom',
-          campaignId: 'july_3rd',
-          durationSeconds: 6120, // 1.7 hours
-          date: '2026-06-19'
-        });
-        localStorage.setItem('daimoku_db_campaign_contributions', JSON.stringify(contributions));
-      }
-      
-      localStorage.setItem(versionKey, '1');
-    }
-  } catch (e) {
-    console.error("Database migration failed:", e);
-  }
+  // Mock database migration deactivated to support pure custom campaigns
 }
 
-// Run migration immediately on file load
 migrateDatabase();

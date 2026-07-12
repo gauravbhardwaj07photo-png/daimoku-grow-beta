@@ -4263,12 +4263,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const todayTime = now.getTime();
       return todayTime >= startT && todayTime <= endT;
     }
-    return true;
+    return false;
   }
   
   function hasActiveCampaignToday() {
     const activeList = MockFirebase.db.getActiveCampaigns();
-    return activeList.length > 0;
+    if (activeList.length === 0) return false;
+    return isCampaignActiveToday(activeList[0]);
   }
   
   function updateCampaignTabVisibility() {
@@ -4874,7 +4875,9 @@ document.addEventListener('DOMContentLoaded', () => {
       adminCreateCampaignForm.reset();
       const activeToggleEl = document.getElementById('campaign-create-active');
       if (activeToggleEl) {
-        activeToggleEl.disabled = false;
+        activeToggleEl.checked = false;
+        activeToggleEl.disabled = true;
+        activeToggleEl.title = "Please enter a campaign title and target hours first.";
       }
       const formTitle = adminCreateCampaignForm.previousElementSibling;
       if (formTitle && formTitle.tagName === 'H4') {
@@ -4895,28 +4898,46 @@ document.addEventListener('DOMContentLoaded', () => {
   // Handle custom campaign creation form
   const adminCreateCampaignForm = document.getElementById('admin-create-campaign-form');
   if (adminCreateCampaignForm) {
+    const campaignCreateNameInput = document.getElementById('campaign-create-name');
+    const campaignCreateTargetInput = document.getElementById('campaign-create-target');
     const campaignCreateEndInput = document.getElementById('campaign-create-end');
     const campaignCreateActiveInput = document.getElementById('campaign-create-active');
-    if (campaignCreateEndInput && campaignCreateActiveInput) {
-      const handleEndDateChange = () => {
+    
+    if (campaignCreateNameInput && campaignCreateTargetInput && campaignCreateEndInput && campaignCreateActiveInput) {
+      const validateActiveToggle = () => {
+        const nameVal = campaignCreateNameInput.value.trim();
+        const targetVal = campaignCreateTargetInput.value.trim();
         const endVal = campaignCreateEndInput.value;
+        
+        let hasPastEnd = false;
         if (endVal) {
           const endT = new Date(endVal + 'T23:59:59').getTime();
           if (Date.now() > endT) {
-            campaignCreateActiveInput.checked = false;
-            campaignCreateActiveInput.disabled = true;
+            hasPastEnd = true;
+          }
+        }
+        
+        if (!nameVal || !targetVal || hasPastEnd) {
+          campaignCreateActiveInput.checked = false;
+          campaignCreateActiveInput.disabled = true;
+          if (hasPastEnd) {
             campaignCreateActiveInput.title = "Cannot mark an expired campaign as active.";
           } else {
-            campaignCreateActiveInput.disabled = false;
-            campaignCreateActiveInput.title = "";
+            campaignCreateActiveInput.title = "Please enter a campaign title and target hours first.";
           }
         } else {
           campaignCreateActiveInput.disabled = false;
           campaignCreateActiveInput.title = "";
         }
       };
-      campaignCreateEndInput.addEventListener('input', handleEndDateChange);
-      campaignCreateEndInput.addEventListener('change', handleEndDateChange);
+      
+      campaignCreateNameInput.addEventListener('input', validateActiveToggle);
+      campaignCreateTargetInput.addEventListener('input', validateActiveToggle);
+      campaignCreateEndInput.addEventListener('input', validateActiveToggle);
+      campaignCreateEndInput.addEventListener('change', validateActiveToggle);
+      
+      // Perform initial check
+      validateActiveToggle();
     }
 
     adminCreateCampaignForm.addEventListener('submit', async (e) => {
