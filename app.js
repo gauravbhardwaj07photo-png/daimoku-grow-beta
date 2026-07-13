@@ -4368,6 +4368,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const detailsContainer = document.getElementById('campaign-view-details');
     if (!detailsContainer) return;
     
+    if (!MockFirebase.db.isCampaignsLoaded() || !MockFirebase.db.isContributionsLoaded()) {
+      detailsContainer.innerHTML = `
+        <div class="empty-state" style="padding: 40px 20px; text-align: center;">
+          <i class="fa-solid fa-spinner fa-spin" style="font-size: 36px; color: var(--primary); margin-bottom: 12px;"></i>
+          <p style="font-size: 13px; color: var(--text-muted);">Syncing campaign database...</p>
+        </div>
+      `;
+      stopFireworks();
+      return;
+    }
+    
     const currentUser = MockFirebase.auth.getCurrentUser();
     if (!currentUser) {
       detailsContainer.innerHTML = `
@@ -5016,6 +5027,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const container = document.getElementById('whitelist-list-container');
     if (!container) return;
     
+    if (!MockFirebase.db.isWhitelistLoaded()) {
+      container.innerHTML = '<div style="font-size:12px; color:var(--text-muted); padding:15px 0; text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> Syncing whitelist...</div>';
+      return;
+    }
+    
     const whitelist = MockFirebase.db.getWhitelist();
     container.innerHTML = '';
     
@@ -5120,6 +5136,11 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderCampaignTargetsEditor() {
     const container = document.getElementById('campaign-targets-container');
     if (!container) return;
+    
+    if (!MockFirebase.db.isCampaignsLoaded()) {
+      container.innerHTML = '<div style="font-size:12px; color:var(--text-muted); padding:15px 0; text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> Syncing campaigns...</div>';
+      return;
+    }
     
     const targets = MockFirebase.db.getCampaignTargets();
     const activeCampaigns = MockFirebase.db.getActiveCampaigns();
@@ -6543,14 +6564,42 @@ document.addEventListener('DOMContentLoaded', () => {
   document.body.addEventListener('click', goFullscreen);
   document.body.addEventListener('touchstart', goFullscreen);
 
-  // Listen for real-time Firebase database changes
-  window.addEventListener('db-updated', () => {
-    console.log("Firebase sync: updating UI...");
+  // Listen for real-time Firebase database changes (contributions & general state)
+  window.addEventListener('db-contributions-updated', () => {
+    console.log("Firebase sync: contributions updated.");
     const user = MockFirebase.auth.getCurrentUser();
     if (user) {
       healUserStateFromContributions(user);
     }
     updateUI();
+  });
+
+  // Listen for real-time campaign settings modifications
+  window.addEventListener('db-campaigns-updated', () => {
+    console.log("Firebase sync: campaign configurations updated.");
+    const user = MockFirebase.auth.getCurrentUser();
+    if (user && user.isAdmin) {
+      renderCampaignTargetsEditor();
+    }
+    updateCampaignTabVisibility();
+  });
+
+  // Listen for real-time whitelist access modifications
+  window.addEventListener('db-whitelist-updated', () => {
+    console.log("Firebase sync: whitelist updated.");
+    const user = MockFirebase.auth.getCurrentUser();
+    if (user && user.isAdmin) {
+      renderWhitelist();
+    }
+  });
+
+  // Listen for real-time member account updates
+  window.addEventListener('db-users-updated', () => {
+    console.log("Firebase sync: user profiles updated.");
+    const user = MockFirebase.auth.getCurrentUser();
+    if (user && user.isAdmin) {
+      renderUsersList();
+    }
   });
 
   function handleTimerExitAutoSave() {

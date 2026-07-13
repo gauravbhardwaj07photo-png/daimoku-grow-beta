@@ -90,7 +90,7 @@ const defaultCampaignDates = {};
 
 const defaultCampaignNames = {};
 
-// --- Real-time Firebase Sync Cache ---
+// --- Real-time Firebase Sync Cache & Load Flags ---
 let cachedWhitelist = [...defaultWhitelist];
 let cachedCampaignTargets = { ...defaultCampaignTargets };
 let cachedCampaignDates = { ...defaultCampaignDates };
@@ -98,6 +98,10 @@ let cachedActiveCampaigns = [];
 let cachedCampaignNames = { ...defaultCampaignNames };
 let cachedCustomCampaigns = [];
 let cachedContributions = [];
+
+let isWhitelistLoaded = !isFirebaseConfigured;
+let isCampaignsLoaded = !isFirebaseConfigured;
+let isContributionsLoaded = !isFirebaseConfigured;
 
 if (isFirebaseConfigured && db) {
   // 1. Listen to Whitelist Changes
@@ -125,7 +129,8 @@ if (isFirebaseConfigured && db) {
         } catch (e) {}
       }
     }
-    window.dispatchEvent(new Event('db-updated'));
+    isWhitelistLoaded = true;
+    window.dispatchEvent(new Event('db-whitelist-updated'));
   }, err => console.warn("Firestore Whitelist listener error:", err));
 
   // 2. Listen to Campaign Configurations (targets, dates, active list)
@@ -137,16 +142,17 @@ if (isFirebaseConfigured && db) {
       if (data.active) cachedActiveCampaigns = data.active;
       if (data.names) cachedCampaignNames = data.names;
       if (data.customCampaigns) cachedCustomCampaigns = data.customCampaigns;
-      window.dispatchEvent(new Event('db-updated'));
+      isCampaignsLoaded = true;
+      window.dispatchEvent(new Event('db-campaigns-updated'));
     } else {
-      // Seed default campaigns configurations document
-      db.collection('settings').doc('campaigns').set({
-        targets: defaultCampaignTargets,
-        dates: defaultCampaignDates,
-        active: [],
-        names: defaultCampaignNames,
-        customCampaigns: []
-      });
+      console.warn("Firestore Campaigns settings document not found. Using default empty arrays/objects.");
+      cachedCampaignTargets = { ...defaultCampaignTargets };
+      cachedCampaignDates = { ...defaultCampaignDates };
+      cachedActiveCampaigns = [];
+      cachedCampaignNames = { ...defaultCampaignNames };
+      cachedCustomCampaigns = [];
+      isCampaignsLoaded = true;
+      window.dispatchEvent(new Event('db-campaigns-updated'));
     }
   }, err => console.warn("Firestore Settings listener error:", err));
 
@@ -157,7 +163,8 @@ if (isFirebaseConfigured && db) {
       list.push({ id: doc.id, ...doc.data() });
     });
     cachedContributions = list;
-    window.dispatchEvent(new Event('db-updated'));
+    isContributionsLoaded = true;
+    window.dispatchEvent(new Event('db-contributions-updated'));
   }, err => console.warn("Firestore Contributions listener error:", err));
 }
 
@@ -305,6 +312,15 @@ const MockFirebase = {
   },
   
   db: {
+    isWhitelistLoaded() {
+      return isWhitelistLoaded;
+    },
+    isCampaignsLoaded() {
+      return isCampaignsLoaded;
+    },
+    isContributionsLoaded() {
+      return isContributionsLoaded;
+    },
     // Whitelisted Emails Collection
     getWhitelist() {
       if (isFirebaseConfigured) {
@@ -336,7 +352,7 @@ const MockFirebase = {
         }
       } else {
         localStorage.setItem('daimoku_db_whitelist', JSON.stringify(list));
-        window.dispatchEvent(new Event('db-updated'));
+        window.dispatchEvent(new Event('db-whitelist-updated'));
       }
     },
     
@@ -393,7 +409,7 @@ const MockFirebase = {
         }
       } else {
         localStorage.setItem('daimoku_db_campaign_targets', JSON.stringify(targets));
-        window.dispatchEvent(new Event('db-updated'));
+        window.dispatchEvent(new Event('db-campaigns-updated'));
       }
     },
     
@@ -419,7 +435,7 @@ const MockFirebase = {
         }
       } else {
         localStorage.setItem('daimoku_db_campaign_dates', JSON.stringify(dates));
-        window.dispatchEvent(new Event('db-updated'));
+        window.dispatchEvent(new Event('db-campaigns-updated'));
       }
     },
     
@@ -455,7 +471,7 @@ const MockFirebase = {
         }
       } else {
         localStorage.setItem('daimoku_db_active_campaigns', JSON.stringify(singleActiveList));
-        window.dispatchEvent(new Event('db-updated'));
+        window.dispatchEvent(new Event('db-campaigns-updated'));
       }
     },
 
@@ -558,7 +574,7 @@ const MockFirebase = {
         localStorage.setItem('daimoku_db_custom_campaigns', JSON.stringify(customCampaigns));
         localStorage.setItem('daimoku_db_active_campaigns', JSON.stringify(active));
         
-        window.dispatchEvent(new Event('db-updated'));
+        window.dispatchEvent(new Event('db-campaigns-updated'));
       }
     },
 
@@ -636,7 +652,7 @@ const MockFirebase = {
         localStorage.setItem('daimoku_db_custom_campaigns', JSON.stringify(customCampaigns));
         localStorage.setItem('daimoku_db_active_campaigns', JSON.stringify(active));
         
-        window.dispatchEvent(new Event('db-updated'));
+        window.dispatchEvent(new Event('db-campaigns-updated'));
       }
     },
 
@@ -693,7 +709,7 @@ const MockFirebase = {
         localStorage.setItem('daimoku_db_custom_campaigns', JSON.stringify(customCampaigns));
         localStorage.setItem('daimoku_db_active_campaigns', JSON.stringify(active));
         
-        window.dispatchEvent(new Event('db-updated'));
+        window.dispatchEvent(new Event('db-campaigns-updated'));
       }
     },
     
@@ -712,7 +728,7 @@ const MockFirebase = {
         // Local fallback: overwrite local array
       } else {
         localStorage.setItem('daimoku_db_campaign_contributions', JSON.stringify(contributions));
-        window.dispatchEvent(new Event('db-updated'));
+        window.dispatchEvent(new Event('db-contributions-updated'));
       }
     },
     async deleteCampaignContribution(userEmail, campaignId, date, durationSeconds) {
@@ -747,7 +763,7 @@ const MockFirebase = {
         if (idx !== -1) {
           contributions.splice(idx, 1);
           localStorage.setItem('daimoku_db_campaign_contributions', JSON.stringify(contributions));
-          window.dispatchEvent(new Event('db-updated'));
+          window.dispatchEvent(new Event('db-contributions-updated'));
         }
       }
     },
@@ -773,7 +789,7 @@ const MockFirebase = {
         let contributions = this.getCampaignContributions();
         contributions = contributions.filter(c => c.userEmail.toLowerCase() !== email);
         localStorage.setItem('daimoku_db_campaign_contributions', JSON.stringify(contributions));
-        window.dispatchEvent(new Event('db-updated'));
+        window.dispatchEvent(new Event('db-contributions-updated'));
       }
     },
     addCampaignContribution(userEmail, username, block, campaignId, durationSeconds, date) {
@@ -936,7 +952,8 @@ const MockFirebase = {
           users[userIdx].block = block;
           if (isAdmin !== undefined) users[userIdx].isAdmin = !!isAdmin;
           localStorage.setItem('daimoku_db_users', JSON.stringify(users));
-          window.dispatchEvent(new Event('db-updated'));
+          window.dispatchEvent(new Event('db-users-updated'));
+          window.dispatchEvent(new Event('db-whitelist-updated'));
         }
       }
     },
@@ -977,7 +994,9 @@ const MockFirebase = {
         let contributions = JSON.parse(localStorage.getItem('daimoku_db_campaign_contributions') || '[]');
         contributions = contributions.filter(c => c.userEmail.toLowerCase() !== normEmail);
         localStorage.setItem('daimoku_db_campaign_contributions', JSON.stringify(contributions));
-        window.dispatchEvent(new Event('db-updated'));
+        window.dispatchEvent(new Event('db-users-updated'));
+        window.dispatchEvent(new Event('db-whitelist-updated'));
+        window.dispatchEvent(new Event('db-contributions-updated'));
       }
     },
     
@@ -1023,7 +1042,8 @@ const MockFirebase = {
           isAdmin: !!isAdmin
         });
         localStorage.setItem('daimoku_db_users', JSON.stringify(users));
-        window.dispatchEvent(new Event('db-updated'));
+        window.dispatchEvent(new Event('db-users-updated'));
+        window.dispatchEvent(new Event('db-whitelist-updated'));
         return code;
       }
     }
