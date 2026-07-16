@@ -1550,8 +1550,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Update goal milestone estimate
     updateMilestoneEstimate();
 
-    // Update Diurnal Sky background
-    updateDiurnalTheme();
+    // Update Sky background scenery
+    updateSkyTheme();
     
     // Trigger canvas state updates
     PlantRenderer.updateState(decimalHours, state.health, state.isDead, timerState === 'running', state.settings.treeTargetHours || 333, state.targets.filter(t => !t.completed), state.settings.skyBackground || 'diurnal', state.streak || 0);
@@ -2498,22 +2498,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-  // --- Diurnal Theme Switcher ---
-  function updateDiurnalTheme() {
-    const nowHour = new Date().getHours();
-    let phase = 'diurnal-day';
-    if (nowHour >= 5 && nowHour < 9) {
-      phase = 'diurnal-sunrise';
-    } else if (nowHour >= 9 && nowHour < 17) {
-      phase = 'diurnal-day';
-    } else if (nowHour >= 17 && nowHour < 20) {
-      phase = 'diurnal-sunset';
+  // --- Sky Theme Switcher ---
+  function updateSkyTheme() {
+    const bgSetting = (state && state.settings && state.settings.skyBackground) ? state.settings.skyBackground : 'diurnal';
+    let phase = 'day';
+    
+    if (bgSetting === 'diurnal') {
+      const nowHour = new Date().getHours();
+      if (nowHour >= 5 && nowHour < 9) {
+        phase = 'sunrise';
+      } else if (nowHour >= 9 && nowHour < 17) {
+        phase = 'day';
+      } else if (nowHour >= 17 && nowHour < 20) {
+        phase = 'sunset';
+      } else {
+        phase = 'night';
+      }
     } else {
-      phase = 'diurnal-night';
+      phase = bgSetting; // 'rainforest', 'cherryblossoms', 'mountains', 'beach', 'bustlingcity'
     }
     
-    document.body.classList.remove('diurnal-sunrise', 'diurnal-day', 'diurnal-sunset', 'diurnal-night');
-    document.body.classList.add(phase);
+    document.body.classList.remove(
+      'diurnal-sunrise', 'diurnal-day', 'diurnal-sunset', 'diurnal-night',
+      'diurnal-rainforest', 'diurnal-cherryblossoms', 'diurnal-mountains', 'diurnal-beach', 'diurnal-bustlingcity'
+    );
+    document.body.classList.add('diurnal-' + phase);
   }
 
   async function deleteChantSession(id) {
@@ -5787,7 +5796,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   
   initNavigation();
-  updateDiurnalTheme();
+  updateSkyTheme();
   updateCampaignTabVisibility();
   updateQuote();
   renderTargetsList();

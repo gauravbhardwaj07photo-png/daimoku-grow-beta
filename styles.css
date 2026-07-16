@@ -3536,6 +3536,46 @@ body.diurnal-sunset {
 body.diurnal-night {
   --bg-app: linear-gradient(135deg, #0b0f19 0%, #151a30 50%, #202640 100%) !important;
 }
+body.diurnal-rainforest {
+  --bg-app: linear-gradient(135deg, #0a1d0d 0%, #123317 50%, #224e28 100%) !important;
+}
+body.diurnal-cherryblossoms {
+  --bg-app: linear-gradient(135deg, #ffeef4 0%, #ffd3e8 50%, #d5bce3 100%) !important;
+}
+body.diurnal-mountains {
+  --bg-app: linear-gradient(135deg, #cbd9e0 0%, #e6eff2 50%, #98aebc 100%) !important;
+}
+body.diurnal-beach {
+  --bg-app: linear-gradient(135deg, #e0f7fa 0%, #ffd54f 50%, #ffab91 100%) !important;
+}
+body.diurnal-bustlingcity {
+  --bg-app: linear-gradient(135deg, #09081a 0%, #1a0f30 45%, #461448 80%, #7e2d45 100%) !important;
+}
+
+/* High-contrast overlays and dark-mode adaptation variables for dark backgrounds */
+body.diurnal-night,
+body.diurnal-bustlingcity,
+body.diurnal-rainforest {
+  --text-main: #f5f8f5 !important;
+  --text-muted: #a3bda3 !important;
+  --border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  --bg-card: rgba(26, 38, 26, 0.8) !important;
+  --bg-card-hover: rgba(34, 50, 34, 0.9) !important;
+  --accent-cream: rgba(255, 255, 255, 0.05) !important;
+  --bg-input: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Fix specific dark-scenery elements readability */
+body.diurnal-night .app-header,
+body.diurnal-bustlingcity .app-header,
+body.diurnal-rainforest .app-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+body.diurnal-night .logo-leaf,
+body.diurnal-bustlingcity .logo-leaf,
+body.diurnal-rainforest .logo-leaf {
+  color: var(--primary) !important;
+}
 
 /* Make body background smooth transition */
 body {

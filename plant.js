@@ -100,9 +100,18 @@ const PlantRenderer = (function() {
   let isChanting = false;
   let targetHours = 333;
   let skyBackgroundSetting = 'diurnal';
+  let currentStreak = 0;
   
   // Ambient Glowing Particles
   let ambientParticles = [];
+
+  // Cinematic Scenery Particle Engines States
+  let rainParticles = [];
+  let rainSplashes = [];
+  let sakuraPetals = [];
+  let snowParticles = [];
+  let qatarFlameParticles = [];
+  let searchlightAngle = 0;
 
   // Swipe & Tap Sway Physics
   let userWindForce = 0;
@@ -247,7 +256,7 @@ const PlantRenderer = (function() {
   /**
    * Set the plant parameters and queue a redraw
    */
-  function updateState(hours, health, deadState, chantingState, targetHoursParam = 333, targetsList = [], skyBg = 'diurnal') {
+  function updateState(hours, health, deadState, chantingState, targetHoursParam = 333, targetsList = [], skyBg = 'diurnal', userStreak = 0) {
     currentHours = hours;
     currentHealth = health;
     isDead = deadState || (health <= 0);
@@ -256,6 +265,7 @@ const PlantRenderer = (function() {
     ambientParticles = ambientParticles || []; // safeguard
     activeTargets = targetsList || [];
     skyBackgroundSetting = skyBg || 'diurnal';
+    currentStreak = userStreak || 0;
   }
 
   /**
@@ -751,7 +761,7 @@ const PlantRenderer = (function() {
       }
     }
     
-    const isNight = phase === 'night';
+    const isNight = phase === 'night' || phase === 'bustlingcity' || phase === 'rainforest';
 
     // Sky Background Rendering
     if (phase === 'sunrise') {
@@ -808,7 +818,7 @@ const PlantRenderer = (function() {
         ctx.closePath();
         ctx.fill();
       }
-    } else { // Night
+    } else if (phase === 'night') {
       const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
       skyGrad.addColorStop(0, '#0b0f19'); // Dark midnight sky
       skyGrad.addColorStop(0.5, '#151a30'); // Twilight navy
@@ -837,14 +847,1106 @@ const PlantRenderer = (function() {
         ctx.fill();
         ctx.restore();
       });
-    }
+    } else if (phase === 'rainforest') {
+      // 1. Rainforest Backdrop Gradient
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
+      skyGrad.addColorStop(0, '#040d06'); // Deep forest canopy shadow
+      skyGrad.addColorStop(0.4, '#0a1f0f'); // Dark emerald
+      skyGrad.addColorStop(1, '#1c4222'); // Soft mossy green
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, w, h);
 
+      // 1.5 Distant Forest Layer (Dense tree silhouettes)
+      ctx.save();
+      ctx.fillStyle = 'rgba(6, 22, 10, 0.30)';
+      ctx.beginPath();
+      ctx.moveTo(0, h);
+      for (let x = 0; x <= w + 40; x += 45) {
+        ctx.arc(x, h - 85 - Math.sin(x * 0.02) * 15, 35, 0, Math.PI * 2);
+      }
+      ctx.lineTo(w, h);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+
+      // 1.6 Midground Forest Layer (Varying height palm/broad tree clusters)
+      ctx.save();
+      ctx.fillStyle = 'rgba(10, 35, 15, 0.58)';
+      for (let i = 0; i < 7; i++) {
+        const tx = w * 0.15 * i + 10;
+        const ty = h - 60 - (i % 3) * 15;
+        // trunk
+        ctx.fillRect(tx - 2, ty, 4, h - ty);
+        // palm head
+        ctx.save();
+        ctx.translate(tx, ty);
+        for (let j = 0; j < 6; j++) {
+          ctx.rotate(Math.PI / 3);
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 18, 5, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+      ctx.restore();
+
+      // 2. Cinematic Sunbeams (God Rays)
+      ctx.save();
+      const beamGrad = ctx.createRadialGradient(w * 0.3, 0, 10, w * 0.3, 0, w * 0.8);
+      beamGrad.addColorStop(0, 'rgba(255, 255, 220, 0.15)');
+      beamGrad.addColorStop(0.5, 'rgba(220, 255, 220, 0.04)');
+      beamGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = beamGrad;
+      for (let i = 0; i < 3; i++) {
+        const angle = 0.6 + i * 0.4 + Math.sin(windTime * 0.15 + i) * 0.05;
+        ctx.beginPath();
+        ctx.moveTo(w * 0.3, 0);
+        ctx.lineTo(w * 0.3 + Math.cos(angle - 0.1) * 600, Math.sin(angle - 0.1) * 600);
+        ctx.lineTo(w * 0.3 + Math.cos(angle + 0.1) * 600, Math.sin(angle + 0.1) * 600);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+
+      // 3. Volumetric Fog Waves
+      ctx.save();
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.035)';
+      for (let f = 0; f < 2; f++) {
+        const speed = 0.2 + f * 0.1;
+        const waveH = 15 + f * 10;
+        ctx.beginPath();
+        ctx.moveTo(0, h);
+        for (let x = 0; x <= w; x += 15) {
+          const y = h * 0.5 + f * 60 + Math.sin(x * 0.01 + windTime * speed) * waveH;
+          ctx.lineTo(x, y);
+        }
+        ctx.lineTo(w, h);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+
+      // 4. Foreground Detailed Rainforest Canopy & Vines (Left/Right Framing)
+      ctx.save();
+      ctx.fillStyle = 'rgba(3, 10, 4, 0.94)';
+      
+      // Left Trunk & Branches
+      ctx.beginPath();
+      ctx.moveTo(0, h);
+      ctx.quadraticCurveTo(w * 0.1, h - 90, 0, h - 180);
+      ctx.lineTo(0, 0);
+      ctx.lineTo(w * 0.08, 0);
+      ctx.quadraticCurveTo(w * 0.22, h * 0.20, w * 0.28, h * 0.25);
+      ctx.quadraticCurveTo(w * 0.15, h * 0.32, w * 0.05, h - 90);
+      ctx.lineTo(w * 0.05, h);
+      ctx.closePath();
+      ctx.fill();
+
+      // Right Trunk & Branches
+      ctx.beginPath();
+      ctx.moveTo(w, h);
+      ctx.quadraticCurveTo(w * 0.9, h - 90, w, h - 180);
+      ctx.lineTo(w, 0);
+      ctx.lineTo(w * 0.92, 0);
+      ctx.quadraticCurveTo(w * 0.78, h * 0.18, w * 0.72, h * 0.22);
+      ctx.quadraticCurveTo(w * 0.85, h * 0.30, w * 0.95, h - 90);
+      ctx.lineTo(w * 0.95, h);
+      ctx.closePath();
+      ctx.fill();
+
+      // Swaying fern leaves on left/right foreground branches
+      const branchSway = Math.sin(windTime * 0.7) * 0.04;
+      ctx.save();
+      ctx.translate(w * 0.28, h * 0.25);
+      ctx.rotate(branchSway);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 32, 12, 0.8, 0, Math.PI * 2);
+      ctx.ellipse(-15, 15, 25, 9, 0.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      ctx.save();
+      ctx.translate(w * 0.72, h * 0.22);
+      ctx.rotate(-branchSway);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 30, 11, -0.8, 0, Math.PI * 2);
+      ctx.ellipse(15, 12, 22, 8, -0.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // Vine 1 (hanging from left branch)
+      ctx.strokeStyle = 'rgba(3, 10, 4, 0.94)';
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      for (let y = h * 0.25; y < h * 0.65; y += 5) {
+        const x = w * 0.20 + Math.sin(y * 0.03 + windTime * 0.5) * 8;
+        if (y === h * 0.25) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+        if (y % 20 === 0) {
+          ctx.save();
+          ctx.translate(x, y);
+          ctx.rotate(Math.sin(y + windTime) * 0.3);
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 8, 4, 0.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+      ctx.stroke();
+
+      // Vine 2 (hanging from right branch)
+      ctx.beginPath();
+      for (let y = h * 0.22; y < h * 0.55; y += 5) {
+        const x = w * 0.78 + Math.sin(y * 0.02 + windTime * 0.4) * 6;
+        if (y === h * 0.22) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+        if (y % 15 === 0) {
+          ctx.save();
+          ctx.translate(x, y);
+          ctx.rotate(Math.sin(y + windTime) * 0.3);
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 7, 3.5, -0.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+      ctx.stroke();
+      ctx.restore();
+
+      // 5. Cinematic Rain Engine (Multi-Layer Depth)
+      if (rainParticles.length === 0) {
+        for (let i = 0; i < 45; i++) {
+          rainParticles.push({
+            x: Math.random() * w,
+            y: Math.random() * h,
+            len: 8 + Math.random() * 12,
+            speed: 12 + Math.random() * 8,
+            thick: 0.5 + Math.random() * 1.0,
+            opacity: 0.08 + Math.random() * 0.12
+          });
+        }
+      }
+      // Draw & Update Rain
+      rainParticles.forEach(p => {
+        ctx.strokeStyle = `rgba(175, 235, 185, ${p.opacity})`;
+        ctx.lineWidth = p.thick;
+        ctx.beginPath();
+        // Fall angled slightly by wind
+        const drift = Math.sin(windTime * 0.1) * 1.5;
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(p.x + drift, p.y + p.len);
+        ctx.stroke();
+
+        p.y += p.speed;
+        p.x += drift;
+
+        // Reset if offscreen
+        const potY = h - 98;
+        if (p.y > potY) {
+          // 6. Spawn Splash Ripple on hit soil
+          if (p.x > w * 0.3 && p.x < w * 0.7 && Math.random() < 0.25) {
+            rainSplashes.push({
+              x: p.x,
+              y: potY + Math.random() * 8,
+              r: 0.5,
+              maxR: 3 + Math.random() * 5,
+              opacity: 0.35
+            });
+          }
+          p.y = -20;
+          p.x = Math.random() * w;
+        }
+      });
+
+      // Update & Draw Splashes
+      rainSplashes.forEach((s, idx) => {
+        ctx.strokeStyle = `rgba(165, 235, 175, ${s.opacity})`;
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.ellipse(s.x, s.y, s.r, s.r * 0.4, 0, 0, Math.PI * 2);
+        ctx.stroke();
+
+        s.r += 0.45;
+        s.opacity -= 0.035;
+        if (s.opacity <= 0 || s.r > s.maxR) {
+          rainSplashes.splice(idx, 1);
+        }
+      });
+
+      // 7. Fluttering Drifting Forest Leaves (Tumbling 3D)
+      if (sakuraPetals.length === 0 || sakuraPetals[0].isFlower) {
+        // Clear old petals if switching theme
+        sakuraPetals = [];
+        for (let i = 0; i < 4; i++) {
+          sakuraPetals.push({
+            x: Math.random() * w,
+            y: Math.random() * h * 0.8,
+            size: 6 + Math.random() * 5,
+            speedY: 0.8 + Math.random() * 0.8,
+            speedX: 0.3 + Math.random() * 0.5,
+            pitch: Math.random() * Math.PI,
+            spinSpeed: 0.02 + Math.random() * 0.03,
+            color: Math.random() < 0.5 ? '#2b5c32' : '#3c8246',
+            isLeaf: true
+          });
+        }
+      }
+      sakuraPetals.forEach(l => {
+        ctx.save();
+        ctx.translate(l.x, l.y);
+        // Apply 3D-like scale on pitch (cosine of pitch creates vertical squashing)
+        ctx.scale(1.0, Math.max(0.1, Math.cos(l.pitch)));
+        ctx.rotate(l.pitch * 0.5);
+        ctx.fillStyle = l.color;
+        ctx.beginPath();
+        // Leaf shape
+        ctx.moveTo(0, -l.size);
+        ctx.quadraticCurveTo(l.size * 0.7, 0, 0, l.size);
+        ctx.quadraticCurveTo(-l.size * 0.7, 0, 0, -l.size);
+        ctx.fill();
+        ctx.restore();
+
+        l.y += l.speedY;
+        l.x += l.speedX + Math.sin(windTime * 0.5 + l.y) * 0.4;
+        l.pitch += l.spinSpeed;
+
+        if (l.y > h + 15) {
+          l.y = -15;
+          l.x = Math.random() * w;
+        }
+      });
+    } else if (phase === 'cherryblossoms') {
+      // 1. Dawn Gradient Background
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
+      skyGrad.addColorStop(0, '#ffeeee'); // Soft peach glow
+      skyGrad.addColorStop(0.5, '#ffd2e3'); // Warm sakura pink
+      skyGrad.addColorStop(1, '#dbbce8'); // Lavender base
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, w, h);
+
+      // 2.5 Far Background Soft Cherry Blossom Hills
+      ctx.save();
+      ctx.fillStyle = 'rgba(255, 174, 201, 0.20)';
+      ctx.beginPath();
+      ctx.moveTo(0, h);
+      ctx.quadraticCurveTo(w * 0.25, h - 50, w * 0.50, h - 35);
+      ctx.quadraticCurveTo(w * 0.75, h - 55, w, h - 30);
+      ctx.lineTo(w, h);
+      ctx.closePath();
+      ctx.fill();
+      
+      ctx.fillStyle = 'rgba(235, 150, 180, 0.15)';
+      ctx.beginPath();
+      ctx.moveTo(0, h);
+      ctx.quadraticCurveTo(w * 0.35, h - 30, w * 0.70, h - 45);
+      ctx.quadraticCurveTo(w * 0.85, h - 35, w, h - 20);
+      ctx.lineTo(w, h);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+
+      // 2. Cinematic Sun Burst & Lens Flare
+      ctx.save();
+      const sunX = w * 0.20;
+      const sunY = h * 0.20;
+      const sunGlow = ctx.createRadialGradient(sunX, sunY, 15, sunX, sunY, 95);
+      sunGlow.addColorStop(0, 'rgba(255, 235, 235, 0.40)');
+      sunGlow.addColorStop(0.3, 'rgba(255, 200, 210, 0.15)');
+      sunGlow.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      ctx.fillStyle = sunGlow;
+      ctx.beginPath();
+      ctx.arc(sunX, sunY, 95, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // 3. Detailed Textured Cherry Tree Branch (Top-Right)
+      ctx.save();
+      ctx.fillStyle = 'rgba(56, 32, 42, 0.85)';
+      ctx.translate(w, 0);
+      ctx.rotate(Math.sin(windTime * 0.5) * 0.02);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.quadraticCurveTo(-50, 20, -110, 35);
+      ctx.quadraticCurveTo(-60, 45, 0, 15);
+      ctx.fill();
+
+      // Draw blossom clusters on branch
+      ctx.fillStyle = 'rgba(255, 160, 185, 0.9)';
+      const clusters = [
+        { cx: -40, cy: 15, r: 12 },
+        { cx: -75, cy: 30, r: 10 },
+        { cx: -105, cy: 32, r: 8 },
+        { cx: -60, cy: 22, r: 11 },
+        { cx: -90, cy: 35, r: 9 }
+      ];
+      clusters.forEach(c => {
+        ctx.beginPath();
+        ctx.arc(c.cx, c.cy, c.r, 0, Math.PI * 2);
+        ctx.arc(c.cx - 5, c.cy + 3, c.r * 0.8, 0, Math.PI * 2);
+        ctx.arc(c.cx + 5, c.cy - 2, c.r * 0.8, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.restore();
+
+      // 3.5 Second Detailed Cherry Tree Branch (Top-Left)
+      ctx.save();
+      ctx.fillStyle = 'rgba(56, 32, 42, 0.85)';
+      ctx.translate(0, 0);
+      ctx.rotate(Math.sin(windTime * 0.4 + 1.0) * 0.02);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.quadraticCurveTo(50, 20, 110, 35);
+      ctx.quadraticCurveTo(60, 45, 0, 15);
+      ctx.fill();
+
+      // Draw blossom clusters on left branch
+      ctx.fillStyle = 'rgba(255, 150, 180, 0.9)';
+      const leftClusters = [
+        { cx: 40, cy: 15, r: 12 },
+        { cx: 75, cy: 30, r: 10 },
+        { cx: 105, cy: 32, r: 8 },
+        { cx: 60, cy: 22, r: 11 },
+        { cx: 90, cy: 35, r: 9 }
+      ];
+      leftClusters.forEach(c => {
+        ctx.beginPath();
+        ctx.arc(c.cx, c.cy, c.r, 0, Math.PI * 2);
+        ctx.arc(c.cx - 5, c.cy + 3, c.r * 0.8, 0, Math.PI * 2);
+        ctx.arc(c.cx + 5, c.cy - 2, c.r * 0.8, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.restore();
+
+      // 4. Detailed 3D Sakura Petal Shower
+      if (sakuraPetals.length === 0 || !sakuraPetals[0].isFlower) {
+        sakuraPetals = [];
+        for (let i = 0; i < 28; i++) {
+          sakuraPetals.push({
+            x: Math.random() * (w + 100) - 50,
+            y: Math.random() * h,
+            size: 4 + Math.random() * 5,
+            speedY: 0.9 + Math.random() * 0.9,
+            speedX: -1.2 - Math.random() * 0.8,
+            pitch: Math.random() * Math.PI,
+            spinSpeed: 0.015 + Math.random() * 0.025,
+            r: Math.random() * Math.PI * 2,
+            isFlower: true
+          });
+        }
+      }
+      sakuraPetals.forEach(p => {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.scale(1.0, Math.max(0.1, Math.cos(p.pitch)));
+        ctx.rotate(p.r);
+        
+        // Draw organic petal shape (heart-like)
+        ctx.fillStyle = 'rgba(255, 175, 200, 0.9)';
+        ctx.beginPath();
+        ctx.moveTo(0, -p.size);
+        ctx.bezierCurveTo(p.size, -p.size, p.size, p.size, 0, p.size);
+        ctx.bezierCurveTo(-p.size, p.size, -p.size, -p.size, 0, -p.size);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+
+        p.y += p.speedY;
+        p.x += p.speedX + Math.sin(windTime * 0.4 + p.y) * 0.3;
+        p.pitch += p.spinSpeed;
+        p.r += 0.01;
+
+        if (p.y > h + 15 || p.x < -15) {
+          p.y = -15;
+          p.x = w + 15 + Math.random() * 50;
+        }
+      });
+
+      // 5. Glowing Yellow Blossom Pollen Particles
+      ctx.fillStyle = 'rgba(255, 245, 180, 0.28)';
+      for (let i = 0; i < 15; i++) {
+        const px = (i * 32 + windTime * 6) % w;
+        const py = (h - (windTime * (12 + i * 2)) % h);
+        ctx.beginPath();
+        const pSize = 1.0 + Math.sin(windTime * 1.5 + i) * 0.8;
+        ctx.arc(px, py, Math.max(0.5, pSize), 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else if (phase === 'mountains') {
+      // 1. Cinematic Cloudy Daytime Sky Gradient
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
+      skyGrad.addColorStop(0, '#a5bcd0');    // Muted sky blue
+      skyGrad.addColorStop(0.5, '#dae6ee');  // Soft cloud mist white
+      skyGrad.addColorStop(1, '#f1f6f9');    // Soft light grey-blue at horizon
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, w, h);
+
+      // 2. Daytime Drifting Overcast Clouds
+      ctx.save();
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+      // Cloud 1
+      let cx1 = (w * 0.15 + windTime * 2.5) % (w + 160) - 80;
+      let cy1 = h * 0.20;
+      ctx.beginPath();
+      ctx.arc(cx1, cy1, 28, 0, Math.PI * 2);
+      ctx.arc(cx1 + 22, cy1 - 10, 35, 0, Math.PI * 2);
+      ctx.arc(cx1 + 45, cy1, 25, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Cloud 2
+      let cx2 = (w * 0.65 - windTime * 1.5) % (w + 200) - 100;
+      if (cx2 < -100) cx2 += (w + 200);
+      let cy2 = h * 0.12;
+      ctx.beginPath();
+      ctx.arc(cx2, cy2, 32, 0, Math.PI * 2);
+      ctx.arc(cx2 + 25, cy2 - 12, 40, 0, Math.PI * 2);
+      ctx.arc(cx2 + 50, cy2, 28, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // 3. Far Background Craggy Peaks (Procedural Ridge Vector)
+      ctx.fillStyle = 'rgba(130, 155, 175, 0.45)';
+      ctx.beginPath();
+      ctx.moveTo(0, h);
+      ctx.lineTo(0, h * 0.56);
+      ctx.lineTo(w * 0.15, h * 0.44);
+      ctx.lineTo(w * 0.28, h * 0.49);
+      ctx.lineTo(w * 0.38, h * 0.41);
+      ctx.lineTo(w * 0.52, h * 0.55);
+      ctx.lineTo(w * 0.65, h * 0.45);
+      ctx.lineTo(w * 0.78, h * 0.51);
+      ctx.lineTo(w * 0.88, h * 0.43);
+      ctx.lineTo(w, h * 0.54);
+      ctx.lineTo(w, h);
+      ctx.closePath();
+      ctx.fill();
+
+      // Draw Snow caps on Far Peaks
+      ctx.fillStyle = '#ffffff';
+      // Peak at w * 0.15
+      ctx.beginPath();
+      ctx.moveTo(w * 0.11, h * 0.47);
+      ctx.lineTo(w * 0.15, h * 0.44);
+      ctx.lineTo(w * 0.19, h * 0.46);
+      ctx.quadraticCurveTo(w * 0.15, h * 0.48, w * 0.11, h * 0.47);
+      ctx.fill();
+      // Peak at w * 0.38
+      ctx.beginPath();
+      ctx.moveTo(w * 0.34, h * 0.44);
+      ctx.lineTo(w * 0.38, h * 0.41);
+      ctx.lineTo(w * 0.43, h * 0.45);
+      ctx.quadraticCurveTo(w * 0.38, h * 0.465, w * 0.34, h * 0.44);
+      ctx.fill();
+      // Peak at w * 0.65
+      ctx.beginPath();
+      ctx.moveTo(w * 0.61, h * 0.48);
+      ctx.lineTo(w * 0.65, h * 0.45);
+      ctx.lineTo(w * 0.70, h * 0.48);
+      ctx.quadraticCurveTo(w * 0.65, h * 0.50, w * 0.61, h * 0.48);
+      ctx.fill();
+      // Peak at w * 0.88
+      ctx.beginPath();
+      ctx.moveTo(w * 0.84, h * 0.46);
+      ctx.lineTo(w * 0.88, h * 0.43);
+      ctx.lineTo(w * 0.92, h * 0.46);
+      ctx.quadraticCurveTo(w * 0.88, h * 0.48, w * 0.84, h * 0.46);
+      ctx.fill();
+
+      // 4. Volumetric Intermediate Parallax Fog (Drifts between ridges)
+      ctx.save();
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
+      ctx.beginPath();
+      ctx.moveTo(0, h);
+      for (let x = 0; x <= w; x += 10) {
+        const y = h * 0.53 + Math.sin(x * 0.015 + windTime * 0.12) * 12;
+        ctx.lineTo(x, y);
+      }
+      ctx.lineTo(w, h);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+
+      // 5. Midground Craggy Ridge (Shaded Peak Slopes)
+      ctx.fillStyle = 'rgba(90, 115, 135, 0.70)';
+      ctx.beginPath();
+      ctx.moveTo(0, h);
+      ctx.lineTo(0, h * 0.68);
+      ctx.lineTo(w * 0.22, h * 0.54);
+      ctx.lineTo(w * 0.34, h * 0.60);
+      ctx.lineTo(w * 0.48, h * 0.51);
+      ctx.lineTo(w * 0.62, h * 0.65);
+      ctx.lineTo(w * 0.76, h * 0.55);
+      ctx.lineTo(w * 0.88, h * 0.61);
+      ctx.lineTo(w, h * 0.69);
+      ctx.lineTo(w, h);
+      ctx.closePath();
+      ctx.fill();
+
+      // Draw Snow caps on Midground Peaks
+      ctx.fillStyle = '#ffffff';
+      // Peak at w * 0.22
+      ctx.beginPath();
+      ctx.moveTo(w * 0.17, h * 0.57);
+      ctx.lineTo(w * 0.22, h * 0.54);
+      ctx.lineTo(w * 0.27, h * 0.565);
+      ctx.quadraticCurveTo(w * 0.22, h * 0.59, w * 0.17, h * 0.57);
+      ctx.fill();
+      // Peak at w * 0.48
+      ctx.beginPath();
+      ctx.moveTo(w * 0.43, h * 0.54);
+      ctx.lineTo(w * 0.48, h * 0.51);
+      ctx.lineTo(w * 0.54, h * 0.56);
+      ctx.quadraticCurveTo(w * 0.48, h * 0.565, w * 0.43, h * 0.54);
+      ctx.fill();
+      // Peak at w * 0.76
+      ctx.beginPath();
+      ctx.moveTo(w * 0.71, h * 0.575);
+      ctx.lineTo(w * 0.76, h * 0.55);
+      ctx.lineTo(w * 0.81, h * 0.575);
+      ctx.quadraticCurveTo(w * 0.76, h * 0.60, w * 0.71, h * 0.575);
+      ctx.fill();
+
+      // 6. Volumetric Foreground Parallax Fog
+      ctx.save();
+      ctx.fillStyle = 'rgba(240, 245, 250, 0.28)';
+      ctx.beginPath();
+      ctx.moveTo(0, h);
+      for (let x = 0; x <= w; x += 10) {
+        const y = h * 0.66 + Math.cos(x * 0.02 + windTime * 0.22) * 15;
+        ctx.lineTo(x, y);
+      }
+      ctx.lineTo(w, h);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+
+      // 7. Foreground Dark Cliff Silhouettes
+      ctx.fillStyle = 'rgba(45, 62, 78, 0.90)';
+      ctx.beginPath();
+      ctx.moveTo(0, h);
+      ctx.lineTo(0, h * 0.80);
+      ctx.lineTo(w * 0.30, h * 0.72);
+      ctx.lineTo(w * 0.65, h * 0.84);
+      ctx.lineTo(w * 0.82, h * 0.75);
+      ctx.lineTo(w, h * 0.83);
+      ctx.lineTo(w, h);
+      ctx.closePath();
+      ctx.fill();
+
+      // Draw edge snow on foreground cliffs
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+      ctx.beginPath();
+      ctx.moveTo(0, h * 0.80);
+      ctx.lineTo(w * 0.30, h * 0.72);
+      ctx.lineTo(w * 0.65, h * 0.84);
+      ctx.lineTo(w * 0.82, h * 0.75);
+      ctx.lineTo(w, h * 0.83);
+      ctx.lineTo(w, h * 0.845);
+      ctx.lineTo(w * 0.82, h * 0.765);
+      ctx.lineTo(w * 0.65, h * 0.855);
+      ctx.lineTo(w * 0.30, h * 0.735);
+      ctx.lineTo(0, h * 0.815);
+      ctx.closePath();
+      ctx.fill();
+
+      // 7. Windswept Fine Snow Motes
+      if (snowParticles.length === 0) {
+        for (let i = 0; i < 30; i++) {
+          snowParticles.push({
+            x: Math.random() * w,
+            y: Math.random() * h * 0.8,
+            r: 0.6 + Math.random() * 1.2,
+            speedX: 1.5 + Math.random() * 2.0,
+            speedY: 0.2 + Math.random() * 0.5,
+            wobble: Math.random() * Math.PI
+          });
+        }
+      }
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+      snowParticles.forEach(s => {
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.fill();
+
+        s.x += s.speedX;
+        s.y += s.speedY + Math.sin(s.wobble + windTime) * 0.3;
+        s.wobble += 0.05;
+
+        if (s.x > w + 10) {
+          s.x = -10;
+          s.y = Math.random() * h * 0.8;
+        }
+      });
+    } else if (phase === 'beach') {
+      // 1. Photorealistic Tropical Horizon sunset
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
+      skyGrad.addColorStop(0, '#e0f7fa'); // Ocean horizon turquoise
+      skyGrad.addColorStop(0.35, '#ffea75'); // Solar gold
+      skyGrad.addColorStop(0.65, '#ff9e80'); // Warm tangerine
+      skyGrad.addColorStop(0.9, '#ff8a80'); // Soft blush rose
+      skyGrad.addColorStop(1, '#ffccbc'); // Dune sand peach
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, w, h);
+
+      // 2. Horizon Low Setting Sun
+      const sunX = w * 0.80;
+      const sunY = h - 130;
+      ctx.save();
+      const sunGlow = ctx.createRadialGradient(sunX, sunY, 15, sunX, sunY, 75);
+      sunGlow.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+      sunGlow.addColorStop(0.4, 'rgba(255, 235, 170, 0.35)');
+      sunGlow.addColorStop(1, 'rgba(255, 204, 128, 0)');
+      ctx.fillStyle = sunGlow;
+      ctx.beginPath();
+      ctx.arc(sunX, sunY, 75, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // 3. Specular Water Reflection Trail (Vertical solar bloom)
+      ctx.save();
+      const trailGrad = ctx.createLinearGradient(sunX - 35, sunY, sunX + 35, h);
+      trailGrad.addColorStop(0, 'rgba(255, 250, 210, 0.30)');
+      trailGrad.addColorStop(0.5, 'rgba(255, 235, 170, 0.15)');
+      trailGrad.addColorStop(1, 'rgba(255, 200, 150, 0)');
+      ctx.fillStyle = trailGrad;
+      ctx.beginPath();
+      ctx.moveTo(sunX - 5, sunY + 15);
+      ctx.lineTo(sunX + 5, sunY + 15);
+      ctx.lineTo(sunX + 60, h);
+      ctx.lineTo(sunX - 60, h);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+
+      // 4. Overlapping Translucent Waves & Seafoam
+      ctx.save();
+      const waveColors = [
+        'rgba(128, 222, 234, 0.20)', // Distant wave
+        'rgba(77, 208, 225, 0.30)',  // Mid wave
+        'rgba(38, 198, 218, 0.40)'   // Near shore wave
+      ];
+      waveColors.forEach((color, idx) => {
+        const offset = idx * 25;
+        const waveSpeed = 1.0 + idx * 0.4;
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(0, h);
+        for (let x = 0; x <= w; x += 10) {
+          const waveY = h - 75 + offset + Math.sin(x * 0.04 + windTime * waveSpeed + idx) * 4;
+          ctx.lineTo(x, waveY);
+          
+          // Generate seafoam particles at wave crests
+          if (idx === 2 && x % 25 === 0 && Math.random() < 0.15) {
+            rainSplashes.push({
+              x: x,
+              y: waveY + Math.random() * 4,
+              r: 0.5,
+              maxR: 2 + Math.random() * 3,
+              opacity: 0.45
+            });
+          }
+        }
+        ctx.lineTo(w, h);
+        ctx.closePath();
+        ctx.fill();
+      });
+
+      // Render Seafoam Bubble ripples
+      rainSplashes.forEach((s, idx) => {
+        ctx.strokeStyle = `rgba(255, 255, 255, ${s.opacity})`;
+        ctx.lineWidth = 0.6;
+        ctx.beginPath();
+        ctx.ellipse(s.x, s.y, s.r, s.r * 0.3, 0, 0, Math.PI * 2);
+        ctx.stroke();
+
+        s.r += 0.25;
+        s.opacity -= 0.025;
+        if (s.opacity <= 0 || s.r > s.maxR) {
+          rainSplashes.splice(idx, 1);
+        }
+      });
+      ctx.restore();
+
+      // 5. Helper to draw an animated-movie style smooth palm tree with comb-like fronds
+      function drawPalmTree(baseX, baseY, trunkH, bendDir, scale) {
+        ctx.save();
+        
+        // 1. Draw smooth curved trunk path
+        ctx.beginPath();
+        for (let i = 0; i <= 20; i++) {
+          const t = i / 20;
+          const wVal = (14 - t * 7.5) * scale;
+          const cx = baseX + Math.sin(t * 1.45) * 80 * bendDir;
+          const cy = baseY - t * trunkH;
+          if (i === 0) ctx.moveTo(cx - wVal, cy);
+          else ctx.lineTo(cx - wVal, cy);
+        }
+        for (let i = 20; i >= 0; i--) {
+          const t = i / 20;
+          const wVal = (14 - t * 7.5) * scale;
+          const cx = baseX + Math.sin(t * 1.45) * 80 * bendDir;
+          const cy = baseY - t * trunkH;
+          ctx.lineTo(cx + wVal, cy);
+        }
+        ctx.closePath();
+
+        // Bark gradient
+        const trunkGrad = ctx.createLinearGradient(baseX - 10, baseY, baseX + 10, baseY - trunkH);
+        trunkGrad.addColorStop(0, '#3e2723'); // Deep cocoa bark
+        trunkGrad.addColorStop(0.5, '#5d4037'); // Warm highlight wood
+        trunkGrad.addColorStop(1, '#2d1d18'); // Top shadow
+        ctx.fillStyle = trunkGrad;
+        ctx.fill();
+
+        // 2. Draw soft bark ring creases
+        ctx.strokeStyle = 'rgba(28, 18, 12, 0.4)';
+        ctx.lineWidth = 1.2 * scale;
+        for (let i = 1; i < 20; i++) {
+          const t = i / 20;
+          const cx = baseX + Math.sin(t * 1.45) * 80 * bendDir;
+          const cy = baseY - t * trunkH;
+          const wVal = (14 - t * 7.5) * scale;
+          ctx.beginPath();
+          ctx.ellipse(cx, cy, wVal, 2.5 * scale, 0, Math.PI, 0, false);
+          ctx.stroke();
+        }
+
+        // Get canopy top coordinates
+        const topT = 1.0;
+        const topX = baseX + Math.sin(topT * 1.45) * 80 * bendDir;
+        const topY = baseY - topT * trunkH;
+        
+        ctx.translate(topX, topY);
+        const sway = Math.sin(windTime * 0.8) * 0.05;
+
+        // 3. Draw Coconuts
+        ctx.fillStyle = 'rgba(38, 20, 12, 0.95)';
+        ctx.beginPath();
+        ctx.arc(-6 * scale, 6 * scale, 6 * scale, 0, Math.PI * 2);
+        ctx.arc(4 * scale, 7 * scale, 5.5 * scale, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 4. Draw 8 Comb-style Palm Fronds
+        const frondAngles = [-1.1, -0.8, -0.5, -0.2, 0.1, 0.4, 0.7, 1.0];
+        frondAngles.forEach((baseAngle, idx) => {
+          ctx.save();
+          const angle = baseAngle + sway;
+          ctx.rotate(angle);
+          
+          const length = (85 + (idx % 3) * 12) * scale;
+          const cpX = length * 0.5;
+          const cpY = 22 * scale;
+          const endX = length;
+          const endY = -5 * scale;
+          
+          // Draw main green spine
+          ctx.strokeStyle = 'rgba(27, 94, 32, 0.95)';
+          ctx.lineWidth = 2.5 * scale;
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.quadraticCurveTo(cpX, cpY, endX, endY);
+          ctx.stroke();
+          
+          // Draw comb-like leaflets branching downwards
+          ctx.strokeStyle = 'rgba(34, 112, 41, 0.92)';
+          ctx.lineWidth = 1.8 * scale;
+          for (let f = 5; f < length; f += 4) {
+            const lfT = f / length;
+            const px = (1 - lfT) * (1 - lfT) * 0 + 2 * (1 - lfT) * lfT * cpX + lfT * lfT * endX;
+            const py = (1 - lfT) * (1 - lfT) * 0 + 2 * (1 - lfT) * lfT * cpY + lfT * lfT * endY;
+            
+            ctx.beginPath();
+            ctx.moveTo(px, py);
+            ctx.lineTo(px + 4 * scale, py + (20 - lfT * 8) * scale);
+            ctx.stroke();
+          }
+          ctx.restore();
+        });
+        
+        ctx.restore();
+      }
+
+      // Draw Main Tall Palm Tree
+      drawPalmTree(w * 0.03, h, 260, 1.0, 1.15);
+      // Draw Smaller Companion Palm Tree for depth
+      drawPalmTree(w * 0.12, h, 185, 0.8, 0.85);
+    } else if (phase === 'bustlingcity') {
+      // 1. Twilight Background Sky & Glow
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
+      skyGrad.addColorStop(0, '#09081a'); // Deep space twilight
+      skyGrad.addColorStop(0.4, '#1b0f32'); // Purple haze
+      skyGrad.addColorStop(0.8, '#4a154b'); // Magenta sunset line
+      skyGrad.addColorStop(1, '#8c354a'); // Warm golden-orange horizon
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, w, h);
+
+      // 2. Twinkling Stars
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+      const starPositions = [
+        { x: w * 0.12, y: h * 0.08, r: 1.0 },
+        { x: w * 0.28, y: h * 0.15, r: 0.8 },
+        { x: w * 0.45, y: h * 0.06, r: 1.2 },
+        { x: w * 0.65, y: h * 0.18, r: 0.7 },
+        { x: w * 0.78, y: h * 0.10, r: 1.4 },
+        { x: w * 0.90, y: h * 0.22, r: 0.9 }
+      ];
+      starPositions.forEach(star => {
+        ctx.save();
+        ctx.beginPath();
+        const twinkle = Math.sin(windTime * 4.0 + star.x) * 0.3;
+        ctx.arc(star.x, star.y, Math.max(0.4, star.r + twinkle), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+
+      // 3. Dense City Skyscraper Silhouettes (Anime Landscape Style)
+      ctx.save();
+      ctx.fillStyle = 'rgba(12, 8, 22, 0.96)';
+      
+      // Tower 1 (Far Left, peaked antenna)
+      const t1X = w * 0.14;
+      const t1W = 25;
+      const t1H = 135;
+      ctx.fillRect(t1X - t1W, h - t1H, t1W * 2, t1H);
+      ctx.strokeStyle = 'rgba(12, 8, 22, 0.96)';
+      ctx.lineWidth = 1.8;
+      ctx.beginPath(); ctx.moveTo(t1X, h - t1H); ctx.lineTo(t1X, h - t1H - 20); ctx.stroke(); // antenna
+
+      // Tower 2 (Left-Center, slanted roof)
+      const t2X = w * 0.28;
+      const t2W = 32;
+      const t2H = 175;
+      ctx.beginPath();
+      ctx.moveTo(t2X - t2W, h);
+      ctx.lineTo(t2X - t2W, h - t2H);
+      ctx.lineTo(t2X + t2W, h - t2H + 25);
+      ctx.lineTo(t2X + t2W, h);
+      ctx.closePath();
+      ctx.fill();
+
+      // Tower 3 (Center, stepped roof)
+      const t3X = w * 0.46;
+      const t3W = 28;
+      const t3H = 145;
+      ctx.fillRect(t3X - t3W, h - t3H, t3W * 2, t3H);
+      ctx.fillRect(t3X - t3W + 6, h - t3H - 12, (t3W - 6) * 2, 12);
+      ctx.fillRect(t3X - t3W + 12, h - t3H - 24, (t3W - 12) * 2, 12);
+
+      // Tower 4 (Center-Right, massive skyscraper with antenna peak)
+      const t4X = w * 0.62;
+      const t4W = 36;
+      const t4H = 200;
+      ctx.beginPath();
+      ctx.moveTo(t4X - t4W, h);
+      ctx.lineTo(t4X - t4W, h - t4H + 20);
+      ctx.lineTo(t4X, h - t4H);
+      ctx.lineTo(t4X + t4W, h - t4H + 20);
+      ctx.lineTo(t4X + t4W, h);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath(); ctx.moveTo(t4X, h - t4H); ctx.lineTo(t4X, h - t4H - 25); ctx.stroke();
+
+      // Tower 5 (Right, curved top)
+      const t5X = w * 0.78;
+      const t5W = 26;
+      const t5H = 130;
+      ctx.beginPath();
+      ctx.moveTo(t5X - t5W, h);
+      ctx.lineTo(t5X - t5W, h - t5H + 15);
+      ctx.quadraticCurveTo(t5X, h - t5H - 10, t5X + t5W, h - t5H + 15);
+      ctx.lineTo(t5X + t5W, h);
+      ctx.closePath();
+      ctx.fill();
+
+      // Tower 6 (Far Right, flat tower with twin spires)
+      const t6X = w * 0.90;
+      const t6W = 24;
+      const t6H = 155;
+      ctx.fillRect(t6X - t6W, h - t6H, t6W * 2, t6H);
+      ctx.beginPath();
+      ctx.moveTo(t6X - t6W + 4, h - t6H); ctx.lineTo(t6X - t6W + 4, h - t6H - 15);
+      ctx.moveTo(t6X + t6W - 4, h - t6H); ctx.lineTo(t6X + t6W - 4, h - t6H - 15);
+      ctx.stroke();
+      ctx.restore();
+
+      // 4. Windows Lights Grids (Warm glowing apartments)
+      ctx.save();
+      ctx.fillStyle = 'rgba(255, 230, 110, 0.50)';
+      // Windows on Tower 2
+      for (let col = -2; col <= 2; col++) {
+        for (let row = 0; row < 12; row++) {
+          const wx = t2X + col * 10 - 2;
+          const wy = h - t2H + 30 + row * 11;
+          const rand = Math.sin(col * 3 + row * 4 + windTime * 2.0);
+          if (rand > -0.1 && wy < h - 25) {
+            ctx.fillRect(wx, wy, 4, 5);
+          }
+        }
+      }
+      // Windows on Tower 4
+      ctx.fillStyle = 'rgba(255, 200, 100, 0.45)';
+      for (let col = -3; col <= 3; col++) {
+        for (let row = 0; row < 15; row++) {
+          const wx = t4X + col * 8 - 1.5;
+          const wy = h - t4H + 40 + row * 10;
+          const rand = Math.sin(col * 2 + row * 5 + windTime * 1.5);
+          if (rand > 0.0 && wy < h - 25) {
+            ctx.fillRect(wx, wy, 3, 5);
+          }
+        }
+      }
+      ctx.restore();
+
+      // 5. Bustling Elevated Highway Bridge, Prague Tram, & Traffic Streams
+      ctx.save();
+      ctx.fillStyle = '#06040a';
+      ctx.fillRect(0, h - 50, w, 50); // Bridge bar
+      // Bridge pillars
+      ctx.fillStyle = '#030206';
+      for (let i = 0; i < 5; i++) {
+        ctx.fillRect(w * 0.2 * i + w * 0.08, h - 50, 8, 50);
+      }
+
+      // Draw Tram tracks
+      ctx.strokeStyle = '#181224';
+      ctx.lineWidth = 1.0;
+      ctx.beginPath();
+      ctx.moveTo(0, h - 45); ctx.lineTo(w, h - 45);
+      ctx.moveTo(0, h - 43); ctx.lineTo(w, h - 43);
+      ctx.stroke();
+
+      // Traffic Stream: Headlights (Yellow/White moving left)
+      ctx.fillStyle = 'rgba(255, 245, 180, 0.85)';
+      for (let i = 0; i < 6; i++) {
+        const hx = (w + 100 - (windTime * 50 + i * 85) % (w + 100)) % (w + 100) - 50;
+        ctx.beginPath();
+        ctx.ellipse(hx, h - 35, 4, 1.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Traffic Stream: Taillights (Red moving right)
+      ctx.fillStyle = 'rgba(255, 80, 80, 0.88)';
+      for (let i = 0; i < 5; i++) {
+        const rx = (windTime * 40 + i * 110) % (w + 100) - 50;
+        ctx.beginPath();
+        ctx.ellipse(rx, h - 30, 3, 1.2, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Prague Tram (Red & White Tatra-style tram moving left-to-right)
+      ctx.save();
+      const tramX = (windTime * 32) % (w + 150) - 80;
+      const tramY = h - 54;
+      
+      // Car 1 (Front)
+      ctx.fillStyle = '#d32f2f'; // Red bottom half
+      ctx.fillRect(tramX, tramY + 4, 20, 5);
+      ctx.fillStyle = '#eceff1'; // White top half
+      ctx.fillRect(tramX, tramY + 1, 20, 3);
+      // Windows
+      ctx.fillStyle = '#fff59d'; // Glowing yellow windows
+      ctx.fillRect(tramX + 2, tramY + 2, 3, 1.5);
+      ctx.fillRect(tramX + 6, tramY + 2, 3, 1.5);
+      ctx.fillRect(tramX + 10, tramY + 2, 3, 1.5);
+      ctx.fillRect(tramX + 14, tramY + 2, 3, 1.5);
+      
+      // Car 2 (Rear)
+      const gap = 3;
+      const rearX = tramX - 20 - gap;
+      ctx.fillStyle = '#d32f2f'; // Red bottom half
+      ctx.fillRect(rearX, tramY + 4, 20, 5);
+      ctx.fillStyle = '#eceff1'; // White top half
+      ctx.fillRect(rearX, tramY + 1, 20, 3);
+      // Windows
+      ctx.fillStyle = '#fff59d';
+      ctx.fillRect(rearX + 2, tramY + 2, 3, 1.5);
+      ctx.fillRect(rearX + 6, tramY + 2, 3, 1.5);
+      ctx.fillRect(rearX + 10, tramY + 2, 3, 1.5);
+      ctx.fillRect(rearX + 14, tramY + 2, 3, 1.5);
+
+      // Accordion connector
+      ctx.fillStyle = '#37474f';
+      ctx.fillRect(tramX - gap, tramY + 3, gap, 5);
+
+      // Pantograph (on top of Car 1)
+      ctx.strokeStyle = '#78909c';
+      ctx.lineWidth = 1.0;
+      ctx.beginPath();
+      ctx.moveTo(tramX + 10, tramY + 1);
+      ctx.lineTo(tramX + 7, tramY - 3);
+      ctx.lineTo(tramX + 13, tramY - 3);
+      ctx.stroke();
+
+      ctx.restore();
+      ctx.restore();
+
+      // 6. Slow Blinking Air Traffic Beacons (Planes drifting across twilight sky)
+      ctx.save();
+      const blink = Math.floor(windTime * 3.5) % 2 === 0;
+      
+      // Beacon 1 (Drifting left to right)
+      const bx1 = (windTime * 8) % (w + 120) - 60;
+      const by1 = h * 0.12;
+      if (blink) {
+        ctx.fillStyle = 'rgba(255, 60, 0, 0.9)'; // Red blink
+        ctx.beginPath(); ctx.arc(bx1, by1, 2.5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'; // White glow halo
+        ctx.beginPath(); ctx.arc(bx1, by1, 6, 0, Math.PI * 2); ctx.fill();
+      } else {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'; // White blink
+        ctx.beginPath(); ctx.arc(bx1, by1, 2.0, 0, Math.PI * 2); ctx.fill();
+      }
+
+      // Beacon 2 (Drifting right to left)
+      const bx2 = (w + 100 - (windTime * 12) % (w + 200)) % (w + 200) - 100;
+      const by2 = h * 0.22;
+      if (blink) {
+        ctx.fillStyle = 'rgba(0, 180, 255, 0.8)'; // Blue blink
+        ctx.beginPath(); ctx.arc(bx2, by2, 2.5, 0, Math.PI * 2); ctx.fill();
+      } else {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        ctx.beginPath(); ctx.arc(bx2, by2, 2.0, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.restore();
+
+      // 7. Roof Chimney Steam Particles (Slow-fading puffs)
+      const steamX = t3X;
+      const steamY = h - t3H - 26;
+      
+      if (qatarFlameParticles.length < 15) {
+        qatarFlameParticles.push({
+          x: steamX + (Math.random() - 0.5) * 4,
+          y: steamY,
+          r: 2.5 + Math.random() * 3.0,
+          vy: -0.4 - Math.random() * 0.5,
+          vx: 0.2 + Math.random() * 0.4, // drift right with forest wind
+          life: 1.0
+        });
+      }
+      // Render steam puffs
+      ctx.save();
+      qatarFlameParticles.forEach((p, idx) => {
+        ctx.fillStyle = `rgba(220, 225, 235, ${p.life * 0.12})`;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r * (1 + (1 - p.life) * 1.5), 0, Math.PI * 2);
+        ctx.fill();
+
+        p.y += p.vy;
+        p.x += p.vx;
+        p.life -= 0.025;
+
+        if (p.life <= 0) {
+          qatarFlameParticles.splice(idx, 1);
+        }
+      });
+      ctx.restore();
+    }
+    
     // Determine Sun/Moon coordinates
     const sunMoonX = 75;
     const sunMoonY = 75;
     
     // Draw Sun/Moon depending on diurnal phase
-    if (phase === 'sunrise') {
+    if (phase === 'sunrise' || phase === 'cherryblossoms') {
       ctx.save();
       ctx.translate(sunMoonX + 15, sunMoonY + 15); // Rising sun position (lower)
       const sunGlow = ctx.createRadialGradient(0, 0, 20, 0, 0, 60);
@@ -863,7 +1965,7 @@ const PlantRenderer = (function() {
       ctx.arc(0, 0, 20, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
-    } else if (phase === 'day') {
+    } else if (phase === 'day' || phase === 'mountains') {
       ctx.save();
       ctx.translate(sunMoonX, sunMoonY);
       const sunGlow = ctx.createRadialGradient(0, 0, 26, 0, 0, 68);
@@ -875,8 +1977,8 @@ const PlantRenderer = (function() {
       ctx.arc(0, 0, 68, 0, Math.PI * 2);
       ctx.fill();
       
-      ctx.fillStyle = '#ffca28'; // Golden core
-      ctx.shadowColor = '#ff9800';
+      ctx.fillStyle = phase === 'mountains' ? '#ffffff' : '#ffca28'; // Golden/misty white core
+      ctx.shadowColor = phase === 'mountains' ? '#e6eff2' : '#ff9800';
       ctx.shadowBlur = 20;
       ctx.beginPath();
       ctx.arc(0, 0, 26, 0, Math.PI * 2);
@@ -884,7 +1986,7 @@ const PlantRenderer = (function() {
       ctx.restore();
     } else if (phase === 'sunset') {
       ctx.save();
-      ctx.translate(sunMoonX + 25, sunMoonY + 30); // Setting sun position (lower)
+      ctx.translate(sunMoonX + 25, sunMoonY + 30);
       const sunGlow = ctx.createRadialGradient(0, 0, 24, 0, 0, 62);
       sunGlow.addColorStop(0, 'rgba(244, 67, 54, 0.65)');
       sunGlow.addColorStop(0.5, 'rgba(255, 152, 0, 0.25)');
@@ -901,7 +2003,7 @@ const PlantRenderer = (function() {
       ctx.arc(0, 0, 24, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
-    } else { // Night Moon
+    } else if (phase === 'night' || phase === 'bustlingcity') { // Night Moon
       ctx.save();
       ctx.translate(sunMoonX, sunMoonY);
       ctx.rotate(-Math.PI / 4);
@@ -934,6 +2036,16 @@ const PlantRenderer = (function() {
       cloudColor = 'rgba(255, 210, 190, 0.88)'; // Peach-gold sunset clouds
     } else if (phase === 'night') {
       cloudColor = 'rgba(25, 30, 48, 0.35)'; // Dark wispy silhouette clouds
+    } else if (phase === 'rainforest') {
+      cloudColor = 'rgba(10, 40, 15, 0.22)'; // Dark forest clouds
+    } else if (phase === 'cherryblossoms') {
+      cloudColor = 'rgba(255, 240, 245, 0.65)'; // Soft sakura clouds
+    } else if (phase === 'mountains') {
+      cloudColor = 'rgba(255, 255, 255, 0.85)'; // Hazy mountain clouds
+    } else if (phase === 'beach') {
+      cloudColor = 'rgba(255, 255, 255, 0.90)'; // White beach clouds
+    } else if (phase === 'bustlingcity') {
+      cloudColor = 'rgba(60, 20, 50, 0.28)'; // Deep twilight purple clouds
     }
     
     clouds.forEach(cloud => {
@@ -944,22 +2056,22 @@ const PlantRenderer = (function() {
     const potY = h - 98;
     ctx.save();
     const spotGrad = ctx.createLinearGradient(w / 2, 0, w / 2, potY + 10);
-    if (phase === 'sunrise') {
+    if (phase === 'sunrise' || phase === 'cherryblossoms') {
       spotGrad.addColorStop(0, 'rgba(255, 230, 180, 0.20)');
       spotGrad.addColorStop(0.6, 'rgba(255, 230, 180, 0.08)');
       spotGrad.addColorStop(1, 'rgba(255, 230, 180, 0)');
-    } else if (phase === 'day') {
-      spotGrad.addColorStop(0, 'rgba(255, 255, 210, 0.18)');
-      spotGrad.addColorStop(0.6, 'rgba(255, 255, 210, 0.08)');
-      spotGrad.addColorStop(1, 'rgba(255, 255, 210, 0)');
-    } else if (phase === 'sunset') {
+    } else if (phase === 'sunset' || phase === 'bustlingcity') {
       spotGrad.addColorStop(0, 'rgba(255, 180, 150, 0.20)');
       spotGrad.addColorStop(0.6, 'rgba(255, 180, 150, 0.08)');
       spotGrad.addColorStop(1, 'rgba(255, 180, 150, 0)');
-    } else { // Night
-      spotGrad.addColorStop(0, 'rgba(235, 245, 255, 0.28)'); // Enhanced spotlight at night
-      spotGrad.addColorStop(0.6, 'rgba(235, 245, 255, 0.12)');
-      spotGrad.addColorStop(1, 'rgba(235, 245, 255, 0)');
+    } else if (isNight) {
+      spotGrad.addColorStop(0, 'rgba(180, 200, 255, 0.15)');
+      spotGrad.addColorStop(0.6, 'rgba(180, 200, 255, 0.05)');
+      spotGrad.addColorStop(1, 'rgba(180, 200, 255, 0)');
+    } else { // Day, Beach, Rainforest, Mountains
+      spotGrad.addColorStop(0, 'rgba(255, 255, 210, 0.18)');
+      spotGrad.addColorStop(0.6, 'rgba(255, 255, 210, 0.08)');
+      spotGrad.addColorStop(1, 'rgba(255, 255, 210, 0)');
     }
     ctx.fillStyle = spotGrad;
     ctx.beginPath();
@@ -1057,6 +2169,31 @@ const PlantRenderer = (function() {
     ctx.fillStyle = colors.soil;
     ctx.fill();
     ctx.restore();
+
+    // Streak Pot Halo Aura (Drawn behind pot)
+    if (currentStreak >= 3) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.ellipse(potX, baseY + 1, bodyBotW * 1.5, 9 * masterScale, 0, 0, Math.PI * 2);
+      
+      let glowColor = 'rgba(38, 166, 154, 0.4)'; // 3+ days: Teal
+      let blurRad = 8;
+      if (currentStreak >= 30) {
+        glowColor = 'rgba(255, 215, 0, 0.55)'; // 30+ days: Gold
+        blurRad = 18;
+      } else if (currentStreak >= 7) {
+        glowColor = 'rgba(255, 128, 171, 0.55)'; // 7+ days: Coral/Pink
+        blurRad = 13;
+      }
+      
+      ctx.shadowColor = glowColor;
+      ctx.shadowBlur = blurRad * masterScale;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 1;
+      ctx.fillStyle = glowColor;
+      ctx.fill();
+      ctx.restore();
+    }
 
     // 3. Draw Pot Body
     ctx.save();
@@ -1725,6 +2862,26 @@ const PlantRenderer = (function() {
       ctx.stroke();
       ctx.restore();
     }
+
+    // 8. Global Atmospheric Ambient Scenery Color Overlay (Cinematic Bloom Tint)
+    ctx.save();
+    let ambientOverlayColor = 'rgba(0, 0, 0, 0)';
+    if (phase === 'sunrise' || phase === 'cherryblossoms') {
+      ambientOverlayColor = 'rgba(255, 182, 193, 0.04)'; // soft pink warm bloom
+    } else if (phase === 'sunset' || phase === 'bustlingcity') {
+      ambientOverlayColor = 'rgba(255, 127, 80, 0.05)'; // soft coral/orange sunset glow
+    } else if (phase === 'night') {
+      ambientOverlayColor = 'rgba(25, 30, 48, 0.08)'; // deep twilight blue overlay
+    } else if (phase === 'rainforest') {
+      ambientOverlayColor = 'rgba(20, 50, 25, 0.05)'; // lush green environment bloom
+    } else if (phase === 'mountains') {
+      ambientOverlayColor = 'rgba(150, 180, 200, 0.03)'; // misty blue alpenglow tint
+    }
+    if (ambientOverlayColor !== 'rgba(0, 0, 0, 0)') {
+      ctx.fillStyle = ambientOverlayColor;
+      ctx.fillRect(0, 0, w, h);
+    }
+    ctx.restore();
   }
 
   function setPotStyle(style) {
