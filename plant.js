@@ -1834,84 +1834,131 @@ const PlantRenderer = (function() {
 
       // Prague Tram (Red & White Tatra-style tram moving left-to-right)
       ctx.save();
-      const loopDist = w + 160;
-      const tramX1 = (windTime * 32) % loopDist - 80;
-      const tramX2 = (windTime * 32 + loopDist / 2) % loopDist - 80;
+      const tramX = (windTime * 32) % (w + 150) - 80;
+      const tramY = h - 54;
       
-      function drawTram(tx) {
-        const tramY = h - 54;
-        // Car 1 (Front)
-        ctx.fillStyle = '#d32f2f'; // Red bottom half
-        ctx.fillRect(tx, tramY + 4, 20, 5);
-        ctx.fillStyle = '#eceff1'; // White top half
-        ctx.fillRect(tx, tramY + 1, 20, 3);
-        // Windows
-        ctx.fillStyle = '#fff59d'; // Glowing yellow windows
-        ctx.fillRect(tx + 2, tramY + 2, 3, 1.5);
-        ctx.fillRect(tx + 6, tramY + 2, 3, 1.5);
-        ctx.fillRect(tx + 10, tramY + 2, 3, 1.5);
-        ctx.fillRect(tx + 14, tramY + 2, 3, 1.5);
-        
-        // Car 2 (Rear)
-        const gap = 3;
-        const rearX = tx - 20 - gap;
-        ctx.fillStyle = '#d32f2f'; // Red bottom half
-        ctx.fillRect(rearX, tramY + 4, 20, 5);
-        ctx.fillStyle = '#eceff1'; // White top half
-        ctx.fillRect(rearX, tramY + 1, 20, 3);
-        // Windows
-        ctx.fillStyle = '#fff59d';
-        ctx.fillRect(rearX + 2, tramY + 2, 3, 1.5);
-        ctx.fillRect(rearX + 6, tramY + 2, 3, 1.5);
-        ctx.fillRect(rearX + 10, tramY + 2, 3, 1.5);
-        ctx.fillRect(rearX + 14, tramY + 2, 3, 1.5);
+      // Car 1 (Front)
+      ctx.fillStyle = '#d32f2f'; // Red bottom half
+      ctx.fillRect(tramX, tramY + 4, 20, 5);
+      ctx.fillStyle = '#eceff1'; // White top half
+      ctx.fillRect(tramX, tramY + 1, 20, 3);
+      // Windows
+      ctx.fillStyle = '#fff59d'; // Glowing yellow windows
+      ctx.fillRect(tramX + 2, tramY + 2, 3, 1.5);
+      ctx.fillRect(tramX + 6, tramY + 2, 3, 1.5);
+      ctx.fillRect(tramX + 10, tramY + 2, 3, 1.5);
+      ctx.fillRect(tramX + 14, tramY + 2, 3, 1.5);
+      
+      // Car 2 (Rear)
+      const gap = 3;
+      const rearX = tramX - 20 - gap;
+      ctx.fillStyle = '#d32f2f'; // Red bottom half
+      ctx.fillRect(rearX, tramY + 4, 20, 5);
+      ctx.fillStyle = '#eceff1'; // White top half
+      ctx.fillRect(rearX, tramY + 1, 20, 3);
+      // Windows
+      ctx.fillStyle = '#fff59d';
+      ctx.fillRect(rearX + 2, tramY + 2, 3, 1.5);
+      ctx.fillRect(rearX + 6, tramY + 2, 3, 1.5);
+      ctx.fillRect(rearX + 10, tramY + 2, 3, 1.5);
+      ctx.fillRect(rearX + 14, tramY + 2, 3, 1.5);
 
-        // Accordion connector
-        ctx.fillStyle = '#37474f';
-        ctx.fillRect(tx - gap, tramY + 3, gap, 5);
+      // Accordion connector
+      ctx.fillStyle = '#37474f';
+      ctx.fillRect(tramX - gap, tramY + 3, gap, 5);
 
-        // Pantograph (on top of Car 1)
-        ctx.strokeStyle = '#78909c';
-        ctx.lineWidth = 1.0;
-        ctx.beginPath();
-        ctx.moveTo(tx + 10, tramY + 1);
-        ctx.lineTo(tx + 7, tramY - 3);
-        ctx.lineTo(tx + 13, tramY - 3);
-        ctx.stroke();
-      }
-
-      drawTram(tramX1);
-      drawTram(tramX2);
+      // Pantograph (on top of Car 1)
+      ctx.strokeStyle = '#78909c';
+      ctx.lineWidth = 1.0;
+      ctx.beginPath();
+      ctx.moveTo(tramX + 10, tramY + 1);
+      ctx.lineTo(tramX + 7, tramY - 3);
+      ctx.lineTo(tramX + 13, tramY - 3);
+      ctx.stroke();
 
       ctx.restore();
       ctx.restore();
 
-      // 6. Slow Blinking Air Traffic Beacons (Planes drifting across twilight sky)
+      // 6. Commercial Airplane disappearing in the vast sky
       ctx.save();
-      const blink = Math.floor(windTime * 3.5) % 2 === 0;
-      
-      // Beacon 1 (Drifting left to right)
-      const bx1 = (windTime * 8) % (w + 120) - 60;
-      const by1 = h * 0.12;
-      if (blink) {
-        ctx.fillStyle = 'rgba(255, 60, 0, 0.9)'; // Red blink
-        ctx.beginPath(); ctx.arc(bx1, by1, 2.5, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'; // White glow halo
-        ctx.beginPath(); ctx.arc(bx1, by1, 6, 0, Math.PI * 2); ctx.fill();
-      } else {
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'; // White blink
-        ctx.beginPath(); ctx.arc(bx1, by1, 2.0, 0, Math.PI * 2); ctx.fill();
-      }
+      const px = (windTime * 14) % (w + 220) - 80;
+      const py = h * 0.26 - (px + 80) * 0.14; // Climb angle diagonally
+      const planeProgress = (px + 80) / (w + 220);
+      const planeAlpha = Math.max(0, 1.0 - planeProgress * 1.15); // Fade out
+      const planeScale = Math.max(0.35, 1.1 - planeProgress * 0.7); // Shrink
 
-      // Beacon 2 (Drifting right to left)
-      const bx2 = (w + 100 - (windTime * 12) % (w + 200)) % (w + 200) - 100;
-      const by2 = h * 0.22;
-      if (blink) {
-        ctx.fillStyle = 'rgba(0, 180, 255, 0.8)'; // Blue blink
-        ctx.beginPath(); ctx.arc(bx2, by2, 2.5, 0, Math.PI * 2); ctx.fill();
-      } else {
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-        ctx.beginPath(); ctx.arc(bx2, by2, 2.0, 0, Math.PI * 2); ctx.fill();
+      if (planeAlpha > 0) {
+        ctx.save();
+        ctx.globalAlpha = planeAlpha;
+        ctx.translate(px, py);
+        ctx.rotate(-0.14); // Climbing pitch
+        ctx.scale(planeScale, planeScale);
+
+        // Body (Fuselage)
+        ctx.fillStyle = 'rgba(236, 239, 241, 0.9)';
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 15, 2.3, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Swiped Wings (Main)
+        ctx.fillStyle = 'rgba(207, 216, 220, 0.95)';
+        ctx.beginPath();
+        ctx.moveTo(-4, 0);
+        ctx.lineTo(-9, 7.5);
+        ctx.lineTo(-6, 7.5);
+        ctx.lineTo(2, 0);
+        ctx.closePath();
+        ctx.fill();
+
+        // Swept Wings (Far wing)
+        ctx.beginPath();
+        ctx.moveTo(-4, 0);
+        ctx.lineTo(-8, -5.5);
+        ctx.lineTo(-5, -5.5);
+        ctx.lineTo(1, 0);
+        ctx.closePath();
+        ctx.fill();
+
+        // Tail Fin
+        ctx.beginPath();
+        ctx.moveTo(-11, 0);
+        ctx.lineTo(-14, -4.5);
+        ctx.lineTo(-11.5, -4.5);
+        ctx.lineTo(-8.5, 0);
+        ctx.closePath();
+        ctx.fill();
+
+        // Swept horizontal stabilizers
+        ctx.beginPath();
+        ctx.moveTo(-11, 0);
+        ctx.lineTo(-13.5, 3.5);
+        ctx.lineTo(-11.5, 3.5);
+        ctx.lineTo(-9, 0);
+        ctx.closePath();
+        ctx.fill();
+
+        // Navigation lights
+        // Right wing tip (Green)
+        ctx.fillStyle = '#00e676';
+        ctx.beginPath();
+        ctx.arc(-7.5, 7.5, 1.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Left wing tip (Red)
+        ctx.fillStyle = '#ff1744';
+        ctx.beginPath();
+        ctx.arc(-6.5, -5.5, 1.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Red blinking beacon on top of fuselage
+        if (Math.floor(windTime * 4) % 2 === 0) {
+          ctx.fillStyle = '#ff1744';
+          ctx.beginPath();
+          ctx.arc(0, -2.3, 1.3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        ctx.restore();
       }
       ctx.restore();
 
