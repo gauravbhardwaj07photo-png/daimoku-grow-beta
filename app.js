@@ -91,24 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
     "2026-12-25": { title: "Gosho Study", type: "meeting" }
   };
 
-  // 2026 National Holidays
-  const SGI_HOLIDAYS_2026 = {
-    "2026-02-10": "National Holiday",
-    "2026-02-23": "Emperor's Birthday",
-    "2026-03-20": "Vernal Equinox Day",
-    "2026-04-29": "Showa Day",
-    "2026-05-03": "Constitution Memorial Day",
-    "2026-05-04": "Greenery Day",
-    "2026-05-05": "Children's Day",
-    "2026-05-06": "Greenery Day Holiday",
-    "2026-07-20": "Marine Day",
-    "2026-08-11": "Mountain Day",
-    "2026-09-21": "Respect for the Aged Day",
-    "2026-09-22": "Autumnal Equinox Day",
-    "2026-10-12": "Sports Day",
-    "2026-11-03": "Culture Day",
-    "2026-11-23": "Labor Thanksgiving Day"
-  };
+  const SGI_HOLIDAYS_2026 = {};
   
   const QUOTES = [
     { text: "Even one daimoku can pervade the entire universe. Truly heartfelt and determined daimoku, therefore, has the power to move everything.", author: "Daisaku Ikeda Sensei" },
@@ -509,20 +492,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnTestGong = document.getElementById('btn-test-gong');
   const themeButtons = document.querySelectorAll('.theme-btn');
 
-  // Debug Panel elements
-  const btnToggleDebug = document.getElementById('btn-toggle-debug');
-  const debugContent = document.getElementById('debug-content');
-  const debugCard = document.querySelector('.debug-card');
-  const btnDebugHours = document.querySelectorAll('.btn-debug');
-  const btnDebugHealth = document.querySelectorAll('.btn-debug-health');
-  const btnDebugDecay24h = document.getElementById('btn-debug-decay-24h');
-  const btnDebugDecay72h = document.getElementById('btn-debug-decay-72h');
-  const btnDebugDecay7d = document.getElementById('btn-debug-decay-7d');
-  const btnDebugDecay15d = document.getElementById('btn-debug-decay-15d');
-  const btnDebugDecay30d = document.getElementById('btn-debug-decay-30d');
-  const btnDebugResetDate = document.getElementById('btn-debug-reset-date');
-  const btnDebugTestMorning = document.getElementById('btn-debug-test-morning');
-  const btnDebugTestEvening = document.getElementById('btn-debug-test-evening');
+
 
   // --- Web Audio API Gong Synthesizer ---
   function playGong() {
@@ -3004,111 +2974,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // (triggerNotification is defined in the upper scope)
 
-  // --- Developer Debug Panel Toggle & Functions ---
-  if (btnToggleDebug) {
-    btnToggleDebug.addEventListener('click', () => {
-      if (debugCard) debugCard.classList.toggle('open');
-      if (debugContent) debugContent.classList.toggle('collapsed');
-    });
-  }
 
-  btnDebugHours.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const hrs = parseInt(btn.getAttribute('data-hours'));
-      state.totalSeconds = hrs * 3600;
-      if (state.isDead) {
-        // If we are debugging plant hours, make it alive for testing
-        state.isDead = false;
-        state.health = 100;
-      }
-      saveState();
-      checkNewAchievements();
-      alert(`Debug: set total chanting to ${hrs} hours.`);
-    });
-  });
-
-  btnDebugHealth.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const targetHealth = parseInt(btn.getAttribute('data-health'));
-      state.health = targetHealth;
-      state.isDead = (targetHealth === 0);
-      if (state.isDead) {
-        state.revivalDates = [];
-      }
-      saveState();
-      alert(`Debug: set plant health to ${targetHealth}%.`);
-    });
-  });
-
-  btnDebugDecay24h.addEventListener('click', () => {
-    state.lastNotifiedThreshold = 0;
-    simulateNeglect(0.5); // 0.5h beyond buffer = 24.5h neglect (Thirsty level notification)
-  });
-
-  btnDebugDecay72h.addEventListener('click', () => {
-    state.lastNotifiedThreshold = 24;
-    simulateNeglect(48.5); // 48.5h beyond buffer = 72.5h neglect (Sad/Shrinking level notification)
-  });
-
-  btnDebugDecay7d.addEventListener('click', () => {
-    state.lastNotifiedThreshold = 72;
-    simulateNeglect(144.5); // 144.5h beyond buffer = 168.5h neglect (7 days neglect - Dying)
-  });
-
-  btnDebugDecay15d.addEventListener('click', () => {
-    state.lastNotifiedThreshold = 168;
-    simulateNeglect(336.5); // 336.5h beyond buffer = 360.5h neglect (15 days neglect - Withered)
-  });
-
-  btnDebugDecay30d.addEventListener('click', () => {
-    state.lastNotifiedThreshold = 360;
-    simulateNeglect(696.5); // 696.5h beyond buffer = 720.5h neglect (30 days neglect - Dormant)
-  });
-
-  btnDebugResetDate.addEventListener('click', () => {
-    state.lastChantedDate = new Date().toISOString();
-    state.health = 100;
-    state.isDead = false;
-    state.lastNotifiedThreshold = 0;
-    saveState();
-    alert("Debug: Last chanted date reset to right now!");
-  });
-
-  function simulateNeglect(additionalHours) {
-    const fakeChantedDate = new Date();
-    fakeChantedDate.setHours(fakeChantedDate.getHours() - (DECAY_BUFFER_HOURS + additionalHours));
-    
-    state.lastChantedDate = fakeChantedDate.toISOString();
-    applyTimeDecay();
-    saveState();
-    alert(`Debug: Simulated neglect. Health is now ${state.health}% (Mood: ${plantMoodBadge.textContent}).`);
-  }
-
-  btnDebugTestMorning.addEventListener('click', () => {
-    const dateTodayStr = new Date().toISOString().split('T')[0];
-    localStorage.removeItem(`morning_check_${dateTodayStr}`);
-    
-    const originalHours = Date.prototype.getHours;
-    Date.prototype.getHours = () => 13;
-    
-    runNotificationsChecks();
-    
-    Date.prototype.getHours = originalHours;
-    alert("Debug: Triggered morning reminder evaluation (Mocked time: 1:00 PM). Check notifications if permission granted!");
-  });
-
-  btnDebugTestEvening.addEventListener('click', () => {
-    const dateTodayStr = new Date().toISOString().split('T')[0];
-    localStorage.removeItem(`evening_check_${dateTodayStr}`);
-    
-    const originalHours = Date.prototype.getHours;
-    Date.prototype.getHours = () => 21;
-    
-    runNotificationsChecks();
-    
-    Date.prototype.getHours = originalHours;
-    alert("Debug: Triggered evening reminder evaluation (Mocked time: 9:00 PM). Check notifications if permission granted!");
-  });
 
 
   // --- Targets & Determinations Manager ---
@@ -4372,6 +4238,164 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // --- Campaign Canvas Animation Loops ---
+  const campaignLoops = {};
+
+  function initCampaignBucketCanvas(canvasId, progressPercent, blockSummaries) {
+    // Run after a tiny timeout to ensure element exists in DOM
+    setTimeout(() => {
+      const canvas = document.getElementById(canvasId);
+      if (!canvas) return;
+      
+      if (campaignLoops[canvasId]) {
+        cancelAnimationFrame(campaignLoops[canvasId]);
+      }
+      
+      const ctx = canvas.getContext('2d');
+      const rect = canvas.getBoundingClientRect();
+      const w = rect.width || 160;
+      const h = rect.height || 220;
+      canvas.width = w;
+      canvas.height = h;
+      
+      const bubbles = [];
+      const maxBubbles = 15;
+      for (let i = 0; i < maxBubbles; i++) {
+        bubbles.push({
+          x: Math.random() * (w - 20) + 10,
+          y: h - Math.random() * (h * (progressPercent / 100)),
+          r: 1.0 + Math.random() * 2.2,
+          speedY: 0.35 + Math.random() * 0.45,
+          phase: Math.random() * Math.PI * 2
+        });
+      }
+      
+      let localWindTime = 0;
+      
+      function tick() {
+        if (!document.getElementById(canvasId)) {
+          delete campaignLoops[canvasId];
+          return;
+        }
+        
+        localWindTime += 0.035;
+        ctx.clearRect(0, 0, w, h);
+        
+        // Background soft inner glow
+        const bgGrad = ctx.createRadialGradient(w/2, h/2, 10, w/2, h/2, w);
+        bgGrad.addColorStop(0, 'rgba(255, 255, 255, 0.02)');
+        bgGrad.addColorStop(1, 'rgba(0, 0, 0, 0.18)');
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0, 0, w, h);
+        
+        const totalSeconds = blockSummaries.reduce((sum, b) => sum + b.seconds, 0);
+        const fillHeight = h * (progressPercent / 100);
+        
+        if (fillHeight > 0) {
+          let currentBaseY = h;
+          const blocksOrder = ['Harmony', 'Faith', 'Courage', 'Compassion', 'Wisdom'];
+          
+          blocksOrder.forEach((bName, idx) => {
+            const b = blockSummaries.find(item => item.name === bName);
+            if (!b || b.seconds === 0) return;
+            
+            const fraction = b.seconds / totalSeconds;
+            const layerHeight = fillHeight * fraction;
+            const targetY = currentBaseY - layerHeight;
+            
+            let grad = ctx.createLinearGradient(0, targetY, 0, currentBaseY);
+            if (bName === 'Wisdom') {
+              grad.addColorStop(0, 'rgba(255, 213, 79, 0.88)');
+              grad.addColorStop(1, 'rgba(255, 179, 0, 0.94)');
+            } else if (bName === 'Compassion') {
+              grad.addColorStop(0, 'rgba(244, 143, 177, 0.88)');
+              grad.addColorStop(1, 'rgba(216, 27, 96, 0.94)');
+            } else if (bName === 'Courage') {
+              grad.addColorStop(0, 'rgba(239, 83, 80, 0.88)');
+              grad.addColorStop(1, 'rgba(183, 28, 28, 0.94)');
+            } else if (bName === 'Faith') {
+              grad.addColorStop(0, 'rgba(66, 165, 245, 0.88)');
+              grad.addColorStop(1, 'rgba(13, 71, 161, 0.94)');
+            } else if (bName === 'Harmony') {
+              grad.addColorStop(0, 'rgba(102, 187, 106, 0.88)');
+              grad.addColorStop(1, 'rgba(27, 94, 32, 0.94)');
+            }
+            
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.moveTo(0, currentBaseY);
+            for (let x = 0; x <= w; x += 10) {
+              const waveHeight = 2.5 * Math.sin(x * 0.05 + localWindTime * 2.0 + idx);
+              ctx.lineTo(x, targetY + waveHeight);
+            }
+            ctx.lineTo(w, currentBaseY);
+            ctx.closePath();
+            ctx.fill();
+            
+            currentBaseY = targetY;
+          });
+          
+          // Draw sparkling rising bubbles
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+          bubbles.forEach(p => {
+            const topLimitY = h - fillHeight;
+            p.y -= p.speedY;
+            p.x += Math.sin(p.phase + localWindTime) * 0.12;
+            
+            if (p.y < topLimitY + 4) {
+              p.y = h;
+              p.x = Math.random() * (w - 20) + 10;
+            }
+            
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+            ctx.fill();
+          });
+          
+          // Draw sloshing transparent top surface waves
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+          ctx.beginPath();
+          const topSurfaceY = h - fillHeight;
+          ctx.moveTo(0, topSurfaceY);
+          for (let x = 0; x <= w; x += 8) {
+            const topWave = 3.5 * Math.sin(x * 0.065 + localWindTime * 2.2);
+            ctx.lineTo(x, topSurfaceY + topWave);
+          }
+          ctx.lineTo(w, h);
+          ctx.lineTo(0, h);
+          ctx.closePath();
+          ctx.fill();
+        }
+        
+        // Glossy reflections
+        ctx.save();
+        const glossGrad = ctx.createLinearGradient(0, 0, w, 0);
+        glossGrad.addColorStop(0, 'rgba(255, 255, 255, 0.15)');
+        glossGrad.addColorStop(0.2, 'rgba(255, 255, 255, 0.06)');
+        glossGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0)');
+        glossGrad.addColorStop(0.8, 'rgba(255, 255, 255, 0.04)');
+        glossGrad.addColorStop(1, 'rgba(255, 255, 255, 0.12)');
+        ctx.fillStyle = glossGrad;
+        ctx.fillRect(0, 0, w, h);
+        
+        // Diagonal highlight glare
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+        ctx.beginPath();
+        ctx.moveTo(w * 0.12, 0);
+        ctx.lineTo(w * 0.28, 0);
+        ctx.lineTo(w * 0.08, h);
+        ctx.lineTo(0, h);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+        
+        campaignLoops[canvasId] = requestAnimationFrame(tick);
+      }
+      
+      campaignLoops[canvasId] = requestAnimationFrame(tick);
+    }, 50);
+  }
+
   // --- Campaign View Dashboard Renderer ---
   function renderCampaignDashboard() {
     const detailsContainer = document.getElementById('campaign-view-details');
@@ -4405,10 +4429,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const campaignNames = MockFirebase.db.getCampaignNames();
     const customCampaigns = MockFirebase.db.getCustomCampaigns();
     
-    const defaultCampaigns = [];
-    
-    const iconMap = {};
-    
     const allCampaignIds = [...customCampaigns];
     const campaigns = allCampaignIds
       .filter(id => isCampaignActiveToday(id))
@@ -4417,7 +4437,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return {
           id: id,
           name: name.endsWith("Campaign") ? name : name + " Campaign",
-          icon: iconMap[id] || "fa-bullhorn"
+          icon: "fa-bullhorn"
         };
       });
     
@@ -4435,6 +4455,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const targets = MockFirebase.db.getCampaignTargets();
     const contributions = MockFirebase.db.getCampaignContributions();
+    const blocksList = ['Wisdom', 'Compassion', 'Courage', 'Faith', 'Harmony'];
     
     let htmlContent = '';
     let completedCampaignId = null;
@@ -4461,7 +4482,6 @@ document.addEventListener('DOMContentLoaded', () => {
         periodStr = `${startD.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} - ${endD.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
       }
       
-      const blocksList = ['Wisdom', 'Compassion', 'Courage', 'Faith', 'Harmony'];
       const blockTotals = {};
       blocksList.forEach(b => {
         blockTotals[b] = 0;
@@ -4476,10 +4496,18 @@ document.addEventListener('DOMContentLoaded', () => {
       const blockSummaries = blocksList.map(bName => {
         const seconds = blockTotals[bName];
         const hours = seconds / 3600;
+        let color = '#757575';
+        if (bName === 'Wisdom') color = '#ffb300';
+        else if (bName === 'Compassion') color = '#d81b60';
+        else if (bName === 'Courage') color = '#b71c1c';
+        else if (bName === 'Faith') color = '#0d47a1';
+        else if (bName === 'Harmony') color = '#1b5e20';
+        
         return {
           name: bName,
           hours: hours,
           seconds: seconds,
+          color: color,
           isOwn: bName.toLowerCase() === currentUser.block.toLowerCase()
         };
       }).sort((a, b) => b.hours - a.hours);
@@ -4538,20 +4566,13 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
           
           <!-- Grand Glass Bucket Visual Card -->
-          <div class="grand-bucket-wrapper">
-            <div class="grand-bucket-container">
-              <div class="grand-bucket-handle"></div>
-              <div class="grand-glass-bucket">
-                <div class="grand-water-liquid" style="height: ${progressPercent}%; ${progressPercent === 0 ? 'display: none;' : ''}">
-                  <svg class="grand-water-waves" xmlns="http://www.w3.org/2000/svg" viewBox="0 24 120 28" preserveAspectRatio="none">
-                    <g class="parallax">
-                      <use href="#gentle-wave" x="48" y="0" fill="var(--bucket-water-1)" />
-                      <use href="#gentle-wave" x="48" y="3" fill="var(--bucket-water-2)" />
-                      <use href="#gentle-wave" x="48" y="5" fill="var(--bucket-water-3)" />
-                    </g>
-                  </svg>
-                </div>
-                <div class="grand-bucket-progress-value">${progressPercent}%</div>
+          <div class="grand-bucket-wrapper" style="position: relative; display: flex; justify-content: center; align-items: center; margin: 30px auto 10px auto; width: 100%; max-width: 320px;">
+            <div class="grand-bucket-container" style="position: relative; width: 160px; height: 220px; margin-right: 40px;">
+              <div class="grand-bucket-handle" style="position: absolute; top: -24px; left: 5px; width: 150px; height: 80px; border: 3px solid var(--text-muted); border-bottom: none; border-radius: 75px 75px 0 0; pointer-events: none; z-index: 1; opacity: 0.35;"></div>
+              <div class="grand-glass-bucket" style="width: 100%; height: 100%; background: rgba(255, 255, 255, 0.03); border: 3px solid rgba(255, 255, 255, 0.28); border-top: 1.5px solid rgba(255, 255, 255, 0.5); border-radius: 8px 8px 36px 36px; position: relative; overflow: hidden; box-shadow: 0 16px 36px rgba(0,0,0,0.2), inset 0 4px 15px rgba(255,255,255,0.1), inset 0 -10px 25px rgba(0,0,0,0.1); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 2;">
+                <!-- HTML5 Canvas liquid renderer -->
+                <canvas id="campaign-bucket-canvas-${selectedCampaignId}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; display: block;"></canvas>
+                <div class="grand-bucket-progress-value" style="font-size: 26px; font-weight: 800; color: #ffffff; text-shadow: 0 2px 10px rgba(0,0,0,0.65), 0 0 15px rgba(255,255,255,0.25); pointer-events: none; z-index: 6; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); transition: all 0.3s ease;">${progressPercent}%</div>
               </div>
               
               <!-- Dynamic Target Markers Overlaid -->
@@ -4578,11 +4599,11 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="campaign-dates-desc" style="text-align: center; margin-top: 14px; margin-bottom: 4px;">
             <span style="font-size:13.5px; color:var(--text-main); font-weight:700;"><i class="fa-solid fa-calculator" style="color:var(--primary); margin-right:4px;"></i> Total Chanted: ${globalHours.toFixed(1)} / ${targetHours} hours</span>
           </div>
-
+ 
           <div class="campaign-est-completion" style="text-align: center; font-size: 12px; color: var(--text-muted); margin-bottom: 14px; font-weight: 500;">
             <i class="fa-regular fa-clock" style="color:var(--primary); margin-right:4px;"></i> ${estCompletionStr}
           </div>
-
+ 
           <!-- SGI Blocks Contribution Leaderboard -->
           <div class="card campaign-leaderboard-card">
             <h3 class="leaderboard-title"><i class="fa-solid fa-ranking-star"></i> SGI Blocks Leaderboard</h3>
@@ -4591,15 +4612,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 const relPercent = Math.min(100, Math.round((b.hours / maxBlockHours) * 100));
                 return `
                   <div class="block-row ${b.isOwn ? 'own-block' : ''}">
-                    <div class="block-meta">
-                      <span style="display:flex; align-items:center; gap:6px;">
-                        <strong>${b.name} Block</strong>
-                        ${b.isOwn ? '<span class="block-badge">Your Block</span>' : ''}
+                    <div class="block-meta" style="display:flex; justify-content:space-between; align-items:center;">
+                      <span style="display:flex; align-items:center; gap:8px;">
+                        <span style="width: 10px; height: 10px; border-radius: 50%; background: ${b.color}; display: inline-block;"></span>
+                        <strong style="color: var(--text-main); font-size: 13px;">${b.name} Block</strong>
+                        ${b.isOwn ? '<span class="block-badge" style="background: rgba(38,166,154,0.15); color: #26a69a; font-size: 9px; padding: 2px 6px; border-radius: 10px; font-weight: 700;">Your Block</span>' : ''}
                       </span>
-                      <span>${b.hours.toFixed(1)} hrs</span>
+                      <span style="font-size: 13px; font-weight: 600; color: var(--text-main);">${b.hours.toFixed(1)} hrs</span>
                     </div>
-                    <div class="block-progress-track">
-                      <div class="block-progress-fill" style="width: ${relPercent}%;"></div>
+                    <div class="block-progress-track" style="background: rgba(255,255,255,0.05); height: 8px; border-radius: 4px; overflow: hidden; margin-top: 6px;">
+                      <div class="block-progress-fill" style="width: ${relPercent}%; background: ${b.color}; height: 100%; border-radius: 4px; transition: width 0.5s ease;"></div>
                     </div>
                   </div>
                 `;
@@ -4615,19 +4637,59 @@ document.addEventListener('DOMContentLoaded', () => {
                 </span>
                 <span class="personal-contrib-value" style="color:var(--primary); font-weight:700;">${personalHours.toFixed(1)} hrs</span>
               </div>
-              <div class="block-progress-track">
-                <div class="block-progress-fill" style="width: ${Math.min(100, Math.round((personalHours / Math.max(blockSummaries.find(b => b.isOwn).hours, 1)) * 100))}%;"></div>
+              <div class="block-progress-track" style="background: rgba(255,255,255,0.05); height: 8px; border-radius: 4px; overflow: hidden;">
+                <div class="block-progress-fill" style="width: ${Math.min(100, Math.round((personalHours / Math.max(blockSummaries.find(b => b.isOwn).hours, 1)) * 100))}%; height: 100%; border-radius: 4px;"></div>
               </div>
               <div style="font-size: 10px; color: var(--text-muted); text-align: right; font-weight: 500;">
                 (${Math.round((personalHours / Math.max(blockSummaries.find(b => b.isOwn).hours, 0.001)) * 100)}% of your block's total)
               </div>
             </div>
           </div>
-        </div>
       `;
     });
     
     detailsContainer.innerHTML = htmlContent;
+    
+    // Setup loops for each active campaign bucket
+    campaigns.forEach(campaign => {
+      const selectedCampaignId = campaign.id;
+      const canvasId = `campaign-bucket-canvas-${selectedCampaignId}`;
+      const campaignContribs = contributions.filter(item => item.campaignId === selectedCampaignId);
+      const targetHours = targets[selectedCampaignId] || 100;
+      const globalSeconds = campaignContribs.reduce((sum, item) => sum + item.durationSeconds, 0);
+      const globalHours = globalSeconds / 3600;
+      const progressPercent = Math.min(100, Math.round((globalHours / targetHours) * 100));
+      
+      const campaignBlockTotals = {};
+      blocksList.forEach(b => {
+        campaignBlockTotals[b] = 0;
+      });
+      campaignContribs.forEach(item => {
+        if (campaignBlockTotals[item.block] !== undefined) {
+          campaignBlockTotals[item.block] += item.durationSeconds;
+        }
+      });
+      
+      const campaignBlockSummaries = blocksList.map(bName => {
+        const seconds = campaignBlockTotals[bName];
+        const hours = seconds / 3600;
+        let color = '#757575';
+        if (bName === 'Wisdom') color = '#ffb300';
+        else if (bName === 'Compassion') color = '#d81b60';
+        else if (bName === 'Courage') color = '#b71c1c';
+        else if (bName === 'Faith') color = '#0d47a1';
+        else if (bName === 'Harmony') color = '#1b5e20';
+        
+        return {
+          name: bName,
+          hours: hours,
+          seconds: seconds,
+          color: color
+        };
+      });
+      
+      initCampaignBucketCanvas(canvasId, progressPercent, campaignBlockSummaries);
+    });
     
     if (completedCampaignId) {
       const fCanvas = document.getElementById(`fireworks-canvas-${completedCampaignId}`);
@@ -4678,16 +4740,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const pCard = document.getElementById('admin-panel-card');
     const cCard = document.getElementById('admin-calendar-card');
     const uCard = document.getElementById('admin-users-card');
-    const debugCard = document.querySelector('.debug-card');
     
     if (isAdmin) {
       if (pCard) pCard.classList.remove('hidden');
       if (cCard) cCard.classList.remove('hidden');
       if (uCard) uCard.classList.remove('hidden');
-      if (debugCard) {
-        debugCard.classList.remove('hidden');
-        debugCard.style.display = '';
-      }
       renderWhitelist();
       renderCampaignTargetsEditor();
       renderAdminCalendarSchedule();
@@ -4696,10 +4753,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (pCard) pCard.classList.add('hidden');
       if (cCard) cCard.classList.add('hidden');
       if (uCard) uCard.classList.add('hidden');
-      if (debugCard) {
-        debugCard.classList.add('hidden');
-        debugCard.style.display = 'none';
-      }
     }
   }
 

@@ -181,9 +181,44 @@
                 <i class="fa-solid fa-chevron-down toggle-arrow" style="font-size: 14px; color: var(--text-muted); transition: transform 0.3s ease;"></i>
               </button>
               <div id="encyclopedia-content" class="admin-content collapsed" style="margin-top: 14px;">
-                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.55;">
-                  Discover the spiritual symbolism behind your growing virtual garden. Consistent daily chanting brings these elements to life in your pot.
-                </p>
+                <!-- App Overview & Rules -->
+                <div style="background: rgba(38, 166, 154, 0.08); border: 1px dashed rgba(38, 166, 154, 0.25); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+                  <h4 style="margin: 0 0 6px 0; font-size: 13px; color: var(--primary); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Quick Guide</h4>
+                  <p style="margin: 0 0 8px 0; font-size: 12px; color: var(--text-main); line-height: 1.5;">
+                    Do <strong>Daimoku</strong> to grow your plant... <em>consistency is the key</em>. It takes <strong>333 hours</strong> (approx. 1 million Daimoku) to grow the tree fully. You can also customize your tree target hours in the settings.
+                  </p>
+                  <p style="margin: 0; font-size: 11.5px; color: var(--text-muted); line-height: 1.45;">
+                    <i class="fa-solid fa-circle-info" style="color: var(--primary);"></i> <strong>Campaigns:</strong> A Campaign tab and target dropdown will automatically appear when there is an active campaign, allowing you to add and track Daimoku contributions.
+                  </p>
+                </div>
+
+                <!-- Growth Stages (Ranks) -->
+                <div style="margin-bottom: 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 14px;">
+                  <h4 style="margin: 0 0 8px 0; font-size: 13.5px; color: var(--text-main); font-weight: 600;">Plant Growth Stages</h4>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px;">
+                    <div style="background: rgba(255,255,255,0.03); border-radius: 6px; padding: 6px 10px; display: flex; align-items: center; gap: 6px;">
+                      <span style="color: #ffb300; font-size: 11px;"><i class="fa-solid fa-star"></i></span>
+                      <div style="font-size: 11px; font-weight: 600; color: var(--text-main);">1★ Seeker</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.03); border-radius: 6px; padding: 6px 10px; display: flex; align-items: center; gap: 6px;">
+                      <span style="color: #ffb300; font-size: 11px;"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></span>
+                      <div style="font-size: 11px; font-weight: 600; color: var(--text-main);">2★ Believer</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.03); border-radius: 6px; padding: 6px 10px; display: flex; align-items: center; gap: 6px;">
+                      <span style="color: #ffb300; font-size: 11px;"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></span>
+                      <div style="font-size: 11px; font-weight: 600; color: var(--text-main);">3★ Practitioner</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.03); border-radius: 6px; padding: 6px 10px; display: flex; align-items: center; gap: 6px;">
+                      <span style="color: #ffb300; font-size: 11px;"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></span>
+                      <div style="font-size: 11px; font-weight: 600; color: var(--text-main);">4★ Bodhisattva</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.03); border-radius: 6px; padding: 6px 10px; display: flex; align-items: center; gap: 6px;">
+                      <span style="color: #ffb300; font-size: 11px;"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></span>
+                      <div style="font-size: 11px; font-weight: 600; color: var(--text-main);">5★ Buddhahood</div>
+                    </div>
+                  </div>
+                </div>
+
                 <div style="display: flex; flex-direction: column; gap: 16px;">
                   <!-- Item 1: Peepal Tree -->
                   <div style="display: flex; gap: 12px; align-items: flex-start;">
@@ -748,61 +783,7 @@
             </div>
           </div>
           
-          <!-- Developer Debug Dashboard (Collapsible, critical for verification) -->
-          <div class="card debug-card collapsible">
-            <button class="debug-header" id="btn-toggle-debug">
-              <span><i class="fa-solid fa-bug"></i> Developer Debug Panel</span>
-              <i class="fa-solid fa-chevron-down toggle-arrow"></i>
-            </button>
-            <div id="debug-content" class="debug-content collapsed">
-              <p class="debug-desc">Use these tools to simulate time passage, plant stages, and trigger state conditions.</p>
-              
-              <div class="debug-control-group">
-                <h4>Simulate Chanting Hours</h4>
-                <div class="debug-buttons">
-                  <button class="btn-debug" data-hours="0">Reset to 0h</button>
-                  <button class="btn-debug" data-hours="5">Set to 5h (Sprout)</button>
-                  <button class="btn-debug" data-hours="35">Set to 35h (Seedling)</button>
-                  <button class="btn-debug" data-hours="100">Set to 100h (Young)</button>
-                  <button class="btn-debug" data-hours="220">Set to 220h (Shrub)</button>
-                  <button class="btn-debug" data-hours="333">Set to 333h (Tree!)</button>
-                </div>
-              </div>
 
-              <div class="debug-control-group">
-                <h4>Simulate Neglect & Health Decay</h4>
-                <div class="debug-buttons">
-                  <button class="btn-debug-health" data-health="100">Full 100% (Happy)</button>
-                  <button class="btn-debug-health" data-health="75">75% Health (Normal)</button>
-                  <button class="btn-debug-health" data-health="50">50% Health (Thirsty)</button>
-                  <button class="btn-debug-health" data-health="25">25% Health (Sad)</button>
-                  <button class="btn-debug-health" data-health="5">5% Health (Dying)</button>
-                  <button class="btn-debug-health" data-health="0">0% Health (Dead)</button>
-                </div>
-              </div>
-
-              <div class="debug-control-group">
-                <h4>Time Decay Simulation</h4>
-                <p class="debug-desc">Simulate decay thresholds to verify corresponding Ikeda quotes and plant alerts.</p>
-                <div class="debug-buttons">
-                  <button id="btn-debug-decay-24h" class="btn-debug-action">Simulate 24h (Thirsty)</button>
-                  <button id="btn-debug-decay-72h" class="btn-debug-action">Simulate 72h (Sad)</button>
-                  <button id="btn-debug-decay-7d" class="btn-debug-action">Simulate 7 Days (Dying)</button>
-                  <button id="btn-debug-decay-15d" class="btn-debug-action">Simulate 15 Days (Withered)</button>
-                  <button id="btn-debug-decay-30d" class="btn-debug-action">Simulate 30 Days (Dormant)</button>
-                  <button id="btn-debug-reset-date" class="btn-debug-action">Reset Last Chanted to Now</button>
-                </div>
-              </div>
-
-              <div class="debug-control-group">
-                <h4>Test Notifications & Alerts</h4>
-                <div class="debug-buttons">
-                  <button id="btn-debug-test-morning" class="btn-debug-action">Trigger Morning Check (Noon)</button>
-                  <button id="btn-debug-test-evening" class="btn-debug-action">Trigger Evening Check (8pm)</button>
-                </div>
-              </div>
-            </div>
-          </div>
 
         </div>
       </section>

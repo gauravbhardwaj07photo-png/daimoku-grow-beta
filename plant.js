@@ -1834,47 +1834,54 @@ const PlantRenderer = (function() {
 
       // Prague Tram (Red & White Tatra-style tram moving left-to-right)
       ctx.save();
-      const tramX = (windTime * 32) % (w + 150) - 80;
-      const tramY = h - 54;
+      const loopDist = w + 160;
+      const tramX1 = (windTime * 32) % loopDist - 80;
+      const tramX2 = (windTime * 32 + loopDist / 2) % loopDist - 80;
       
-      // Car 1 (Front)
-      ctx.fillStyle = '#d32f2f'; // Red bottom half
-      ctx.fillRect(tramX, tramY + 4, 20, 5);
-      ctx.fillStyle = '#eceff1'; // White top half
-      ctx.fillRect(tramX, tramY + 1, 20, 3);
-      // Windows
-      ctx.fillStyle = '#fff59d'; // Glowing yellow windows
-      ctx.fillRect(tramX + 2, tramY + 2, 3, 1.5);
-      ctx.fillRect(tramX + 6, tramY + 2, 3, 1.5);
-      ctx.fillRect(tramX + 10, tramY + 2, 3, 1.5);
-      ctx.fillRect(tramX + 14, tramY + 2, 3, 1.5);
-      
-      // Car 2 (Rear)
-      const gap = 3;
-      const rearX = tramX - 20 - gap;
-      ctx.fillStyle = '#d32f2f'; // Red bottom half
-      ctx.fillRect(rearX, tramY + 4, 20, 5);
-      ctx.fillStyle = '#eceff1'; // White top half
-      ctx.fillRect(rearX, tramY + 1, 20, 3);
-      // Windows
-      ctx.fillStyle = '#fff59d';
-      ctx.fillRect(rearX + 2, tramY + 2, 3, 1.5);
-      ctx.fillRect(rearX + 6, tramY + 2, 3, 1.5);
-      ctx.fillRect(rearX + 10, tramY + 2, 3, 1.5);
-      ctx.fillRect(rearX + 14, tramY + 2, 3, 1.5);
+      function drawTram(tx) {
+        const tramY = h - 54;
+        // Car 1 (Front)
+        ctx.fillStyle = '#d32f2f'; // Red bottom half
+        ctx.fillRect(tx, tramY + 4, 20, 5);
+        ctx.fillStyle = '#eceff1'; // White top half
+        ctx.fillRect(tx, tramY + 1, 20, 3);
+        // Windows
+        ctx.fillStyle = '#fff59d'; // Glowing yellow windows
+        ctx.fillRect(tx + 2, tramY + 2, 3, 1.5);
+        ctx.fillRect(tx + 6, tramY + 2, 3, 1.5);
+        ctx.fillRect(tx + 10, tramY + 2, 3, 1.5);
+        ctx.fillRect(tx + 14, tramY + 2, 3, 1.5);
+        
+        // Car 2 (Rear)
+        const gap = 3;
+        const rearX = tx - 20 - gap;
+        ctx.fillStyle = '#d32f2f'; // Red bottom half
+        ctx.fillRect(rearX, tramY + 4, 20, 5);
+        ctx.fillStyle = '#eceff1'; // White top half
+        ctx.fillRect(rearX, tramY + 1, 20, 3);
+        // Windows
+        ctx.fillStyle = '#fff59d';
+        ctx.fillRect(rearX + 2, tramY + 2, 3, 1.5);
+        ctx.fillRect(rearX + 6, tramY + 2, 3, 1.5);
+        ctx.fillRect(rearX + 10, tramY + 2, 3, 1.5);
+        ctx.fillRect(rearX + 14, tramY + 2, 3, 1.5);
 
-      // Accordion connector
-      ctx.fillStyle = '#37474f';
-      ctx.fillRect(tramX - gap, tramY + 3, gap, 5);
+        // Accordion connector
+        ctx.fillStyle = '#37474f';
+        ctx.fillRect(tx - gap, tramY + 3, gap, 5);
 
-      // Pantograph (on top of Car 1)
-      ctx.strokeStyle = '#78909c';
-      ctx.lineWidth = 1.0;
-      ctx.beginPath();
-      ctx.moveTo(tramX + 10, tramY + 1);
-      ctx.lineTo(tramX + 7, tramY - 3);
-      ctx.lineTo(tramX + 13, tramY - 3);
-      ctx.stroke();
+        // Pantograph (on top of Car 1)
+        ctx.strokeStyle = '#78909c';
+        ctx.lineWidth = 1.0;
+        ctx.beginPath();
+        ctx.moveTo(tx + 10, tramY + 1);
+        ctx.lineTo(tx + 7, tramY - 3);
+        ctx.lineTo(tx + 13, tramY - 3);
+        ctx.stroke();
+      }
+
+      drawTram(tramX1);
+      drawTram(tramX2);
 
       ctx.restore();
       ctx.restore();
