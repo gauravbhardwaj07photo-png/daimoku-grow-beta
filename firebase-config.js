@@ -98,10 +98,14 @@ let cachedActiveCampaigns = [];
 let cachedCampaignNames = { ...defaultCampaignNames };
 let cachedCustomCampaigns = [];
 let cachedContributions = [];
+let cachedBlockGoals = null;
+let cachedAlliances = [];
 
 let isWhitelistLoaded = !isFirebaseConfigured;
 let isCampaignsLoaded = !isFirebaseConfigured;
 let isContributionsLoaded = !isFirebaseConfigured;
+let isBlockGoalsLoaded = !isFirebaseConfigured;
+let isAlliancesLoaded = !isFirebaseConfigured;
 
 if (isFirebaseConfigured && db) {
   // 1. Listen to Whitelist Changes
@@ -166,6 +170,28 @@ if (isFirebaseConfigured && db) {
     isContributionsLoaded = true;
     window.dispatchEvent(new Event('db-contributions-updated'));
   }, err => console.warn("Firestore Contributions listener error:", err));
+
+  // 4. Listen to Block Goals
+  db.collection('settings').doc('blockGoals').onSnapshot((doc) => {
+    if (doc.exists) {
+      cachedBlockGoals = doc.data();
+    } else {
+      cachedBlockGoals = null;
+    }
+    isBlockGoalsLoaded = true;
+    window.dispatchEvent(new Event('db-block-goals-updated'));
+  }, err => console.warn("Firestore Block Goals listener error:", err));
+
+  // 5. Listen to Alliances
+  db.collection('alliances').onSnapshot((snapshot) => {
+    const list = [];
+    snapshot.forEach(doc => {
+      list.push({ id: doc.id, ...doc.data() });
+    });
+    cachedAlliances = list;
+    isAlliancesLoaded = true;
+    window.dispatchEvent(new Event('db-alliances-updated'));
+  }, err => console.warn("Firestore Alliances listener error:", err));
 }
 
 // Define the namespace matching MockFirebase API
@@ -321,6 +347,12 @@ const MockFirebase = {
     isContributionsLoaded() {
       return isContributionsLoaded;
     },
+    isBlockGoalsLoaded() {
+      return isBlockGoalsLoaded;
+    },
+    isAlliancesLoaded() {
+      return isAlliancesLoaded;
+    },
     // Whitelisted Emails Collection
     getWhitelist() {
       if (isFirebaseConfigured) {
@@ -353,6 +385,73 @@ const MockFirebase = {
       } else {
         localStorage.setItem('daimoku_db_whitelist', JSON.stringify(list));
         window.dispatchEvent(new Event('db-whitelist-updated'));
+      }
+    },
+    
+    // SGI Block Goals Image Uploads
+    getBlockGoals() {
+      if (isFirebaseConfigured) {
+        return cachedBlockGoals;
+      } else {
+        const saved = localStorage.getItem('daimoku_db_block_goals');
+        return saved ? JSON.parse(saved) : null;
+      }
+    },
+    async saveBlockGoals(goalsObj) {
+      if (isFirebaseConfigured && db) {
+        try {
+          await db.collection('settings').doc('blockGoals').set(goalsObj);
+        } catch (e) {
+          console.warn("Firestore saveBlockGoals error:", e);
+        }
+      } else {
+        localStorage.setItem('daimoku_db_block_goals', JSON.stringify(goalsObj));
+        window.dispatchEvent(new Event('db-block-goals-updated'));
+      }
+    },
+    
+    // Alliance Daimoku Methods
+    getAlliances() {
+      if (isFirebaseConfigured) {
+        return cachedAlliances;
+      } else {
+        const saved = localStorage.getItem('daimoku_db_alliances');
+        return saved ? JSON.parse(saved) : [];
+      }
+    },
+    async saveAlliance(allianceObj) {
+      if (!allianceObj || !allianceObj.id) return;
+      if (isFirebaseConfigured && db) {
+        try {
+          await db.collection('alliances').doc(allianceObj.id).set(allianceObj);
+        } catch (e) {
+          console.warn("Firestore saveAlliance error:", e);
+        }
+      } else {
+        const list = this.getAlliances();
+        const idx = list.findIndex(a => a.id === allianceObj.id);
+        if (idx >= 0) {
+          list[idx] = allianceObj;
+        } else {
+          list.push(allianceObj);
+        }
+        localStorage.setItem('daimoku_db_alliances', JSON.stringify(list));
+        window.dispatchEvent(new Event('db-alliances-updated'));
+      }
+    },
+    async deleteAlliance(allianceId) {
+      if (!allianceId) return;
+      if (isFirebaseConfigured && db) {
+        try {
+          await db.collection('alliances').doc(allianceId).delete();
+        } catch (e) {
+          console.warn("Firestore deleteAlliance error:", e);
+        }
+      } else {
+        let list = this.getAlliances();
+        list = list.filter(a => a.id !== allianceId);
+        localStorage.setItem('daimoku_db_alliances', JSON.stringify(list));
+        window.dispatchEvent(new Event('db-alliances-updated'));
       }
     },
     

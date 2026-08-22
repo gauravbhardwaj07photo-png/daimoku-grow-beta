@@ -579,6 +579,8 @@ document.addEventListener('DOMContentLoaded', () => {
         sessions: [],
         streak: 0,
         targets: [],
+        journal: [],
+        manualVictories: [],
         lastNotifiedThreshold: 0,
         settings: {
           morningReminder: true,
@@ -664,6 +666,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!cloudState.sessions) cloudState.sessions = [];
         if (!cloudState.targets) cloudState.targets = [];
         if (!cloudState.unlockedAchievements) cloudState.unlockedAchievements = [];
+        if (!cloudState.journal) cloudState.journal = [];
+        if (!cloudState.manualVictories) cloudState.manualVictories = [];
 
         // Reconcile locally saved sessions (e.g. exit auto-saves)
         if (state && state.sessions) {
@@ -724,6 +728,30 @@ document.addEventListener('DOMContentLoaded', () => {
               }
             }
           });
+        }
+
+        // Reconcile locally saved journal entries
+        if (state && state.journal) {
+          state.journal.forEach(localJ => {
+            const existsInCloud = cloudState.journal.some(cloudJ => cloudJ.id === localJ.id);
+            if (!existsInCloud) {
+              cloudState.journal.push(localJ);
+              merged = true;
+            }
+          });
+          cloudState.journal.sort((a, b) => new Date(b.date) - new Date(a.date));
+        }
+
+        // Reconcile locally saved manual victories
+        if (state && state.manualVictories) {
+          state.manualVictories.forEach(localV => {
+            const existsInCloud = cloudState.manualVictories.some(cloudV => cloudV.id === localV.id);
+            if (!existsInCloud) {
+              cloudState.manualVictories.push(localV);
+              merged = true;
+            }
+          });
+          cloudState.manualVictories.sort((a, b) => b.createdAt - a.createdAt);
         }
 
         if (merged) {
@@ -825,6 +853,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (state.settings.skyBackground === undefined) state.settings.skyBackground = 'diurnal';
     }
     if (state.unlockedAchievements === undefined) state.unlockedAchievements = [];
+    if (state.journal === undefined) state.journal = [];
+    if (state.manualVictories === undefined) state.manualVictories = [];
     
     // Apply saved theme
     document.body.className = state.theme || 'theme-sage-light';
@@ -852,6 +882,23 @@ document.addEventListener('DOMContentLoaded', () => {
       logoutBtn.classList.remove('hidden');
     }
     updateCampaignTabVisibility();
+
+    // Populate side menu user details
+    const sideUsername = document.getElementById('side-menu-username');
+    if (sideUsername) {
+      sideUsername.textContent = user.username;
+    }
+    const sideLevel = document.getElementById('side-menu-level');
+    if (sideLevel) {
+      const totalHours = (state.accumulatedSeconds || 0) / 3600;
+      let levelName = "Seed Planter";
+      if (totalHours >= 333) levelName = "Infinite Forest";
+      else if (totalHours >= 100) levelName = "Cosmic Tree";
+      else if (totalHours >= 50) levelName = "Star Believer";
+      else if (totalHours >= 10) levelName = "Star Seeker";
+      
+      sideLevel.textContent = `${user.block} Block • ${levelName}`;
+    }
   }
 
   // --- PWA Native-like Notification Scheduling & Background Synchronization ---
@@ -1199,6 +1246,17 @@ document.addEventListener('DOMContentLoaded', () => {
         // Switch nav active status
         navItems.forEach(i => i.classList.remove('active'));
         item.classList.add('active');
+
+        // Sync side menu items active styling
+        const targetId = item.id.replace('nav-', '');
+        const sideMenuItems = document.querySelectorAll('.side-menu-item');
+        if (sideMenuItems) {
+          sideMenuItems.forEach(mi => mi.classList.remove('active'));
+          const matchingSideItem = document.querySelector(`.side-menu-item[data-target="${targetId}"]`);
+          if (matchingSideItem) {
+            matchingSideItem.classList.add('active');
+          }
+        }
         
         // Switch content view
         views.forEach(v => {
@@ -1263,6 +1321,22 @@ document.addEventListener('DOMContentLoaded', () => {
             renderTargetsList();
           }
           
+          if (viewId === 'view-goals') {
+            renderBlockGoals();
+          }
+          
+          if (viewId === 'view-alliance') {
+            updateAllianceUI();
+          }
+          
+          if (viewId === 'view-victories') {
+            renderVictories();
+          }
+          
+          if (viewId === 'view-journal') {
+            renderJournalEntries();
+          }
+          
           if (viewId === 'view-campaign') {
             renderCampaignDashboard();
           }
@@ -1277,6 +1351,56 @@ document.addEventListener('DOMContentLoaded', () => {
         const navHistory = document.getElementById('nav-history');
         if (navHistory) {
           navHistory.click();
+        }
+      });
+    }
+
+    // --- Collapsible Side Drawer Navigation Logic ---
+    const btnMenu = document.getElementById('btn-menu');
+    const sideMenu = document.getElementById('side-menu');
+    const sideMenuBackdrop = document.getElementById('side-menu-backdrop');
+    const btnCloseMenu = document.getElementById('btn-close-menu');
+    const sideMenuItems = document.querySelectorAll('.side-menu-item');
+    const btnMenuLogout = document.getElementById('btn-menu-logout');
+
+    const toggleMenu = (open) => {
+      if (open) {
+        sideMenu.classList.add('active');
+        sideMenuBackdrop.classList.add('active');
+      } else {
+        sideMenu.classList.remove('active');
+        sideMenuBackdrop.classList.remove('active');
+      }
+    };
+
+    if (btnMenu) btnMenu.addEventListener('click', () => toggleMenu(true));
+    if (sideMenuBackdrop) sideMenuBackdrop.addEventListener('click', () => toggleMenu(false));
+    if (btnCloseMenu) btnCloseMenu.addEventListener('click', () => toggleMenu(false));
+
+    sideMenuItems.forEach(item => {
+      item.addEventListener('click', () => {
+        const target = item.getAttribute('data-target');
+        const hiddenNavBtn = document.getElementById('nav-' + target);
+        
+        if (hiddenNavBtn) {
+          // Trigger the view-routing click logic on hidden nav item
+          hiddenNavBtn.click();
+        }
+        
+        // Highlight active side menu item
+        sideMenuItems.forEach(mi => mi.classList.remove('active'));
+        item.classList.add('active');
+        
+        toggleMenu(false);
+      });
+    });
+
+    if (btnMenuLogout) {
+      btnMenuLogout.addEventListener('click', () => {
+        toggleMenu(false);
+        const headerLogoutBtn = document.getElementById('btn-logout');
+        if (headerLogoutBtn) {
+          headerLogoutBtn.click();
         }
       });
     }
@@ -1432,6 +1556,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const statTargetHours = document.getElementById('stat-target-hours');
     if (statTargetHours) {
       statTargetHours.textContent = GOAL_HOURS;
+    }
+    
+    // Update YYYY Goals Year dynamically
+    const currentYear = new Date().getFullYear();
+    const sideGoalsLabel = document.getElementById('side-menu-goals-label');
+    if (sideGoalsLabel) {
+      sideGoalsLabel.textContent = `${currentYear} Goals`;
+    }
+    const goalsViewTitle = document.getElementById('goals-view-title');
+    if (goalsViewTitle) {
+      goalsViewTitle.textContent = `${currentYear} Goals`;
     }
     rebuildRevivalDates();
     const decimalHours = state.totalSeconds / 3600;
@@ -1832,6 +1967,8 @@ document.addEventListener('DOMContentLoaded', () => {
     PlantRenderer.updateState(parseFloat(totalHours), state.health, state.isDead, true, state.settings.treeTargetHours || 333, state.targets.filter(t => !t.completed), state.settings.skyBackground || 'diurnal', state.streak || 0);
     saveActiveTimer();
     
+    updateAllianceChantingState(true, 0);
+    
     timerInterval = setInterval(() => {
       const now = Date.now();
       const elapsedMs = now - timerStartTime + timerAccumulatedPaused;
@@ -1860,6 +1997,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
       
+      if (timerSecondsElapsed > 0 && timerSecondsElapsed % 10 === 0) {
+        updateAllianceChantingState(true, timerSecondsElapsed);
+      }
+
       // Update dashboard mini timer text
       if (dashboardMiniTimerTime) {
         dashboardMiniTimerTime.textContent = displayTimeStr;
@@ -1889,6 +2030,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const totalHours = (state.totalSeconds / 3600).toFixed(1);
     PlantRenderer.updateState(parseFloat(totalHours), state.health, state.isDead, false, state.settings.treeTargetHours || 333, state.targets.filter(t => !t.completed), state.settings.skyBackground || 'diurnal', state.streak || 0);
     saveActiveTimer();
+    
+    updateAllianceChantingState(false, timerSecondsElapsed);
   }
 
   // Stop and record
@@ -1899,6 +2042,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (duration >= 5) { // Only log if at least 5 seconds
         saveChantSession(duration, timerType);
       }
+      updateAllianceChantingState(false, duration);
       resetTimerControls();
     });
   }
@@ -1914,6 +2058,8 @@ document.addEventListener('DOMContentLoaded', () => {
     timerState = 'idle';
     clearInterval(timerInterval);
     timerAccumulatedPaused = 0;
+    
+    updateAllianceChantingState(false, 0);
     
     btnTimerStart.classList.remove('hidden');
     btnTimerPause.classList.add('hidden');
@@ -4740,19 +4886,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const pCard = document.getElementById('admin-panel-card');
     const cCard = document.getElementById('admin-calendar-card');
     const uCard = document.getElementById('admin-users-card');
+    const gCard = document.getElementById('admin-goals-card');
     
     if (isAdmin) {
       if (pCard) pCard.classList.remove('hidden');
       if (cCard) cCard.classList.remove('hidden');
       if (uCard) uCard.classList.remove('hidden');
+      if (gCard) gCard.classList.remove('hidden');
       renderWhitelist();
       renderCampaignTargetsEditor();
       renderAdminCalendarSchedule();
       renderUsersList();
+      renderBlockGoals();
     } else {
       if (pCard) pCard.classList.add('hidden');
       if (cCard) cCard.classList.add('hidden');
       if (uCard) uCard.classList.add('hidden');
+      if (gCard) gCard.classList.add('hidden');
     }
   }
 
@@ -6679,16 +6829,774 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('pagehide', handleTimerExitAutoSave);
   window.addEventListener('beforeunload', handleTimerExitAutoSave);
 
-  // Encyclopedia Collapsible
-  const btnToggleEncyclopedia = document.getElementById('btn-toggle-encyclopedia');
-  const encyclopediaContent = document.getElementById('encyclopedia-content');
-  const encyclopediaCard = document.getElementById('encyclopedia-card');
-  if (btnToggleEncyclopedia && encyclopediaContent && encyclopediaCard) {
-    btnToggleEncyclopedia.addEventListener('click', () => {
-      encyclopediaContent.classList.toggle('collapsed');
-      encyclopediaCard.classList.toggle('open');
+  // --- Gratitude Journal & My Victories Rendering ---
+  function escapeHTML(str) {
+    return str
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  function renderJournalEntries() {
+    const entriesList = document.getElementById('journal-entries-list');
+    if (!entriesList) return;
+    if (!state.journal || state.journal.length === 0) {
+      entriesList.innerHTML = `
+        <div class="empty-state">
+          <i class="fa-solid fa-feather" style="font-size: 32px; color: var(--text-muted); margin-bottom: 12px;"></i>
+          <p>Your gratitude journal is empty. Write down what you are grateful for today!</p>
+        </div>
+      `;
+      return;
+    }
+    
+    entriesList.innerHTML = '';
+    state.journal.forEach(entry => {
+      const dateStr = new Date(entry.date).toLocaleDateString(undefined, { 
+        month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' 
+      });
+      const card = document.createElement('div');
+      card.className = 'journal-entry-card';
+      
+      let tagStyle = 'background: rgba(var(--primary-rgb), 0.1); color: var(--primary);';
+      if (entry.tag === 'victory') tagStyle = 'background: rgba(76, 175, 80, 0.1); color: #4caf50; border: 1px solid rgba(76, 175, 80, 0.2);';
+      else if (entry.tag === 'gratitude') tagStyle = 'background: rgba(255, 152, 0, 0.1); color: #ff9800; border: 1px solid rgba(255, 152, 0, 0.2);';
+      
+      card.innerHTML = `
+        <div class="journal-entry-header">
+          <div class="journal-entry-title" style="font-weight: 700; font-size: 15px; color: var(--text-main);">${escapeHTML(entry.title)}</div>
+          <div class="journal-entry-date">${dateStr}</div>
+        </div>
+        <div class="journal-entry-content" style="margin-top: 8px; font-size: 13px; line-height: 1.5; color: var(--text-main); white-space: pre-wrap;">${escapeHTML(entry.content)}</div>
+        <div class="journal-entry-actions" style="margin-top: 12px; display: flex; justify-content: space-between; align-items: center;">
+          <span class="journal-tag" style="${tagStyle} font-size: 10px; font-weight: 700; padding: 4px 8px; border-radius: 12px;">${entry.tag.toUpperCase()}</span>
+          <button class="btn-delete-journal" data-id="${entry.id}" style="background:none; border:none; color:var(--accent-danger); cursor:pointer; font-size:14px; opacity:0.7;"><i class="fa-solid fa-trash-can"></i></button>
+        </div>
+      `;
+      
+      const btnDelete = card.querySelector('.btn-delete-journal');
+      btnDelete.addEventListener('click', () => {
+        if (confirm("Delete this journal entry?")) {
+          state.journal = state.journal.filter(j => j.id !== entry.id);
+          saveState();
+          renderJournalEntries();
+        }
+      });
+      
+      entriesList.appendChild(card);
     });
   }
+
+  function renderVictories() {
+    const completedList = document.getElementById('victories-targets-list');
+    const manualList = document.getElementById('manual-victories-list');
+    if (!completedList || !manualList) return;
+    
+    const completedCount = state.targets.filter(t => t.completed).length;
+    const manualCount = state.manualVictories ? state.manualVictories.length : 0;
+    const badgesCount = state.unlockedAchievements ? state.unlockedAchievements.length : 0;
+    
+    const countCompletedLabel = document.getElementById('victory-stat-completed');
+    if (countCompletedLabel) countCompletedLabel.textContent = completedCount + manualCount;
+    
+    const countBadgesLabel = document.getElementById('victory-stat-badges');
+    if (countBadgesLabel) countBadgesLabel.textContent = badgesCount;
+    
+    const completedTargets = state.targets.filter(t => t.completed);
+    if (completedTargets.length === 0) {
+      completedList.innerHTML = `
+        <div class="empty-state">
+          <i class="fa-solid fa-circle-check" style="font-size: 32px; color: var(--text-muted); margin-bottom: 12px;"></i>
+          <p>No completed determinations yet. Chant to complete your goals and see them listed here as victories!</p>
+        </div>
+      `;
+    } else {
+      completedList.innerHTML = '';
+      completedTargets.forEach(t => {
+        const dateStr = t.completedDate ? new Date(t.completedDate).toLocaleDateString(undefined, {
+          month: 'short', day: 'numeric', year: 'numeric'
+        }) : 'Completed';
+        const hrsText = t.type === 'hours' ? ` (${t.targetSeconds/3600}h target achieved)` : ' (Open-ended goal achieved)';
+        
+        const item = document.createElement('div');
+        item.className = 'target-item completed';
+        item.style.background = 'rgba(76, 175, 80, 0.05)';
+        item.style.border = '1px solid rgba(76, 175, 80, 0.15)';
+        item.style.borderRadius = '8px';
+        item.style.padding = '12px';
+        item.style.marginBottom = '8px';
+        item.style.display = 'flex';
+        item.style.justifyContent = 'space-between';
+        item.style.alignItems = 'center';
+        
+        item.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="color: #4caf50; font-size: 16px;"><i class="fa-solid fa-circle-check"></i></span>
+            <div>
+              <div style="font-weight: 700; font-size: 13px; color: var(--text-main);">${escapeHTML(t.text)}</div>
+              <div style="font-size: 10.5px; color: var(--text-muted);">${hrsText}</div>
+            </div>
+          </div>
+          <span style="font-size: 11px; font-weight: 600; color: #4caf50; background: rgba(76, 175, 80, 0.1); padding: 4px 8px; border-radius: 12px;">
+            ${dateStr}
+          </span>
+        `;
+        completedList.appendChild(item);
+      });
+    }
+
+    if (!state.manualVictories || state.manualVictories.length === 0) {
+      manualList.innerHTML = `
+        <div class="empty-state">
+          <i class="fa-solid fa-award" style="font-size: 32px; color: var(--text-muted); margin-bottom: 12px;"></i>
+          <p>No logged victories yet. Share your breakthroughs here!</p>
+        </div>
+      `;
+    } else {
+      manualList.innerHTML = '';
+      state.manualVictories.forEach(v => {
+        const item = document.createElement('div');
+        item.className = 'target-item completed';
+        item.style.background = 'rgba(255, 193, 7, 0.04)';
+        item.style.border = '1px solid rgba(255, 193, 7, 0.15)';
+        item.style.borderRadius = '8px';
+        item.style.padding = '12px';
+        item.style.marginBottom = '8px';
+        item.style.display = 'flex';
+        item.style.justifyContent = 'space-between';
+        item.style.alignItems = 'center';
+        
+        item.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 10px; flex: 1; margin-right: 12px;">
+            <span style="color: #ffc107; font-size: 16px;"><i class="fa-solid fa-award"></i></span>
+            <div style="flex: 1;">
+              <div style="font-weight: 700; font-size: 13px; color: var(--text-main);">${escapeHTML(v.title)}</div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 11px; font-weight: 600; color: #ffb300; background: rgba(255, 193, 7, 0.1); padding: 4px 8px; border-radius: 12px; white-space: nowrap;">
+              ${escapeHTML(v.date)}
+            </span>
+            <button class="btn-delete-victory" data-id="${v.id}" style="background:none; border:none; color:var(--accent-danger); cursor:pointer; font-size:14px; opacity:0.7; padding:4px;"><i class="fa-solid fa-trash-can"></i></button>
+          </div>
+        `;
+        
+        const btnDelete = item.querySelector('.btn-delete-victory');
+        btnDelete.addEventListener('click', () => {
+          if (confirm("Delete this victory entry?")) {
+            state.manualVictories = state.manualVictories.filter(x => x.id !== v.id);
+            saveState();
+            renderVictories();
+          }
+        });
+        
+        manualList.appendChild(item);
+      });
+    }
+  }
+
+  // Bind Manual Victory Form submission
+  const addVictoryForm = document.getElementById('add-victory-form');
+  if (addVictoryForm) {
+    addVictoryForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const titleInput = document.getElementById('victory-title');
+      const dateInput = document.getElementById('victory-date-input');
+      
+      const dateText = dateInput.value.trim();
+      const yearRegex = /\b\d{4}\b/;
+      if (!yearRegex.test(dateText)) {
+        alert("Please specify a valid 4-digit year (e.g., 2026) in the date field.");
+        return;
+      }
+      
+      const victory = {
+        id: Date.now().toString() + '_' + Math.random().toString(36).substr(2, 5),
+        title: titleInput.value.trim(),
+        date: dateText,
+        createdAt: Date.now()
+      };
+      
+      if (!state.manualVictories) state.manualVictories = [];
+      state.manualVictories.unshift(victory);
+      saveState();
+      
+      titleInput.value = '';
+      dateInput.value = '';
+      
+      renderVictories();
+      alert("Victory logged successfully! 🎉");
+    });
+  }
+
+  // Bind Gratitude Journal Form submission
+  const addJournalForm = document.getElementById('add-journal-form');
+  if (addJournalForm) {
+    addJournalForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const titleInput = document.getElementById('journal-title');
+      const contentInput = document.getElementById('journal-content');
+      const tagSelect = document.getElementById('journal-tag-select');
+      
+      const entry = {
+        id: Date.now().toString() + '_' + Math.random().toString(36).substr(2, 5),
+        title: titleInput.value.trim(),
+        content: contentInput.value.trim(),
+        tag: tagSelect.value,
+        date: new Date().toISOString()
+      };
+      
+      if (!state.journal) state.journal = [];
+      state.journal.unshift(entry);
+      saveState();
+      
+      titleInput.value = '';
+      contentInput.value = '';
+      tagSelect.value = 'gratitude';
+      
+      renderJournalEntries();
+      alert("Reflection saved to Gratitude Journal! 🙏");
+    });
+  }
+
+
+
+  // SGI Block Goals Collapsible and Admin Listeners
+  const btnToggleAdminGoals = document.getElementById('btn-toggle-admin-goals');
+  const adminGoalsContent = document.getElementById('admin-goals-content');
+  const adminGoalsCard = document.getElementById('admin-goals-card');
+  if (btnToggleAdminGoals && adminGoalsContent && adminGoalsCard) {
+    btnToggleAdminGoals.addEventListener('click', () => {
+      adminGoalsContent.classList.toggle('collapsed');
+      adminGoalsCard.classList.toggle('open');
+    });
+  }
+
+  const adminUploadGoalsForm = document.getElementById('admin-upload-goals-form');
+  if (adminUploadGoalsForm) {
+    adminUploadGoalsForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fileInput = document.getElementById('goals-image-input');
+      if (!fileInput || fileInput.files.length === 0) return;
+      
+      const file = fileInput.files[0];
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const currentUser = MockFirebase.auth.currentUser;
+        const goalsObj = {
+          imageUrl: reader.result,
+          uploadedBy: currentUser ? currentUser.email : 'admin',
+          uploadedAt: Date.now()
+        };
+        
+        try {
+          await MockFirebase.db.saveBlockGoals(goalsObj);
+          alert("Block goals flyer uploaded successfully! 🎉");
+          fileInput.value = '';
+          renderBlockGoals();
+        } catch (err) {
+          alert("Failed to upload block goals flyer: " + err.message);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+  
+  const btnAdminDeleteGoals = document.getElementById('btn-admin-delete-goals');
+  if (btnAdminDeleteGoals) {
+    btnAdminDeleteGoals.addEventListener('click', async () => {
+      if (confirm("Delete the current block goals flyer? This cannot be undone.")) {
+        try {
+          await MockFirebase.db.saveBlockGoals(null);
+          alert("Block goals flyer deleted successfully.");
+          renderBlockGoals();
+        } catch (err) {
+          alert("Failed to delete flyer: " + err.message);
+        }
+      }
+    });
+  }
+
+  function renderBlockGoals() {
+    const goalsView = document.getElementById('view-goals');
+    if (!goalsView) return;
+    
+    const goalsData = MockFirebase.db.getBlockGoals();
+    
+    // Update goals view content
+    const contentCard = goalsView.querySelector('.card');
+    if (!contentCard) return;
+    
+    if (goalsData && goalsData.imageUrl) {
+      contentCard.innerHTML = `
+        <div style="text-align: center; display: flex; flex-direction: column; gap: 14px;">
+          <img src="${goalsData.imageUrl}" style="max-width: 100%; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); margin: 0 auto; object-fit: contain;">
+          <span style="font-size: 11px; color: var(--text-muted);">
+            Uploaded by ${escapeHTML(goalsData.uploadedBy)} on ${new Date(goalsData.uploadedAt).toLocaleDateString()}
+          </span>
+        </div>
+      `;
+    } else {
+      contentCard.innerHTML = `
+        <div style="font-size: 48px; color: var(--primary); margin-bottom: 16px;"><i class="fa-solid fa-image"></i></div>
+        <h3 style="font-family: var(--font-serif); margin-bottom: 8px;">Goals</h3>
+        <p style="color: var(--text-muted); font-size: 13px; max-width: 320px; margin: 0 auto 24px auto; line-height: 1.5;">
+          will be uploaded here by the administrator as an image file.
+        </p>
+        <div style="display: inline-block; padding: 6px 12px; background: rgba(var(--primary-rgb), 0.1); border: 1px solid rgba(var(--primary-rgb), 0.2); border-radius: 20px; color: var(--primary); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+          No Goals Uploaded Yet
+        </div>
+      `;
+    }
+    
+    // Also update admin panel preview
+    const adminPreview = document.getElementById('admin-current-goals-preview');
+    const adminPreviewImg = document.getElementById('admin-goals-preview-img');
+    if (adminPreview && adminPreviewImg) {
+      if (goalsData && goalsData.imageUrl) {
+        adminPreviewImg.src = goalsData.imageUrl;
+        adminPreview.style.display = 'flex';
+      } else {
+        adminPreviewImg.src = '';
+        adminPreview.style.display = 'none';
+      }
+    }
+  }
+
+  // Real-time synchronization listener
+  window.addEventListener('db-block-goals-updated', () => {
+    console.log("Firebase sync: block goals updated.");
+    renderBlockGoals();
+  });
+
+  // --- Alliance Daimoku POC Logic ---
+  let allianceAnimationId = null;
+  let lastBothChanting = false;
+
+  // Synthesized wind chime sound arpeggio
+  function playAllianceChime() {
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      const ctx = new AudioContext();
+      const now = ctx.currentTime;
+      const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6 (crystal chime chord)
+      notes.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+        
+        // Plucked envelope
+        gain.gain.setValueAtTime(0.25, now + idx * 0.08);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 1.0);
+        
+        osc.start(now + idx * 0.08);
+        osc.stop(now + idx * 0.08 + 1.2);
+      });
+    } catch (e) {
+      console.warn("Web Audio chime failed:", e);
+    }
+  }
+
+  // Draw the animated celestial alignment line
+  function drawAllianceConnection(isActive) {
+    const canvas = document.getElementById('alliance-connector-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    if (!isActive) return;
+    
+    // Draw curved dotted line
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(255, 193, 7, 0.45)';
+    ctx.lineWidth = 2.5;
+    ctx.setLineDash([8, 6]);
+    ctx.lineDashOffset = -Math.floor(Date.now() / 100) % 28;
+    
+    // Curved bridge between self avatar (50, 36) and partner avatar (250, 36)
+    ctx.moveTo(50, 36);
+    ctx.bezierCurveTo(100, 5, 200, 5, 250, 36);
+    ctx.stroke();
+    
+    // Energy particle arcing along the bridge
+    const t = (Date.now() % 2500) / 2500;
+    const x = (1-t)*(1-t)*(1-t)*50 + 3*(1-t)*(1-t)*t*100 + 3*(1-t)*t*t*200 + t*t*t*250;
+    const y = (1-t)*(1-t)*(1-t)*36 + 3*(1-t)*(1-t)*t*5 + 3*(1-t)*t*t*5 + t*t*t*36;
+    
+    ctx.shadowBlur = 12;
+    ctx.shadowColor = 'rgba(255, 193, 7, 0.9)';
+    ctx.fillStyle = '#ffc107';
+    ctx.beginPath();
+    ctx.arc(x, y, 5.5, 0, 2 * Math.PI);
+    ctx.fill();
+    
+    // Reset shadow
+    ctx.shadowBlur = 0;
+  }
+
+  function startAllianceAnimation() {
+    if (allianceAnimationId) return;
+    function loop() {
+      const banner = document.getElementById('alliance-glow-banner');
+      const isBothChanting = banner && banner.style.display !== 'none';
+      drawAllianceConnection(isBothChanting);
+      allianceAnimationId = requestAnimationFrame(loop);
+    }
+    loop();
+  }
+
+  function stopAllianceAnimation() {
+    if (allianceAnimationId) {
+      cancelAnimationFrame(allianceAnimationId);
+      allianceAnimationId = null;
+    }
+  }
+
+  // Update alliance state on timer changes
+  async function updateAllianceChantingState(isChanting, secondsElapsed) {
+    if (!state || !state.activeAllianceId) return;
+    const alliances = MockFirebase.db.getAlliances();
+    const alliance = alliances.find(a => a.id === state.activeAllianceId);
+    if (!alliance) return;
+    
+    const email = currentUser ? currentUser.email : 'guest';
+    const member = alliance.members.find(m => m.email.toLowerCase() === email.toLowerCase());
+    if (member) {
+      member.isChanting = isChanting;
+      member.secondsLogged = secondsElapsed;
+      member.lastActive = Date.now();
+      
+      try {
+        await MockFirebase.db.saveAlliance(alliance);
+      } catch (err) {
+        console.warn("Failed to save alliance state:", err);
+      }
+    }
+  }
+
+  // Update UI and states
+  function updateAllianceUI() {
+    const setupMode = document.getElementById('alliance-setup-mode');
+    const roomMode = document.getElementById('alliance-room-mode');
+    const summaryMode = document.getElementById('alliance-summary-mode');
+    
+    if (!state.activeAllianceId) {
+      if (setupMode) setupMode.style.display = 'flex';
+      if (roomMode) roomMode.style.display = 'none';
+      if (summaryMode) summaryMode.style.display = 'none';
+      stopAllianceAnimation();
+      lastBothChanting = false;
+      return;
+    }
+    
+    const alliances = MockFirebase.db.getAlliances();
+    const alliance = alliances.find(a => a.id === state.activeAllianceId);
+    
+    if (!alliance) {
+      // Room got deleted or invalid ID
+      state.activeAllianceId = null;
+      saveState();
+      if (setupMode) setupMode.style.display = 'flex';
+      if (roomMode) roomMode.style.display = 'none';
+      if (summaryMode) summaryMode.style.display = 'none';
+      stopAllianceAnimation();
+      lastBothChanting = false;
+      return;
+    }
+    
+    const email = currentUser ? currentUser.email : 'guest';
+    const selfMember = alliance.members.find(m => m.email.toLowerCase() === email.toLowerCase());
+    const partnerMember = alliance.members.find(m => m.email.toLowerCase() !== email.toLowerCase());
+    
+    // 1. Conclusion check: if both finished, move status to completed
+    if (selfMember && selfMember.finished && partnerMember && partnerMember.finished && alliance.status === 'active') {
+      alliance.status = 'completed';
+      MockFirebase.db.saveAlliance(alliance);
+      return; // DB update will trigger re-render
+    }
+    
+    // 2. Completed / Summary view
+    if (alliance.status === 'completed') {
+      if (setupMode) setupMode.style.display = 'none';
+      if (roomMode) roomMode.style.display = 'none';
+      if (summaryMode) summaryMode.style.display = 'flex';
+      
+      stopAllianceAnimation();
+      lastBothChanting = false;
+      
+      const selfTimeMin = Math.round((selfMember ? selfMember.secondsLogged : 0) / 60);
+      const partnerTimeMin = Math.round((partnerMember ? partnerMember.secondsLogged : 0) / 60);
+      
+      document.getElementById('alliance-summary-self-time').textContent = `${selfTimeMin}m`;
+      document.getElementById('alliance-summary-partner-time').textContent = `${partnerTimeMin}m`;
+      
+      const partnerLabel = document.getElementById('alliance-summary-partner-label');
+      if (partnerLabel) {
+        partnerLabel.textContent = partnerMember ? `${partnerMember.username}'s Time` : "Partner's Time";
+      }
+      return;
+    }
+    
+    // 3. Active Room view
+    if (setupMode) setupMode.style.display = 'none';
+    if (roomMode) roomMode.style.display = 'flex';
+    if (summaryMode) summaryMode.style.display = 'none';
+    
+    document.getElementById('alliance-room-target').textContent = alliance.title;
+    document.getElementById('alliance-room-code-display').textContent = alliance.code;
+    
+    // Render Self status
+    if (selfMember) {
+      document.getElementById('alliance-name-self').textContent = selfMember.username + " (You)";
+      const statusSelf = document.getElementById('alliance-status-self');
+      const avatarSelf = document.getElementById('alliance-avatar-self');
+      if (selfMember.finished) {
+        statusSelf.textContent = '✓ Finished';
+        statusSelf.style.color = '#ffb300';
+        statusSelf.style.background = 'rgba(255, 179, 0, 0.1)';
+        avatarSelf.classList.remove('active');
+      } else if (selfMember.isChanting) {
+        statusSelf.textContent = '● Chanting';
+        statusSelf.style.color = '#4caf50';
+        statusSelf.style.background = 'rgba(76, 175, 80, 0.1)';
+        avatarSelf.classList.add('active');
+      } else {
+        statusSelf.textContent = '○ Idle';
+        statusSelf.style.color = 'var(--text-muted)';
+        statusSelf.style.background = 'rgba(0,0,0,0.04)';
+        avatarSelf.classList.remove('active');
+      }
+    }
+    
+    // Render Partner status
+    const namePartner = document.getElementById('alliance-name-partner');
+    const statusPartner = document.getElementById('alliance-status-partner');
+    const avatarPartner = document.getElementById('alliance-avatar-partner');
+    
+    if (!partnerMember) {
+      namePartner.textContent = 'Waiting for partner...';
+      statusPartner.textContent = 'Offline';
+      statusPartner.style.color = 'var(--text-muted)';
+      statusPartner.style.background = 'rgba(0,0,0,0.04)';
+      avatarPartner.classList.remove('active');
+      
+      document.getElementById('alliance-glow-banner').style.display = 'none';
+      stopAllianceAnimation();
+      lastBothChanting = false;
+    } else {
+      namePartner.textContent = partnerMember.username;
+      if (partnerMember.finished) {
+        statusPartner.textContent = `✓ Finished (${Math.round(partnerMember.secondsLogged / 60)}m)`;
+        statusPartner.style.color = '#ffb300';
+        statusPartner.style.background = 'rgba(255, 179, 0, 0.1)';
+        avatarPartner.classList.remove('active');
+      } else if (partnerMember.isChanting) {
+        statusPartner.textContent = '● Chanting';
+        statusPartner.style.color = '#4caf50';
+        statusPartner.style.background = 'rgba(76, 175, 80, 0.1)';
+        avatarPartner.classList.add('active');
+      } else {
+        statusPartner.textContent = '○ Idle';
+        statusPartner.style.color = 'var(--text-muted)';
+        statusPartner.style.background = 'rgba(0,0,0,0.04)';
+        avatarPartner.classList.remove('active');
+      }
+      
+      // Determine if both are actively chanting
+      const bothChantingNow = (selfMember && selfMember.isChanting && !selfMember.finished) && (partnerMember && partnerMember.isChanting && !partnerMember.finished);
+      const banner = document.getElementById('alliance-glow-banner');
+      
+      if (bothChantingNow) {
+        banner.style.display = 'block';
+        startAllianceAnimation();
+        
+        // Play arpeggio sound exactly once on transition to aligned state
+        if (!lastBothChanting) {
+          playAllianceChime();
+        }
+        lastBothChanting = true;
+      } else {
+        banner.style.display = 'none';
+        stopAllianceAnimation();
+        drawAllianceConnection(false); // clear canvas
+        lastBothChanting = false;
+      }
+    }
+  }
+
+  // Action: Create Alliance Form Submission
+  const createAllianceForm = document.getElementById('create-alliance-form');
+  if (createAllianceForm) {
+    createAllianceForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const targetInput = document.getElementById('alliance-target-input');
+      const shareUsernameCheck = document.getElementById('alliance-share-username');
+      
+      const title = targetInput.value.trim();
+      const codeNum = Math.floor(100 + Math.random() * 900); // 3-digit random code
+      const code = `ALL-${codeNum}`;
+      const roomId = Date.now().toString() + '_' + Math.random().toString(36).substr(2, 5);
+      
+      const selfName = (shareUsernameCheck && shareUsernameCheck.checked && currentUser) ? currentUser.username : "A block member";
+      
+      const newAlliance = {
+        id: roomId,
+        code: code,
+        title: title,
+        members: [
+          {
+            email: currentUser ? currentUser.email : 'guest',
+            username: selfName,
+            isChanting: false,
+            secondsLogged: 0,
+            finished: false,
+            lastActive: Date.now()
+          }
+        ],
+        status: 'active',
+        createdAt: Date.now()
+      };
+      
+      try {
+        await MockFirebase.db.saveAlliance(newAlliance);
+        state.activeAllianceId = roomId;
+        saveState();
+        
+        targetInput.value = '';
+        updateAllianceUI();
+        alert(`Alliance created! Share the code ${code} with your friend.`);
+      } catch (err) {
+        alert("Failed to create alliance session: " + err.message);
+      }
+    });
+  }
+
+  // Action: Join Alliance Form Submission
+  const joinAllianceForm = document.getElementById('join-alliance-form');
+  if (joinAllianceForm) {
+    joinAllianceForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const codeInput = document.getElementById('alliance-code-input');
+      const shareUsernameCheck = document.getElementById('alliance-join-share-username');
+      
+      const codeInputVal = codeInput.value.trim().toUpperCase();
+      
+      // Find the alliance with this code
+      const alliances = MockFirebase.db.getAlliances();
+      const alliance = alliances.find(a => a.code === codeInputVal && a.status === 'active');
+      
+      if (!alliance) {
+        alert("Active Alliance session not found. Please verify the code.");
+        return;
+      }
+      
+      const email = currentUser ? currentUser.email : 'guest';
+      // Check if already in the alliance
+      if (alliance.members.some(m => m.email.toLowerCase() === email.toLowerCase())) {
+        state.activeAllianceId = alliance.id;
+        saveState();
+        codeInput.value = '';
+        updateAllianceUI();
+        return;
+      }
+      
+      // Add self to the alliance members list
+      const selfName = (shareUsernameCheck && shareUsernameCheck.checked && currentUser) ? currentUser.username : "A block member";
+      alliance.members.push({
+        email: email,
+        username: selfName,
+        isChanting: false,
+        secondsLogged: 0,
+        finished: false,
+        lastActive: Date.now()
+      });
+      
+      try {
+        await MockFirebase.db.saveAlliance(alliance);
+        state.activeAllianceId = alliance.id;
+        saveState();
+        
+        codeInput.value = '';
+        updateAllianceUI();
+        alert("Joined Alliance successfully!");
+      } catch (err) {
+        alert("Failed to join alliance: " + err.message);
+      }
+    });
+  }
+
+  // Action: Goto Chant tab button
+  const btnAllianceGotoChant = document.getElementById('btn-alliance-goto-chant');
+  if (btnAllianceGotoChant) {
+    btnAllianceGotoChant.addEventListener('click', () => {
+      const chantBtn = document.getElementById('nav-chant');
+      if (chantBtn) chantBtn.click();
+    });
+  }
+
+  // Action: Finish session
+  const btnAllianceFinish = document.getElementById('btn-alliance-finish');
+  if (btnAllianceFinish) {
+    btnAllianceFinish.addEventListener('click', () => {
+      if (confirm("Are you finished chanting? This will record your final contribution and mark you as finished.")) {
+        finishAllianceSession();
+      }
+    });
+  }
+
+  // Action: Close summary
+  const btnAllianceCloseSummary = document.getElementById('btn-alliance-close-summary');
+  if (btnAllianceCloseSummary) {
+    btnAllianceCloseSummary.addEventListener('click', () => {
+      state.activeAllianceId = null;
+      saveState();
+      updateAllianceUI();
+      const dashboardBtn = document.getElementById('nav-dashboard');
+      if (dashboardBtn) dashboardBtn.click();
+    });
+  }
+
+  async function finishAllianceSession() {
+    if (!state || !state.activeAllianceId) return;
+    
+    if (timerState === 'running') {
+      const btnStop = document.getElementById('btn-timer-stop');
+      if (btnStop) {
+        btnStop.click();
+      }
+    }
+    
+    const alliances = MockFirebase.db.getAlliances();
+    const alliance = alliances.find(a => a.id === state.activeAllianceId);
+    if (!alliance) return;
+    
+    const email = currentUser ? currentUser.email : 'guest';
+    const member = alliance.members.find(m => m.email.toLowerCase() === email.toLowerCase());
+    if (member) {
+      member.isChanting = false;
+      member.finished = true;
+      member.lastActive = Date.now();
+      
+      try {
+        await MockFirebase.db.saveAlliance(alliance);
+        updateAllianceUI();
+      } catch (err) {
+        console.warn("Failed to update finish status:", err);
+      }
+    }
+  }
+
+  // Real-time synchronization listeners
+  window.addEventListener('db-alliances-updated', () => {
+    updateAllianceUI();
+  });
 
   } catch (err) {
     console.error("Initialization Error:", err);

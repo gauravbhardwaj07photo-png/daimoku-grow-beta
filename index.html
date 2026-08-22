@@ -51,12 +51,15 @@
     
     <!-- Top Header -->
     <header class="app-header">
-      <div class="logo-container">
-        <div class="logo">
-          <span class="logo-leaf"><i class="fa-solid fa-leaf"></i></span>
-          <div class="logo-text-group">
-            <h1>Daimoku Grow</h1>
-            <div id="user-block-badge" class="user-block-badge hidden">Wisdom</div>
+      <div style="display:flex; align-items:center; gap:12px;">
+        <button id="btn-menu" class="btn-header-action" title="Menu" style="background:none; border:none; color:var(--text-main); font-size:18px; cursor:pointer; padding:4px; outline:none; display:flex; align-items:center; justify-content:center;"><i class="fa-solid fa-bars"></i></button>
+        <div class="logo-container">
+          <div class="logo">
+            <span class="logo-leaf"><i class="fa-solid fa-leaf"></i></span>
+            <div class="logo-text-group">
+              <h1>Daimoku Grow</h1>
+              <div id="user-block-badge" class="user-block-badge hidden">Wisdom</div>
+            </div>
           </div>
         </div>
       </div>
@@ -171,106 +174,7 @@
               <span id="guidance-author">— Daisaku Ikeda</span>
             </div>
 
-            <!-- Interactive Garden Encyclopedia Card (Styled typography to match Daily Guidance and collapsed height to match Session Logs) -->
-            <div class="card collapsible" id="encyclopedia-card" style="margin-bottom: 24px;">
-              <button class="encyclopedia-header" id="btn-toggle-encyclopedia" style="width: 100%; display: flex; justify-content: space-between; align-items: center; background: none; border: none; padding: 0; cursor: pointer; outline: none; text-align: left;">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <span class="guidance-icon" style="background: rgba(38, 166, 154, 0.15); color: #26a69a; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px;"><i class="fa-solid fa-book-open"></i></span>
-                  <h2 style="margin: 0; font-family: var(--font-serif); font-size: 18px; font-weight: 700; color: var(--text-main);">Garden Encyclopedia</h2>
-                </div>
-                <i class="fa-solid fa-chevron-down toggle-arrow" style="font-size: 14px; color: var(--text-muted); transition: transform 0.3s ease;"></i>
-              </button>
-              <div id="encyclopedia-content" class="admin-content collapsed" style="margin-top: 14px;">
-                <!-- App Overview & Rules -->
-                <div style="background: rgba(38, 166, 154, 0.08); border: 1px dashed rgba(38, 166, 154, 0.25); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
-                  <h4 style="margin: 0 0 6px 0; font-size: 13px; color: var(--primary); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Quick Guide</h4>
-                  <p style="margin: 0 0 8px 0; font-size: 12px; color: var(--text-main); line-height: 1.5;">
-                    Do <strong>Daimoku</strong> to grow your plant... <em>consistency is the key</em>. It takes <strong>333 hours</strong> (approx. 1 million Daimoku) to grow the tree fully. You can also customize your tree target hours in the settings.
-                  </p>
-                  <p style="margin: 0; font-size: 11.5px; color: var(--text-muted); line-height: 1.45;">
-                    <i class="fa-solid fa-circle-info" style="color: var(--primary);"></i> <strong>Campaigns:</strong> A Campaign tab and target dropdown will automatically appear when there is an active campaign, allowing you to add and track Daimoku contributions.
-                  </p>
-                </div>
 
-                <!-- Growth Stages (Ranks) -->
-                <div style="margin-bottom: 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 14px;">
-                  <h4 style="margin: 0 0 8px 0; font-size: 13.5px; color: var(--text-main); font-weight: 600;">Plant Growth Stages</h4>
-                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px;">
-                    <div style="background: rgba(255,255,255,0.03); border-radius: 6px; padding: 6px 10px; display: flex; align-items: center; gap: 6px;">
-                      <span style="color: #ffb300; font-size: 11px;"><i class="fa-solid fa-star"></i></span>
-                      <div style="font-size: 11px; font-weight: 600; color: var(--text-main);">1★ Seeker</div>
-                    </div>
-                    <div style="background: rgba(255,255,255,0.03); border-radius: 6px; padding: 6px 10px; display: flex; align-items: center; gap: 6px;">
-                      <span style="color: #ffb300; font-size: 11px;"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></span>
-                      <div style="font-size: 11px; font-weight: 600; color: var(--text-main);">2★ Believer</div>
-                    </div>
-                    <div style="background: rgba(255,255,255,0.03); border-radius: 6px; padding: 6px 10px; display: flex; align-items: center; gap: 6px;">
-                      <span style="color: #ffb300; font-size: 11px;"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></span>
-                      <div style="font-size: 11px; font-weight: 600; color: var(--text-main);">3★ Practitioner</div>
-                    </div>
-                    <div style="background: rgba(255,255,255,0.03); border-radius: 6px; padding: 6px 10px; display: flex; align-items: center; gap: 6px;">
-                      <span style="color: #ffb300; font-size: 11px;"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></span>
-                      <div style="font-size: 11px; font-weight: 600; color: var(--text-main);">4★ Bodhisattva</div>
-                    </div>
-                    <div style="background: rgba(255,255,255,0.03); border-radius: 6px; padding: 6px 10px; display: flex; align-items: center; gap: 6px;">
-                      <span style="color: #ffb300; font-size: 11px;"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></span>
-                      <div style="font-size: 11px; font-weight: 600; color: var(--text-main);">5★ Buddhahood</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div style="display: flex; flex-direction: column; gap: 16px;">
-                  <!-- Item 1: Peepal Tree -->
-                  <div style="display: flex; gap: 12px; align-items: flex-start;">
-                    <div style="background: rgba(86, 172, 86, 0.15); color: #2e7d32; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px;">
-                      <i class="fa-solid fa-tree"></i>
-                    </div>
-                    <div style="flex: 1;">
-                      <h4 style="margin: 0 0 3px 0; font-size: 13.5px; color: var(--text-main); font-weight: 600;">The Peepal Tree (Main Practice)</h4>
-                      <p style="margin: 0; font-size: 12px; color: var(--text-muted); line-height: 1.45;">
-                        Known as the Bodhi tree under which Shakyamuni attained enlightenment. It represents your main daily practice. Grows from a tiny Seed to a Majestic Tree based on your progress towards your tree target hours.
-                      </p>
-                    </div>
-                  </div>
-                  <!-- Item 2: Lotus Flower -->
-                  <div style="display: flex; gap: 12px; align-items: flex-start;">
-                    <div style="background: rgba(255, 128, 171, 0.15); color: #c2185b; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px;">
-                      <i class="fa-solid fa-seedling"></i>
-                    </div>
-                    <div style="flex: 1;">
-                      <h4 style="margin: 0 0 3px 0; font-size: 13.5px; color: var(--text-main); font-weight: 600;">The Lotus Flower (First Active Target)</h4>
-                      <p style="margin: 0; font-size: 12px; color: var(--text-muted); line-height: 1.45;">
-                        Sprouts on the left soil. Symbolizes the principle of "simultaneity of cause and effect" and the ability to bloom pure and beautiful out of muddy waters. Grows, opens, and blooms as you complete Target 1.
-                      </p>
-                    </div>
-                  </div>
-                  <!-- Item 3: Bamboo Shoot -->
-                  <div style="display: flex; gap: 12px; align-items: flex-start;">
-                    <div style="background: rgba(38, 166, 154, 0.15); color: #00796b; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px;">
-                      <i class="fa-solid fa-leaf"></i>
-                    </div>
-                    <div style="flex: 1;">
-                      <h4 style="margin: 0 0 3px 0; font-size: 13.5px; color: var(--text-main); font-weight: 600;">The Bamboo Shoot (Second Active Target)</h4>
-                      <p style="margin: 0; font-size: 12px; color: var(--text-muted); line-height: 1.45;">
-                        Sprouts on the right soil. Represents resilience, flexibility, and rapid growth—bending gracefully in the wind but never breaking. Grows tall and sprouts sections as you complete Target 2.
-                      </p>
-                    </div>
-                  </div>
-                  <!-- Item 4: Red Apples -->
-                  <div style="display: flex; gap: 12px; align-items: flex-start;">
-                    <div style="background: rgba(229, 115, 115, 0.15); color: #d32f2f; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px;">
-                      <i class="fa-solid fa-apple-whole"></i>
-                    </div>
-                    <div style="flex: 1;">
-                      <h4 style="margin: 0 0 3px 0; font-size: 13.5px; color: var(--text-main); font-weight: 600;">Red Apple Fruits (Advanced Milestones)</h4>
-                      <p style="margin: 0; font-size: 12px; color: var(--text-muted); line-height: 1.45;">
-                        Grow on the outer branches of the Majestic Tree once you surpass your target hours (1 apple per 3 hours 20 mins). Symbolizes the actual proof, benefits, and fruits of your long-term practice.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
 
           </div>
       </section>
@@ -379,6 +283,7 @@
 
       <!-- VIEW 1.5: PRAYERS/TARGETS -->
       <section id="view-prayers" class="content-view">
+        <h2 class="view-title">Targets</h2>
         <div class="targets-grid">
             
             <!-- Add Target Card -->
@@ -689,6 +594,31 @@
             </div>
           </div>
 
+          <!-- Admin Block Goals Manager (visible only to admin role) -->
+          <div class="card admin-card collapsible hidden" id="admin-goals-card" style="margin-bottom: 20px;">
+            <button class="admin-panel-header" id="btn-toggle-admin-goals">
+              <span><i class="fa-solid fa-image"></i> Block Goals Image Manager</span>
+              <i class="fa-solid fa-chevron-down toggle-arrow"></i>
+            </button>
+            <div id="admin-goals-content" class="admin-content collapsed">
+              <p class="admin-desc">Upload or update the block goals flyer. Allowed extensions: PNG, JPG, JPEG, GIF, WEBP. This flyer is visible to all members under the goals drawer view.</p>
+              
+              <form id="admin-upload-goals-form" style="display:flex; flex-direction:column; gap:12px;">
+                <div class="journal-input-group">
+                  <label for="goals-image-input">Select Image File</label>
+                  <input type="file" id="goals-image-input" accept="image/*" required style="width:100%; padding:8px; border-radius:8px; border:var(--border); background:var(--accent-cream); color:var(--text-main); font-size:12.5px;">
+                </div>
+                <button type="submit" class="btn btn-secondary btn-full" style="padding:10px; font-size:13px;"><i class="fa-solid fa-upload"></i> Upload Goals Flyer</button>
+              </form>
+              
+              <div id="admin-current-goals-preview" style="margin-top:16px; padding:10px; background:rgba(0,0,0,0.02); border:var(--border); border-radius:8px; display:none; flex-direction:column; gap:8px; text-align:center;">
+                <span style="font-size:11px; font-weight:600; color:var(--text-muted);">Current Active Flyer:</span>
+                <img id="admin-goals-preview-img" src="" style="max-width:100%; max-height:160px; border-radius:6px; margin:0 auto; object-fit:contain;">
+                <button id="btn-admin-delete-goals" type="button" class="btn btn-full" style="background:rgba(211,47,47,0.1); color:#e57373; border:1px solid rgba(211,47,47,0.2); padding:6px; font-size:11.5px;"><i class="fa-solid fa-trash-can"></i> Delete Current Flyer</button>
+              </div>
+            </div>
+          </div>
+
           <!-- Admin User Management Panel (Collapsible, visible only to admin role) -->
           <div class="card admin-card collapsible hidden" id="admin-users-card">
             <button class="admin-panel-header" id="btn-toggle-admin-users">
@@ -822,9 +752,454 @@
         </div>
       </section>
 
+      <!-- VIEW 9: MY VICTORIES -->
+      <section id="view-victories" class="content-view">
+        <h2 class="view-title">My Victories</h2>
+        <div class="victories-grid" style="display: flex; flex-direction: column; gap: 20px;">
+          
+          <!-- Victory Stats -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div class="card" style="text-align: center; padding: 16px;">
+              <div style="font-size: 24px; color: #ffb300; margin-bottom: 6px;"><i class="fa-solid fa-trophy"></i></div>
+              <div id="victory-stat-completed" style="font-size: 22px; font-weight: 800; color: var(--text-main);">0</div>
+              <div style="font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Total Victories</div>
+            </div>
+            <div class="card" style="text-align: center; padding: 16px;">
+              <div style="font-size: 24px; color: var(--primary); margin-bottom: 6px;"><i class="fa-solid fa-award"></i></div>
+              <div id="victory-stat-badges" style="font-size: 22px; font-weight: 800; color: var(--text-main);">0</div>
+              <div style="font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Badges Earned</div>
+            </div>
+          </div>
+
+          <!-- Add Victory Card -->
+          <div class="card journal-form-card" id="add-victory-card">
+            <h3>Share a Victory</h3>
+            <form id="add-victory-form" style="display: flex; flex-direction: column; gap: 12px;">
+              <div class="journal-input-group">
+                <label for="victory-title">Victory / Breakthrough</label>
+                <input type="text" id="victory-title" placeholder="e.g., Passed bar exam, purchased house..." required class="journal-input">
+              </div>
+              <div class="journal-input-group">
+                <label for="victory-date-input">Date Achieved</label>
+                <input type="text" id="victory-date-input" placeholder="e.g., 2026, June 2026, or 28/07/2026" required class="journal-input">
+                <span style="font-size: 10.5px; color: var(--text-muted); margin-top: 4px; display: block;">
+                  Day and Month are optional, but a 4-digit Year (e.g. 2026) is required.
+                </span>
+              </div>
+              <button type="submit" class="btn btn-secondary btn-full" style="margin-top: 8px;"><i class="fa-solid fa-trophy"></i> Log Victory</button>
+            </form>
+          </div>
+
+          <!-- Logged Victories List -->
+          <div class="card">
+            <h3>Logged Victories</h3>
+            <div id="manual-victories-list" class="targets-list">
+              <!-- Dynamically populated -->
+              <div class="empty-state">
+                <i class="fa-solid fa-award" style="font-size: 32px; color: var(--text-muted); margin-bottom: 12px;"></i>
+                <p>No logged victories yet. Share your breakthroughs here!</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Completed Determinations List -->
+          <div class="card">
+            <h3>Completed Determinations</h3>
+            <div id="victories-targets-list" class="targets-list">
+              <!-- Dynamically populated -->
+              <div class="empty-state">
+                <i class="fa-solid fa-circle-check" style="font-size: 32px; color: var(--text-muted); margin-bottom: 12px;"></i>
+                <p>No completed determinations yet. Chant to complete your goals and see them listed here as victories!</p>
+              </div>
+            </div>
+          </div>
+          
+        </div>
+      </section>
+
+      <!-- VIEW 10: GRATITUDE JOURNAL -->
+      <section id="view-journal" class="content-view">
+        <h2 class="view-title">Gratitude Journal</h2>
+        <div class="journal-grid" style="display: flex; flex-direction: column; gap: 20px;">
+          
+          <!-- New Journal Entry Card -->
+          <div class="card journal-form-card">
+            <h3>New Gratitude Entry</h3>
+            <form id="add-journal-form" style="display: flex; flex-direction: column; gap: 12px;">
+              <div class="journal-input-group">
+                <label for="journal-title">Title / Focus</label>
+                <input type="text" id="journal-title" placeholder="What are you grateful for today?" required class="journal-input">
+              </div>
+              <div class="journal-input-group">
+                <label for="journal-content">Gratitude Details</label>
+                <textarea id="journal-content" placeholder="Write down your sincere appreciation, realizations, or victories..." required class="journal-textarea"></textarea>
+              </div>
+              <div class="journal-input-group">
+                <label for="journal-tag-select">Category Tag</label>
+                <select id="journal-tag-select" class="journal-select">
+                  <option value="gratitude">Gratitude</option>
+                  <option value="victory">Victory</option>
+                  <option value="determination">Determination</option>
+                </select>
+              </div>
+              <button type="submit" class="btn btn-secondary btn-full" style="margin-top: 8px;"><i class="fa-solid fa-feather"></i> Save Entry</button>
+            </form>
+          </div>
+
+          <!-- Journal Entries List -->
+          <div class="card">
+            <h3>My Reflections</h3>
+            <div id="journal-entries-list" class="journal-list">
+              <!-- Dynamically populated -->
+              <div class="empty-state">
+                <i class="fa-solid fa-feather" style="font-size: 32px; color: var(--text-muted); margin-bottom: 12px;"></i>
+                <p>Your gratitude journal is empty. Write down what you are grateful for today!</p>
+              </div>
+            </div>
+          </div>
+          
+        </div>
+      </section>
+
+      <!-- VIEW 11: GOALS (Admin Image Upload Placeholder) -->
+      <section id="view-goals" class="content-view">
+        <h2 class="view-title" id="goals-view-title">2026 Goals</h2>
+        <div class="card" style="text-align: center; padding: 40px 24px; background: var(--bg-card); border: var(--border);">
+          <div style="font-size: 48px; color: var(--primary); margin-bottom: 16px;"><i class="fa-solid fa-image"></i></div>
+          <h3 style="font-family: var(--font-serif); margin-bottom: 8px;">Goals</h3>
+          <p style="color: var(--text-muted); font-size: 13px; max-width: 320px; margin: 0 auto 24px auto; line-height: 1.5;">
+            will be uploaded here by the administrator as an image file.
+          </p>
+          <div style="display: inline-block; padding: 6px 12px; background: rgba(var(--primary-rgb), 0.1); border: 1px solid rgba(var(--primary-rgb), 0.2); border-radius: 20px; color: var(--primary); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+            No Goals Uploaded Yet
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 12: ALLIANCE DAIMOKU -->
+      <section id="view-alliance" class="content-view">
+        <h2 class="view-title">Alliance Daimoku</h2>
+        
+        <style>
+          @keyframes pulseHalo {
+            0% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.15); opacity: 0.3; }
+            100% { transform: scale(1.3); opacity: 0; }
+          }
+          @keyframes pulseBanner {
+            0%, 100% { border-color: rgba(255, 193, 7, 0.25); box-shadow: 0 0 15px rgba(255, 193, 7, 0.15); }
+            50% { border-color: rgba(255, 193, 7, 0.6); box-shadow: 0 0 25px rgba(255, 193, 7, 0.35); }
+          }
+          .alliance-avatar-container.active .alliance-halo {
+            display: block !important;
+          }
+        </style>
+        
+        <!-- Tab Sub-content (Switchable or Dynamic based on Session state) -->
+        <div id="alliance-main-container">
+          
+          <!-- Outer Grid when NO active session exists -->
+          <div id="alliance-setup-mode" class="journal-grid" style="display: flex; flex-direction: column; gap: 20px;">
+            
+            <!-- Generate a Session Card -->
+            <div class="card journal-form-card" style="background: linear-gradient(135deg, rgba(103, 58, 183, 0.08) 0%, rgba(255, 193, 7, 0.05) 100%); border: var(--border);">
+              <div style="font-size: 32px; color: var(--primary); margin-bottom: 8px;"><i class="fa-solid fa-plus"></i></div>
+              <h3 style="font-family: var(--font-serif); margin-bottom: 4px;">Start an Alliance</h3>
+              <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">Create a real-time chanting alignment room and share the code with others.</p>
+              
+              <form id="create-alliance-form" style="display: flex; flex-direction: column; gap: 12px;">
+                <div class="journal-input-group">
+                  <label for="alliance-target-input">Alliance Determination / Focus</label>
+                  <input type="text" id="alliance-target-input" placeholder="e.g., Global peace, recovery of our friend..." required class="journal-input">
+                </div>
+                <div class="setting-toggle-row" style="padding: 4px 0; display:flex; justify-content:space-between; align-items:center;">
+                  <div class="setting-info" style="display:flex; flex-direction:column; gap:2px;">
+                    <span class="setting-title" style="font-size:12px; font-weight:600; color:var(--text-main);">Share Username</span>
+                    <span class="setting-subtitle" style="font-size:10px; color:var(--text-muted);">Otherwise, you will appear anonymously</span>
+                  </div>
+                  <label class="toggle-switch">
+                    <input type="checkbox" id="alliance-share-username" checked>
+                    <span class="slider"></span>
+                  </label>
+                </div>
+                <button type="submit" class="btn btn-secondary btn-full" style="margin-top: 8px;"><i class="fa-solid fa-rotate"></i> Generate Code & Open Room</button>
+              </form>
+            </div>
+            
+            <!-- Join Session Card -->
+            <div class="card" style="border: var(--border);">
+              <div style="font-size: 32px; color: var(--accent-gold); margin-bottom: 8px;"><i class="fa-solid fa-key"></i></div>
+              <h3 style="font-family: var(--font-serif); margin-bottom: 4px;">Join an Alliance</h3>
+              <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">Enter a shared code from another member to chant together.</p>
+              
+              <form id="join-alliance-form" style="display: flex; flex-direction: column; gap: 12px;">
+                <div class="journal-input-group">
+                  <label for="alliance-code-input">Alliance Code</label>
+                  <input type="text" id="alliance-code-input" placeholder="e.g. ALL-492" required class="journal-input" style="text-transform: uppercase;">
+                </div>
+                <div class="setting-toggle-row" style="padding: 4px 0; display:flex; justify-content:space-between; align-items:center;">
+                  <div class="setting-info" style="display:flex; flex-direction:column; gap:2px;">
+                    <span class="setting-title" style="font-size:12px; font-weight:600; color:var(--text-main);">Share Username</span>
+                    <span class="setting-subtitle" style="font-size:10px; color:var(--text-muted);">Otherwise, you will appear anonymously</span>
+                  </div>
+                  <label class="toggle-switch">
+                    <input type="checkbox" id="alliance-join-share-username" checked>
+                    <span class="slider"></span>
+                  </label>
+                </div>
+                <button type="submit" class="btn btn-primary btn-full" style="margin-top: 8px;"><i class="fa-solid fa-right-to-bracket"></i> Join Session</button>
+              </form>
+            </div>
+            
+          </div>
+          
+          <!-- Active Room View (Hidden by default, shown when session starts) -->
+          <div id="alliance-room-mode" style="display: none; flex-direction: column; gap: 20px;">
+            
+            <!-- Shared Target Header Card -->
+            <div class="card" style="background: linear-gradient(135deg, rgba(103, 58, 183, 0.12) 0%, rgba(255, 193, 7, 0.08) 100%); border: 1px solid rgba(103, 58, 183, 0.2); text-align: center; padding: 24px; position: relative; overflow: hidden; border-radius: 16px;">
+              <!-- Subtle dynamic sparkles container -->
+              <div id="alliance-sparkles-bg" style="position: absolute; top:0; left:0; width:100%; height:100%; pointer-events:none;"></div>
+              
+              <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--primary); letter-spacing: 1px; margin-bottom: 8px;">Active Alliance Session</div>
+              <h3 id="alliance-room-target" style="font-family: var(--font-serif); font-size: 20px; color: var(--text-main); margin-bottom: 12px; line-height: 1.4;">Target Focus</h3>
+              
+              <div style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; background: var(--bg-card); border: var(--border); border-radius: 20px; font-weight: 700; color: var(--text-main); font-size: 13.5px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+                <i class="fa-solid fa-hashtag" style="color: var(--accent-gold);"></i> Room Code: <span id="alliance-room-code-display" style="color: var(--primary); font-family: monospace; letter-spacing: 0.5px;">---</span>
+              </div>
+            </div>
+            
+            <!-- Connection Status Panel (The decorative visual halos & line connection) -->
+            <div class="card" style="border: var(--border); padding: 30px 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; overflow: hidden;">
+              
+              <!-- Sparkles or alignment thread canvas overlay -->
+              <canvas id="alliance-connector-canvas" width="300" height="150" style="position: absolute; width: 300px; height: 150px; pointer-events: none; z-index: 1; top: 0; left: 50%; transform: translateX(-50%);"></canvas>
+              
+              <!-- Participants Grid -->
+              <div style="display: flex; width: 100%; justify-content: space-around; align-items: center; z-index: 2; margin-bottom: 24px; position: relative;">
+                
+                <!-- Participant A (Self) -->
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100px;">
+                  <div class="alliance-avatar-container" id="alliance-avatar-self" style="position: relative; width: 72px; height: 72px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(var(--primary-rgb), 0.15); border: 2px dashed var(--primary);">
+                    <i class="fa-solid fa-user-astronaut" style="font-size: 28px; color: var(--primary);"></i>
+                    <!-- Pulsating halo circle -->
+                    <div class="alliance-halo" style="display: none; position: absolute; top: -6px; left: -6px; right: -6px; bottom: -6px; border-radius: 50%; border: 2px solid rgba(var(--primary-rgb), 0.4); animation: pulseHalo 1.5s infinite;"></div>
+                  </div>
+                  <span id="alliance-name-self" style="font-size: 11.5px; font-weight: 700; color: var(--text-main); text-align: center; text-overflow: ellipsis; overflow: hidden; width: 100%;">You</span>
+                  <span id="alliance-status-self" style="font-size: 10px; font-weight: 600; color: var(--text-muted); background: rgba(0,0,0,0.04); padding: 2px 8px; border-radius: 10px;">Idle</span>
+                </div>
+                
+                <!-- Participant B (Partner) -->
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100px;">
+                  <div class="alliance-avatar-container" id="alliance-avatar-partner" style="position: relative; width: 72px; height: 72px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(255, 193, 7, 0.15); border: 2px dashed var(--accent-gold);">
+                    <i class="fa-solid fa-user-friends" style="font-size: 28px; color: var(--accent-gold);"></i>
+                    <!-- Pulsating halo circle -->
+                    <div class="alliance-halo" style="display: none; position: absolute; top: -6px; left: -6px; right: -6px; bottom: -6px; border-radius: 50%; border: 2px solid rgba(255, 193, 7, 0.4); animation: pulseHalo 1.5s infinite;"></div>
+                  </div>
+                  <span id="alliance-name-partner" style="font-size: 11.5px; font-weight: 700; color: var(--text-main); text-align: center; text-overflow: ellipsis; overflow: hidden; width: 100%;">Waiting...</span>
+                  <span id="alliance-status-partner" style="font-size: 10px; font-weight: 600; color: var(--text-muted); background: rgba(0,0,0,0.04); padding: 2px 8px; border-radius: 10px;">Offline</span>
+                </div>
+                
+              </div>
+              
+              <!-- Glow Banner Indicator -->
+              <div id="alliance-glow-banner" style="display: none; padding: 8px 16px; background: rgba(255, 193, 7, 0.1); border: 1px solid rgba(255, 193, 7, 0.25); border-radius: 12px; text-align: center; font-size: 11.5px; color: var(--text-main); font-weight: 600; box-shadow: 0 0 15px rgba(255, 193, 7, 0.15); animation: pulseBanner 2s infinite; z-index: 2;">
+                ✨ Connected in Alliance: You are chanting together now! ✨
+              </div>
+              
+            </div>
+            
+            <!-- Quick Actions -->
+            <div style="display: flex; gap: 12px;">
+              <button id="btn-alliance-goto-chant" class="btn btn-primary" style="flex: 2;"><i class="fa-regular fa-clock"></i> Go to Chant Timer</button>
+              <button id="btn-alliance-finish" class="btn btn-secondary" style="flex: 1;"><i class="fa-solid fa-circle-check"></i> Finish Session</button>
+            </div>
+            
+          </div>
+          
+          <!-- Shared Summary Mode (Hidden by default, shown when session concludes) -->
+          <div id="alliance-summary-mode" style="display: none; flex-direction: column; gap: 20px;">
+            
+            <div class="card" style="text-align: center; padding: 40px 24px; border: var(--border); background: linear-gradient(135deg, rgba(76, 175, 80, 0.08) 0%, rgba(103, 58, 183, 0.05) 100%);">
+              <div style="font-size: 54px; color: #4caf50; margin-bottom: 16px;"><i class="fa-solid fa-circle-check"></i></div>
+              <h2 style="font-family: var(--font-serif); margin-bottom: 8px; color: var(--text-main);">Session Concluded</h2>
+              <p style="color: var(--text-muted); font-size: 13px; max-width: 290px; margin: 0 auto 24px auto; line-height: 1.5;">
+                Wonderful chanting! Your collective Daimoku has been successfully recorded in your profiles.
+              </p>
+              
+              <!-- Stats Row -->
+              <div style="display: flex; gap: 12px; margin-bottom: 24px; justify-content: center;">
+                <div style="background: var(--bg-card); border: var(--border); padding: 12px 18px; border-radius: 12px; min-width: 100px;">
+                  <div style="font-size: 20px; font-weight: 800; color: var(--primary);" id="alliance-summary-self-time">0m</div>
+                  <div style="font-size: 9px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-top: 2px;">Your Contribution</div>
+                </div>
+                <div style="background: var(--bg-card); border: var(--border); padding: 12px 18px; border-radius: 12px; min-width: 100px;">
+                  <div style="font-size: 20px; font-weight: 800; color: var(--accent-gold);" id="alliance-summary-partner-time">0m</div>
+                  <div style="font-size: 9px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-top: 2px;" id="alliance-summary-partner-label">Partner's Time</div>
+                </div>
+              </div>
+              
+              <button id="btn-alliance-close-summary" class="btn btn-primary btn-full"><i class="fa-solid fa-house"></i> Return to Garden</button>
+            </div>
+            
+          </div>
+          
+        </div>
+      </section>
+
+      <!-- VIEW 13: GARDEN ENCYCLOPEDIA -->
+      <section id="view-encyclopedia" class="content-view">
+        <h2 class="view-title">Garden Encyclopedia</h2>
+        
+        <div class="journal-grid" style="display: flex; flex-direction: column; gap: 20px;">
+          
+          <!-- Quick Overview & Rules Card -->
+          <div class="card" style="background: rgba(38, 166, 154, 0.08); border: 1px dashed rgba(38, 166, 154, 0.25); border-radius: 12px; padding: 16px;">
+            <h4 style="margin: 0 0 6px 0; font-size: 13.5px; color: var(--primary); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Quick Guide</h4>
+            <p style="margin: 0 0 8px 0; font-size: 12.5px; color: var(--text-main); line-height: 1.55;">
+              Chant <strong>Daimoku</strong> to grow your plant... <em>consistency is the key</em>. It takes <strong>333 hours</strong> (approx. 1 million Daimoku) to grow the tree fully. You can customize your tree target hours in the settings.
+            </p>
+            <p style="margin: 0; font-size: 12px; color: var(--text-muted); line-height: 1.5;">
+              <i class="fa-solid fa-circle-info" style="color: var(--primary);"></i> <strong>Campaigns:</strong> A Campaign tab and target dropdown will automatically appear when there is an active campaign, allowing you to add and track Daimoku contributions.
+            </p>
+          </div>
+
+          <!-- Growth Stages (Ranks) -->
+          <div class="card" style="border: var(--border);">
+            <h3 style="margin: 0 0 12px 0; font-family: var(--font-serif); font-size: 17px; font-weight: 700;">Plant Growth Stages</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px;">
+              <div style="background: rgba(255,255,255,0.03); border-radius: 6px; padding: 6px 10px; display: flex; align-items: center; gap: 6px;">
+                <span style="color: #ffb300; font-size: 11px;"><i class="fa-solid fa-star"></i></span>
+                <div style="font-size: 11px; font-weight: 600; color: var(--text-main);">1★ Seeker</div>
+              </div>
+              <div style="background: rgba(255,255,255,0.03); border-radius: 6px; padding: 6px 10px; display: flex; align-items: center; gap: 6px;">
+                <span style="color: #ffb300; font-size: 11px;"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></span>
+                <div style="font-size: 11px; font-weight: 600; color: var(--text-main);">2★ Believer</div>
+              </div>
+              <div style="background: rgba(255,255,255,0.03); border-radius: 6px; padding: 6px 10px; display: flex; align-items: center; gap: 6px;">
+                <span style="color: #ffb300; font-size: 11px;"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></span>
+                <div style="font-size: 11px; font-weight: 600; color: var(--text-main);">3★ Practitioner</div>
+              </div>
+              <div style="background: rgba(255,255,255,0.03); border-radius: 6px; padding: 6px 10px; display: flex; align-items: center; gap: 6px;">
+                <span style="color: #ffb300; font-size: 11px;"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></span>
+                <div style="font-size: 11px; font-weight: 600; color: var(--text-main);">4★ Bodhisattva</div>
+              </div>
+              <div style="background: rgba(255,255,255,0.03); border-radius: 6px; padding: 6px 10px; display: flex; align-items: center; gap: 6px;">
+                <span style="color: #ffb300; font-size: 11px;"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></span>
+                <div style="font-size: 11px; font-weight: 600; color: var(--text-main);">5★ Buddhahood</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Garden Species Details -->
+          <div class="card" style="border: var(--border);">
+            <h3 style="margin: 0 0 16px 0; font-family: var(--font-serif); font-size: 17px; font-weight: 700;">Garden Elements</h3>
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+              <!-- Item 1: Peepal Tree -->
+              <div style="display: flex; gap: 12px; align-items: flex-start;">
+                <div style="background: rgba(86, 172, 86, 0.15); color: #2e7d32; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px;">
+                  <i class="fa-solid fa-tree"></i>
+                </div>
+                <div style="flex: 1;">
+                  <h4 style="margin: 0 0 3px 0; font-size: 13.5px; color: var(--text-main); font-weight: 600;">The Peepal Tree (Main Practice)</h4>
+                  <p style="margin: 0; font-size: 12.5px; color: var(--text-muted); line-height: 1.45;">
+                    Known as the Bodhi tree under which Shakyamuni attained enlightenment. It represents your main daily practice. Grows from a tiny Seed to a Majestic Tree based on your progress towards your tree target hours.
+                  </p>
+                </div>
+              </div>
+              <!-- Item 2: Lotus Flower -->
+              <div style="display: flex; gap: 12px; align-items: flex-start;">
+                <div style="background: rgba(255, 128, 171, 0.15); color: #c2185b; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px;">
+                  <i class="fa-solid fa-seedling"></i>
+                </div>
+                <div style="flex: 1;">
+                  <h4 style="margin: 0 0 3px 0; font-size: 13.5px; color: var(--text-main); font-weight: 600;">The Lotus Flower (First Active Target)</h4>
+                  <p style="margin: 0; font-size: 12.5px; color: var(--text-muted); line-height: 1.45;">
+                    Sprouts on the left soil. Symbolizes the principle of "simultaneity of cause and effect" and the ability to bloom pure and beautiful out of muddy waters. Grows, opens, and blooms as you complete Target 1.
+                  </p>
+                </div>
+              </div>
+              <!-- Item 3: Bamboo Shoot -->
+              <div style="display: flex; gap: 12px; align-items: flex-start;">
+                <div style="background: rgba(38, 166, 154, 0.15); color: #00796b; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px;">
+                  <i class="fa-solid fa-leaf"></i>
+                </div>
+                <div style="flex: 1;">
+                  <h4 style="margin: 0 0 3px 0; font-size: 13.5px; color: var(--text-main); font-weight: 600;">The Bamboo Shoot (Second Active Target)</h4>
+                  <p style="margin: 0; font-size: 12.5px; color: var(--text-muted); line-height: 1.45;">
+                    Sprouts on the right soil. Represents resilience, flexibility, and rapid growth—bending gracefully in the wind but never breaking. Grows tall and sprouts sections as you complete Target 2.
+                  </p>
+                </div>
+              </div>
+              <!-- Item 4: Red Apples -->
+              <div style="display: flex; gap: 12px; align-items: flex-start;">
+                <div style="background: rgba(229, 115, 115, 0.15); color: #d32f2f; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px;">
+                  <i class="fa-solid fa-apple-whole"></i>
+                </div>
+                <div style="flex: 1;">
+                  <h4 style="margin: 0 0 3px 0; font-size: 13.5px; color: var(--text-main); font-weight: 600;">Red Apple Fruits (Advanced Milestones)</h4>
+                  <p style="margin: 0; font-size: 12.5px; color: var(--text-muted); line-height: 1.45;">
+                    Grow on the outer branches of the Majestic Tree once you surpass your target hours (1 apple per 3 hours 20 mins). Symbolizes the actual proof, benefits, and fruits of your long-term practice.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Significance of Badges -->
+          <div class="card" style="border: var(--border); background: linear-gradient(135deg, rgba(255, 193, 7, 0.05) 0%, rgba(103, 58, 183, 0.03) 100%);">
+            <h3 style="margin: 0 0 6px 0; font-family: var(--font-serif); font-size: 17px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 8px;">
+              <span style="color: var(--accent-gold);"><i class="fa-solid fa-trophy"></i></span> Significance of Badges
+            </h3>
+            <p style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.55;">
+              In Nichiren Buddhist practice, actual proof is essential. Badges are medals of honor recognizing your consistent daily efforts, breakthroughs, and devotion.
+            </p>
+            
+            <div style="display: flex; flex-direction: column; gap: 14px;">
+              <div style="display: flex; gap: 10px; align-items: flex-start;">
+                <div style="font-size: 14px; color: var(--primary); margin-top: 2px;"><i class="fa-solid fa-circle-check"></i></div>
+                <div>
+                  <h4 style="margin: 0 0 2px 0; font-size: 13px; color: var(--text-main); font-weight: 600;">What are they?</h4>
+                  <p style="margin: 0; font-size: 12px; color: var(--text-muted); line-height: 1.5;">
+                    Honorary awards commemorating key milestones in your daily practice, determinations, and district campaign support.
+                  </p>
+                </div>
+              </div>
+              
+              <div style="display: flex; gap: 10px; align-items: flex-start;">
+                <div style="font-size: 14px; color: var(--primary); margin-top: 2px;"><i class="fa-solid fa-unlock-keyhole"></i></div>
+                <div>
+                  <h4 style="margin: 0 0 2px 0; font-size: 13px; color: var(--text-main); font-weight: 600;">How are they unlocked?</h4>
+                  <p style="margin: 0; font-size: 12px; color: var(--text-muted); line-height: 1.5;">
+                    Unlocking occurs automatically when you hit specific milestones:
+                  </p>
+                  <ul style="margin: 6px 0 0 0; padding-left: 20px; font-size: 12px; color: var(--text-muted); display: flex; flex-direction: column; gap: 4px; line-height: 1.5;">
+                    <li><strong>Cumulative Chanting:</strong> Accrue total chanting hours (e.g. 10h, 50h, 100h, up to the full 333h).</li>
+                    <li><strong>Consecutive Streaks:</strong> Chant daily without interruption to hit streak milestones (7, 30, or 100 consecutive days).</li>
+                    <li><strong>Gongyo Recital:</strong> Consistently complete your morning and evening Gongyo prayers.</li>
+                    <li><strong>Campaign Contributions:</strong> Participate in and log hours towards active SGI District Daimoku campaigns.</li>
+                  </ul>
+                </div>
+              </div>
+              
+              <div style="display: flex; gap: 10px; align-items: flex-start;">
+                <div style="font-size: 14px; color: var(--primary); margin-top: 2px;"><i class="fa-solid fa-circle-play"></i></div>
+                <div>
+                  <h4 style="margin: 0 0 2px 0; font-size: 13px; color: var(--text-main); font-weight: 600;">How to get going?</h4>
+                  <p style="margin: 0; font-size: 12px; color: var(--text-muted); line-height: 1.5;">
+                    Go to the <strong>Targets</strong> tab to set your determinations, start chanting daily using the <strong>Chant</strong> stopwatch, and watch your unlocked badges in the <strong>Badges</strong> side drawer view!
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
     </main>
 
-    <!-- Bottom Navigation Bar -->
+    <!-- Bottom Navigation Bar (Garden, Practice, Chant, History, Calendar visible) -->
     <nav class="app-nav">
       <button id="nav-dashboard" class="nav-item active">
         <i class="fa-solid fa-seedling"></i>
@@ -832,31 +1207,53 @@
       </button>
       <button id="nav-prayers" class="nav-item">
         <i class="fa-solid fa-bullseye"></i>
-        <span>Practice</span>
+        <span>Targets</span>
       </button>
       <button id="nav-chant" class="nav-item">
         <i class="fa-regular fa-clock"></i>
         <span>Chant</span>
       </button>
-      <button id="nav-history" class="nav-item">
-        <i class="fa-solid fa-clock-rotate-left"></i>
-        <span>History</span>
-      </button>
-      <button id="nav-achievements" class="nav-item">
-        <i class="fa-solid fa-trophy"></i>
-        <span>Badges</span>
-      </button>
       <button id="nav-campaign" class="nav-item hidden">
         <i class="fa-solid fa-bullhorn"></i>
         <span>Campaign</span>
+      </button>
+      <button id="nav-history" class="nav-item">
+        <i class="fa-solid fa-clock-rotate-left"></i>
+        <span>History</span>
       </button>
       <button id="nav-calendar" class="nav-item">
         <i class="fa-regular fa-calendar-days"></i>
         <span>Calendar</span>
       </button>
-      <button id="nav-settings" class="nav-item">
+      
+      <!-- Hidden Nav Items linked to Side Menu -->
+      <button id="nav-achievements" class="nav-item" style="display: none;">
+        <i class="fa-solid fa-trophy"></i>
+        <span>Badges</span>
+      </button>
+      <button id="nav-settings" class="nav-item" style="display: none;">
         <i class="fa-solid fa-sliders"></i>
         <span>Settings</span>
+      </button>
+      <button id="nav-victories" class="nav-item" style="display: none;">
+        <i class="fa-solid fa-trophy"></i>
+        <span>My Victories</span>
+      </button>
+      <button id="nav-journal" class="nav-item" style="display: none;">
+        <i class="fa-solid fa-feather"></i>
+        <span>Gratitude Journal</span>
+      </button>
+      <button id="nav-goals" class="nav-item" style="display: none;">
+        <i class="fa-solid fa-image"></i>
+        <span>Goals</span>
+      </button>
+      <button id="nav-alliance" class="nav-item" style="display: none;">
+        <i class="fa-solid fa-handshake-angle"></i>
+        <span>Alliance</span>
+      </button>
+      <button id="nav-encyclopedia" class="nav-item" style="display: none;">
+        <i class="fa-solid fa-book-open"></i>
+        <span>Encyclopedia</span>
       </button>
     </nav>
 
@@ -1032,6 +1429,60 @@
       <button id="btn-close-campaign-announce" class="btn btn-primary btn-full">Let's Do Our Best! 🎯</button>
     </div>
   </div>
+
+  <!-- Collapsible Side Menu -->
+  <div id="side-menu-backdrop" class="side-menu-backdrop"></div>
+  <aside id="side-menu" class="side-menu">
+    <div class="side-menu-header">
+      <div class="side-menu-user-info">
+        <div class="side-menu-avatar"><i class="fa-solid fa-user-astronaut"></i></div>
+        <div class="side-menu-user-details">
+          <span id="side-menu-username">Member</span>
+          <span id="side-menu-level">Seed Planter</span>
+        </div>
+      </div>
+      <button id="btn-close-menu" class="btn-close-menu"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <nav class="side-menu-nav">
+      <!-- SGI Goals -->
+      <button class="side-menu-item" data-target="goals">
+        <i class="fa-solid fa-image"></i>
+        <span id="side-menu-goals-label">2026 Goals</span>
+      </button>
+      <!-- Alliance Daimoku -->
+      <button class="side-menu-item" data-target="alliance">
+        <i class="fa-solid fa-handshake-angle"></i>
+        <span>Alliance Daimoku</span>
+      </button>
+      <button class="side-menu-item" data-target="victories">
+        <i class="fa-solid fa-trophy"></i>
+        <span>My Victories</span>
+      </button>
+      <button class="side-menu-item" data-target="journal">
+        <i class="fa-solid fa-feather"></i>
+        <span>Gratitude Journal</span>
+      </button>
+      <button class="side-menu-item" data-target="achievements">
+        <i class="fa-solid fa-award"></i>
+        <span>Badges</span>
+      </button>
+      <!-- Garden Encyclopedia -->
+      <button class="side-menu-item" data-target="encyclopedia">
+        <i class="fa-solid fa-book-open"></i>
+        <span>Garden Encyclopedia</span>
+      </button>
+      <button class="side-menu-item" data-target="settings">
+        <i class="fa-solid fa-sliders"></i>
+        <span>Settings</span>
+      </button>
+    </nav>
+    <div class="side-menu-footer">
+      <button id="btn-menu-logout" class="side-menu-logout-btn">
+        <i class="fa-solid fa-right-from-bracket"></i>
+        <span>Logout</span>
+      </button>
+    </div>
+  </aside>
 
   <!-- Include Firebase SDK Compat Libraries -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js" crossorigin="anonymous"></script>
