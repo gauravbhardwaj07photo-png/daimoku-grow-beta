@@ -183,7 +183,7 @@
       <section id="view-chant" class="content-view">
         <div class="chant-grid">
           
-          <div class="card timer-card">
+          <div class="card timer-card" style="position: relative; overflow: hidden;">
             <!-- Timer Type Toggle -->
             <div class="timer-type-selector">
               <button id="btn-timer-stopwatch" class="selector-btn active">Stopwatch</button>
@@ -239,6 +239,29 @@
               <button id="btn-timer-stop" class="btn btn-success hidden"><i class="fa-solid fa-stop"></i> Stop & Record</button>
               <button id="btn-timer-cancel" class="btn btn-danger hidden"><i class="fa-solid fa-rotate-left"></i> Reset</button>
             </div>
+            
+            <!-- Cosmic Ceremony Mode Toggle -->
+            <button id="btn-toggle-cosmic-mode" class="btn btn-secondary btn-full" style="margin-top: 14px; background: rgba(103, 58, 183, 0.08); border: 1px solid rgba(103, 58, 183, 0.25); color: var(--primary);">
+              <i class="fa-solid fa-moon"></i> Enter Ceremony in the Air
+            </button>
+
+            <!-- Cosmic Mode Overlay -->
+            <div id="cosmic-mode-overlay" style="display: none; position: absolute; top:0; left:0; width:100%; height:100%; background: radial-gradient(circle, #1a0b36 0%, #050212 100%); z-index: 100;">
+              <canvas id="cosmic-pagoda-canvas" style="position: absolute; width:100%; height:100%; top:0; left:0; pointer-events:none;"></canvas>
+              <!-- Glassmorphic floating content -->
+              <div style="position: relative; z-index: 102; height:100%; display:flex; flex-direction:column; justify-content:space-between; padding:20px; align-items:center; background: rgba(255,255,255,0.01); backdrop-filter: blur(2px);">
+                <div style="font-size: 11px; text-transform:uppercase; color:#b39ddb; letter-spacing:1.5px; font-weight:700;">Ceremony in the Air</div>
+                <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+                  <div id="cosmic-timer-display" style="font-size: 42px; font-weight:800; font-family: monospace; color:#ffffff; text-shadow: 0 0 15px rgba(255,193,7,0.45);">00:00:00</div>
+                  <div id="cosmic-timer-state" style="font-size: 11px; color:#b39ddb; text-transform:uppercase; font-weight:600; letter-spacing:1px;">Ready</div>
+                </div>
+                <div style="display:flex; gap:10px; width:100%;">
+                  <button id="btn-cosmic-control" class="btn btn-primary" style="flex:2;"><i class="fa-solid fa-play"></i> Start</button>
+                  <button id="btn-exit-cosmic-mode" class="btn btn-secondary" style="flex:1; background: rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); color:white;"><i class="fa-solid fa-arrow-left"></i> Exit</button>
+                </div>
+              </div>
+            </div>
+
           </div>
 
           <!-- Manual Session Log Entry Card -->
@@ -335,6 +358,34 @@
               </button>
               <div id="completed-targets-list" class="targets-list collapsed">
                 <!-- Dynamically populated -->
+              </div>
+            </div>
+
+            <!-- Karma to Mission Alchemist -->
+            <div class="card" style="margin-top: 24px; border: var(--border);">
+              <h3 style="font-family: var(--font-serif); margin: 0 0 6px 0; color: var(--text-main); display: flex; align-items: center; gap: 8px;">
+                <span style="color: var(--primary);"><i class="fa-solid fa-flask"></i></span> Karma to Mission Alchemist
+              </h3>
+              <p style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5;">
+                Nichiren Buddhism teaches how to alchemize challenges into victories. Plant an obstacle as a seed, focus chanting effort, and grow golden lotus victory fruits.
+              </p>
+              
+              <form id="add-alchemy-form" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px;">
+                <div class="form-group" style="display: flex; flex-direction: column; gap: 4px;">
+                  <label for="alchemy-obstacle-input" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Describe the Obstacle / Worry</label>
+                  <input type="text" id="alchemy-obstacle-input" placeholder="e.g. Health challenge, Job search doubt..." required style="width:100%; border:var(--border); border-radius:10px; padding:10px; background:var(--accent-cream); color:var(--text-main); font-size:13px; outline:none;">
+                </div>
+                <div style="display: flex; gap: 8px; align-items: flex-end;">
+                  <div class="form-group" style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
+                    <label for="alchemy-hours-input" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Required Chanting Hours</label>
+                    <input type="number" id="alchemy-hours-input" min="1" max="1000" value="10" required style="width:100%; border:var(--border); border-radius:10px; padding:10px; background:var(--accent-cream); color:var(--text-main); font-size:13px; outline:none;">
+                  </div>
+                  <button type="submit" class="btn btn-primary" style="height: 38px; padding: 0 16px;"><i class="fa-solid fa-fire"></i> Sow Worry Seed</button>
+                </div>
+              </form>
+              
+              <div id="alchemy-list-container" style="display: flex; flex-direction: column; gap: 12px;">
+                <!-- Dynamically populated obstacles -->
               </div>
             </div>
 
@@ -973,33 +1024,10 @@
             <div class="card" style="border: var(--border); padding: 30px 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; overflow: hidden;">
               
               <!-- Sparkles or alignment thread canvas overlay -->
-              <canvas id="alliance-connector-canvas" width="300" height="150" style="position: absolute; width: 300px; height: 150px; pointer-events: none; z-index: 1; top: 0; left: 50%; transform: translateX(-50%);"></canvas>
+              <canvas id="alliance-connector-canvas" width="300" height="150" style="position: absolute; width: 300px; height: 150px; pointer-events: none; z-index: 1; top: 0; left: 50%; transform: translateX(-50%); display: none;"></canvas>
               
-              <!-- Participants Grid -->
-              <div style="display: flex; width: 100%; justify-content: space-around; align-items: center; z-index: 2; margin-bottom: 24px; position: relative;">
-                
-                <!-- Participant A (Self) -->
-                <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100px;">
-                  <div class="alliance-avatar-container" id="alliance-avatar-self" style="position: relative; width: 72px; height: 72px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(var(--primary-rgb), 0.15); border: 2px dashed var(--primary);">
-                    <i class="fa-solid fa-user-astronaut" style="font-size: 28px; color: var(--primary);"></i>
-                    <!-- Pulsating halo circle -->
-                    <div class="alliance-halo" style="display: none; position: absolute; top: -6px; left: -6px; right: -6px; bottom: -6px; border-radius: 50%; border: 2px solid rgba(var(--primary-rgb), 0.4); animation: pulseHalo 1.5s infinite;"></div>
-                  </div>
-                  <span id="alliance-name-self" style="font-size: 11.5px; font-weight: 700; color: var(--text-main); text-align: center; text-overflow: ellipsis; overflow: hidden; width: 100%;">You</span>
-                  <span id="alliance-status-self" style="font-size: 10px; font-weight: 600; color: var(--text-muted); background: rgba(0,0,0,0.04); padding: 2px 8px; border-radius: 10px;">Idle</span>
-                </div>
-                
-                <!-- Participant B (Partner) -->
-                <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100px;">
-                  <div class="alliance-avatar-container" id="alliance-avatar-partner" style="position: relative; width: 72px; height: 72px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(255, 193, 7, 0.15); border: 2px dashed var(--accent-gold);">
-                    <i class="fa-solid fa-user-friends" style="font-size: 28px; color: var(--accent-gold);"></i>
-                    <!-- Pulsating halo circle -->
-                    <div class="alliance-halo" style="display: none; position: absolute; top: -6px; left: -6px; right: -6px; bottom: -6px; border-radius: 50%; border: 2px solid rgba(255, 193, 7, 0.4); animation: pulseHalo 1.5s infinite;"></div>
-                  </div>
-                  <span id="alliance-name-partner" style="font-size: 11.5px; font-weight: 700; color: var(--text-main); text-align: center; text-overflow: ellipsis; overflow: hidden; width: 100%;">Waiting...</span>
-                  <span id="alliance-status-partner" style="font-size: 10px; font-weight: 600; color: var(--text-muted); background: rgba(0,0,0,0.04); padding: 2px 8px; border-radius: 10px;">Offline</span>
-                </div>
-                
+              <!-- Dynamic Participants Grid -->
+              <div id="alliance-participants-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 16px; width: 100%; z-index: 2; margin-bottom: 24px; position: relative; justify-content: center;">
               </div>
               
               <!-- Glow Banner Indicator -->
@@ -1007,6 +1035,19 @@
                 ✨ Connected in Alliance: You are chanting together now! ✨
               </div>
               
+            </div>
+            
+            <!-- Partner Leaf Determinations list -->
+            <div class="card" id="alliance-partner-leaves-card" style="display: none; border: var(--border);">
+              <h4 style="margin: 0 0 10px 0; font-family: var(--font-serif); font-size: 14px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 6px;">
+                <span style="color: var(--accent-gold);"><i class="fa-solid fa-seedling"></i></span> <span id="alliance-partner-leaves-title">Determinations of Alliance Members</span>
+              </h4>
+              <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.4;">
+                Tap a leaf determination from other members to send silent Daimoku light to support their victory.
+              </p>
+              <div id="alliance-partner-leaves-list" style="display: flex; flex-direction: column; gap: 8px;">
+                <!-- Dynamically rendered partner determinations -->
+              </div>
             </div>
             
             <!-- Quick Actions -->
@@ -1027,16 +1068,8 @@
                 Wonderful chanting! Your collective Daimoku has been successfully recorded in your profiles.
               </p>
               
-              <!-- Stats Row -->
-              <div style="display: flex; gap: 12px; margin-bottom: 24px; justify-content: center;">
-                <div style="background: var(--bg-card); border: var(--border); padding: 12px 18px; border-radius: 12px; min-width: 100px;">
-                  <div style="font-size: 20px; font-weight: 800; color: var(--primary);" id="alliance-summary-self-time">0m</div>
-                  <div style="font-size: 9px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-top: 2px;">Your Contribution</div>
-                </div>
-                <div style="background: var(--bg-card); border: var(--border); padding: 12px 18px; border-radius: 12px; min-width: 100px;">
-                  <div style="font-size: 20px; font-weight: 800; color: var(--accent-gold);" id="alliance-summary-partner-time">0m</div>
-                  <div style="font-size: 9px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-top: 2px;" id="alliance-summary-partner-label">Partner's Time</div>
-                </div>
+              <!-- Dynamic Session Ledger -->
+              <div id="alliance-summary-list" style="display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 320px; margin: 0 auto 24px auto; background: var(--bg-card); border: var(--border); padding: 16px; border-radius: 12px; text-align: left;">
               </div>
               
               <button id="btn-alliance-close-summary" class="btn btn-primary btn-full"><i class="fa-solid fa-house"></i> Return to Garden</button>
@@ -1197,6 +1230,83 @@
         </div>
       </section>
 
+      <!-- VIEW 1.8: DAIMOKU ESTIMATOR -->
+      <section id="view-estimator" class="content-view">
+        <h2 class="view-title">Daimoku Estimator</h2>
+        <div class="card" style="border: var(--border); padding: 24px; border-radius: 16px; margin-bottom: 20px;">
+          <h3 style="font-family: var(--font-serif); margin: 0 0 6px 0; color: var(--text-main); display: flex; align-items: center; gap: 8px;">
+            <span style="color: var(--primary);"><i class="fa-solid fa-calculator"></i></span> Target Estimator
+          </h3>
+          <p style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 20px; line-height: 1.5;">
+            Calculate how many hours/days of daily practice are needed to complete your chanting determinations.
+          </p>
+
+          <div style="display: flex; flex-direction: column; gap: 16px;">
+            <!-- Target Daimoku Input -->
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <label for="estimator-target" style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">Target Daimoku Count</label>
+                <span id="display-estimator-target" style="font-size: 14px; font-weight: 800; color: var(--primary);">100,000</span>
+              </div>
+              <input type="range" id="estimator-target" min="10000" max="1000000" step="10000" value="100000" style="width: 100%; accent-color: var(--primary); cursor: pointer;">
+              <div style="display: flex; justify-content: space-between; font-size: 10px; color: var(--text-muted);">
+                <span>10,000</span>
+                <span>500,000</span>
+                <span>1,000,000 (1 Million)</span>
+              </div>
+            </div>
+
+            <!-- Chanting Speed (Daimoku per hour) -->
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <label for="estimator-speed" style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">Chanting Speed (Daimoku / hour)</label>
+                <span id="display-estimator-speed" style="font-size: 14px; font-weight: 800; color: var(--primary);">3,000 / hr</span>
+              </div>
+              <input type="range" id="estimator-speed" min="1500" max="4500" step="100" value="3000" style="width: 100%; accent-color: var(--primary); cursor: pointer;">
+              <div style="display: flex; justify-content: space-between; font-size: 10px; color: var(--text-muted);">
+                <span>1,500 (Slow)</span>
+                <span>3,000 (Standard)</span>
+                <span>4,500 (Fast)</span>
+              </div>
+            </div>
+
+            <!-- Daily Commitment (Minutes per day) -->
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <label for="estimator-daily" style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">Daily Commitment</label>
+                <span id="display-estimator-daily" style="font-size: 14px; font-weight: 800; color: var(--primary);">30 mins / day</span>
+              </div>
+              <input type="range" id="estimator-daily" min="5" max="240" step="5" value="30" style="width: 100%; accent-color: var(--primary); cursor: pointer;">
+              <div style="display: flex; justify-content: space-between; font-size: 10px; color: var(--text-muted);">
+                <span>5 mins</span>
+                <span>1 hour</span>
+                <span>4 hours</span>
+              </div>
+            </div>
+
+            <!-- Calculation Output Card -->
+            <div style="margin-top: 10px; background: linear-gradient(135deg, rgba(103, 58, 183, 0.08) 0%, rgba(255, 193, 7, 0.04) 100%); border: 1px solid rgba(103, 58, 183, 0.2); border-radius: 12px; padding: 18px; text-align: center; display: flex; flex-direction: column; gap: 10px;">
+              <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--primary); letter-spacing: 1px;">Calculation Summary</div>
+              <div style="display: flex; justify-content: space-around; align-items: center; margin: 6px 0;">
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                  <span id="estimator-result-hours" style="font-size: 24px; font-weight: 800; color: var(--text-main);">33.3</span>
+                  <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">Total Hours</span>
+                </div>
+                <div style="height: 30px; width: 1px; background: rgba(0,0,0,0.08);"></div>
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                  <span id="estimator-result-days" style="font-size: 24px; font-weight: 800; color: var(--text-main);">67</span>
+                  <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">Total Days</span>
+                </div>
+              </div>
+              <p style="font-size: 12px; color: var(--text-muted); line-height: 1.5; margin: 0;">
+                To reach <span id="summary-target-count" style="font-weight:700; color:var(--text-main);">100,000</span> Daimoku chanting at <span id="summary-chant-speed" style="font-weight:700; color:var(--text-main);">3,000</span> per hour for <span id="summary-daily-minutes" style="font-weight:700; color:var(--text-main);">30</span> minutes daily.
+              </p>
+            </div>
+            
+          </div>
+        </div>
+      </section>
+
     </main>
 
     <!-- Bottom Navigation Bar (Garden, Practice, Chant, History, Calendar visible) -->
@@ -1254,6 +1364,10 @@
       <button id="nav-encyclopedia" class="nav-item" style="display: none;">
         <i class="fa-solid fa-book-open"></i>
         <span>Encyclopedia</span>
+      </button>
+      <button id="nav-estimator" class="nav-item" style="display: none;">
+        <i class="fa-solid fa-calculator"></i>
+        <span>Estimator</span>
       </button>
     </nav>
 
@@ -1471,6 +1585,11 @@
         <i class="fa-solid fa-book-open"></i>
         <span>Garden Encyclopedia</span>
       </button>
+      <!-- Daimoku Estimator -->
+      <button class="side-menu-item" data-target="estimator">
+        <i class="fa-solid fa-calculator"></i>
+        <span>Daimoku Estimator</span>
+      </button>
       <button class="side-menu-item" data-target="settings">
         <i class="fa-solid fa-sliders"></i>
         <span>Settings</span>
@@ -1483,6 +1602,29 @@
       </button>
     </div>
   </aside>
+
+  <!-- Tree of Wisdom Leaves Modal -->
+  <div id="tree-leaves-modal" class="modal" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+    <div class="card" style="max-width: 340px; width: 90%; padding: 24px; background: var(--bg-card); border: var(--border); box-shadow: 0 10px 25px rgba(0,0,0,0.2); border-radius: 16px;">
+      <h3 style="font-family: var(--font-serif); margin-bottom: 6px; color: var(--text-main); display: flex; align-items: center; gap: 8px;">
+        <span style="color: var(--primary);"><i class="fa-solid fa-seedling"></i></span> Tree Determinations
+      </h3>
+      <p style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5;">
+        Pin your determinations directly onto the leaves of your tree. Alliance partners can tap them to send silent Daimoku light.
+      </p>
+      
+      <div id="leaves-list-container" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px;">
+        <!-- Dynamically rendered leaf items -->
+      </div>
+      
+      <form id="add-leaf-form" style="display: flex; gap: 8px;">
+        <input type="text" id="leaf-text-input" placeholder="Type a determination..." required class="journal-input" style="flex: 1; font-size: 12px; height: 36px; padding: 0 10px;">
+        <button type="submit" class="btn btn-primary" style="padding: 0 14px; height: 36px;"><i class="fa-solid fa-plus"></i></button>
+      </form>
+      
+      <button id="btn-close-leaves-modal" class="btn btn-secondary btn-full" style="margin-top: 14px;"><i class="fa-solid fa-xmark"></i> Close</button>
+    </div>
+  </div>
 
   <!-- Include Firebase SDK Compat Libraries -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js" crossorigin="anonymous"></script>

@@ -360,6 +360,9 @@ document.addEventListener('DOMContentLoaded', () => {
     sessions: [],
     streak: 0,
     targets: [], // [{ id, text, type, targetSeconds, accumulatedSeconds, completed }]
+    treeDeterminations: [], // [{ text, lightCount }]
+    karmaObstacles: [], // [{ id, obstacle, targetHours, accumulatedSeconds, completed, reflection }]
+    activeAllianceId: null,
     lastNotifiedThreshold: 0, // Inactivity alerts: 0 (ok), 24, 72, 168 (7d), 360 (15d), 720 (30d)
     settings: {
       morningReminder: true,
@@ -455,6 +458,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnTimerStop = document.getElementById('btn-timer-stop');
   const btnTimerCancel = document.getElementById('btn-timer-cancel');
   
+  // Cosmic Mode Controls
+  const btnToggleCosmicMode = document.getElementById('btn-toggle-cosmic-mode');
+  const cosmicModeOverlay = document.getElementById('cosmic-mode-overlay');
+  const btnExitCosmicMode = document.getElementById('btn-exit-cosmic-mode');
+  const cosmicTimerDisplay = document.getElementById('cosmic-timer-display');
+  const cosmicTimerState = document.getElementById('cosmic-timer-state');
+  const btnCosmicControl = document.getElementById('btn-cosmic-control');
+  
   // Manual Log
   const manualLogForm = document.getElementById('manual-log-form');
   const logHours = document.getElementById('log-hours');
@@ -476,6 +487,32 @@ document.addEventListener('DOMContentLoaded', () => {
   const completedTargetsCount = document.getElementById('completed-targets-count');
   const btnToggleCompletedTargets = document.getElementById('btn-toggle-completed-targets');
   const completedTargetsCard = document.querySelector('.completed-targets-card');
+  
+  // Tree leaves modal elements
+  const treeLeavesModal = document.getElementById('tree-leaves-modal');
+  const btnCloseLeavesModal = document.getElementById('btn-close-leaves-modal');
+  const addLeafForm = document.getElementById('add-leaf-form');
+  const leafTextInput = document.getElementById('leaf-text-input');
+  const leavesListContainer = document.getElementById('leaves-list-container');
+
+  // Alchemist elements
+  const addAlchemyForm = document.getElementById('add-alchemy-form');
+  const alchemyObstacleInput = document.getElementById('alchemy-obstacle-input');
+  const alchemyHoursInput = document.getElementById('alchemy-hours-input');
+  const alchemyListContainer = document.getElementById('alchemy-list-container');
+
+  // Estimator elements
+  const estimatorTargetInput = document.getElementById('estimator-target');
+  const estimatorSpeedInput = document.getElementById('estimator-speed');
+  const estimatorDailyInput = document.getElementById('estimator-daily');
+  const displayEstimatorTarget = document.getElementById('display-estimator-target');
+  const displayEstimatorSpeed = document.getElementById('display-estimator-speed');
+  const displayEstimatorDaily = document.getElementById('display-estimator-daily');
+  const resultHours = document.getElementById('estimator-result-hours');
+  const resultDays = document.getElementById('estimator-result-days');
+  const summaryTargetCount = document.getElementById('summary-target-count');
+  const summaryChantSpeed = document.getElementById('summary-chant-speed');
+  const summaryDailyMinutes = document.getElementById('summary-daily-minutes');
   
   // History elements
   const btnClearHistory = document.getElementById('btn-clear-history');
@@ -579,6 +616,9 @@ document.addEventListener('DOMContentLoaded', () => {
         sessions: [],
         streak: 0,
         targets: [],
+        treeDeterminations: [],
+        karmaObstacles: [],
+        activeAllianceId: null,
         journal: [],
         manualVictories: [],
         lastNotifiedThreshold: 0,
@@ -855,6 +895,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (state.unlockedAchievements === undefined) state.unlockedAchievements = [];
     if (state.journal === undefined) state.journal = [];
     if (state.manualVictories === undefined) state.manualVictories = [];
+    if (state.treeDeterminations === undefined) state.treeDeterminations = [];
+    if (state.karmaObstacles === undefined) state.karmaObstacles = [];
     
     // Apply saved theme
     document.body.className = state.theme || 'theme-sage-light';
@@ -1969,11 +2011,15 @@ document.addEventListener('DOMContentLoaded', () => {
     
     updateAllianceChantingState(true, 0);
     
+    syncCosmicTimerUI();
+    
     timerInterval = setInterval(() => {
       const now = Date.now();
       const elapsedMs = now - timerStartTime + timerAccumulatedPaused;
       
       saveActiveTimer(); // Keep active timer updated with the last active tick
+      
+      syncCosmicTimerUI();
       
       let displayTimeStr = '00:00:00';
       if (timerType === 'stopwatch') {
@@ -2032,6 +2078,8 @@ document.addEventListener('DOMContentLoaded', () => {
     saveActiveTimer();
     
     updateAllianceChantingState(false, timerSecondsElapsed);
+    
+    syncCosmicTimerUI();
   }
 
   // Stop and record
@@ -2084,6 +2132,7 @@ document.addEventListener('DOMContentLoaded', () => {
     PlantRenderer.updateState(parseFloat(totalHours), state.health, state.isDead, false, state.settings.treeTargetHours || 333, state.targets.filter(t => !t.completed), state.settings.skyBackground || 'diurnal', state.streak || 0);
     saveActiveTimer();
     resetTimerDisplay();
+    syncCosmicTimerUI();
   }
 
   function saveChantSession(durationSeconds, method) {
@@ -3201,6 +3250,25 @@ document.addEventListener('DOMContentLoaded', () => {
         alert(`Congratulations! You have completed your target: "${target.text}"! 🎉`);
         checkNewAchievements();
       }
+      return;
+    }
+    
+    // Check alchemist obstacles
+    if (!state.karmaObstacles) state.karmaObstacles = [];
+    const obstacle = state.karmaObstacles.find(o => o.id === targetId);
+    if (obstacle && !obstacle.completed) {
+      obstacle.accumulatedSeconds += seconds;
+      
+      const targetSecs = obstacle.targetHours * 3600;
+      if (obstacle.accumulatedSeconds >= targetSecs) {
+        obstacle.completed = true;
+        setTimeout(() => {
+          const reflection = prompt(`Congratulations! You have alchemized your worry into mission: "${obstacle.obstacle}"! 🎉\n\nPlease record your victory reflection (actual proof testimony):`, "I successfully overcame this obstacle through strong Daimoku!");
+          obstacle.reflection = reflection || "Victoriously alchemized!";
+          saveState();
+          renderAlchemyList();
+        }, 500);
+      }
     }
   }
 
@@ -3282,15 +3350,35 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     const activeTargets = state.targets.filter(t => !t.completed);
+    const determinationsGroup = document.createElement('optgroup');
+    determinationsGroup.label = "Determinations";
     activeTargets.forEach(t => {
       const option = document.createElement('option');
       option.value = t.id;
       const hrsText = t.type === 'hours' ? ` (${(t.accumulatedSeconds/3600).toFixed(1)}h/${t.targetSeconds/3600}h)` : '';
       option.textContent = t.text + hrsText;
-      
-      timerPersonalSelect.appendChild(option.cloneNode(true));
-      manualPersonalSelect.appendChild(option.cloneNode(true));
+      determinationsGroup.appendChild(option);
     });
+    
+    const karmaGroup = document.createElement('optgroup');
+    karmaGroup.label = "Karma Alchemist Vault";
+    const activeObstacles = (state.karmaObstacles || []).filter(o => !o.completed);
+    activeObstacles.forEach(o => {
+      const option = document.createElement('option');
+      option.value = o.id;
+      const hrsText = ` (${(o.accumulatedSeconds/3600).toFixed(1)}h/${o.targetHours}h)`;
+      option.textContent = o.obstacle + hrsText;
+      karmaGroup.appendChild(option);
+    });
+    
+    if (activeTargets.length > 0) {
+      timerPersonalSelect.appendChild(determinationsGroup.cloneNode(true));
+      manualPersonalSelect.appendChild(determinationsGroup.cloneNode(true));
+    }
+    if (activeObstacles.length > 0) {
+      timerPersonalSelect.appendChild(karmaGroup.cloneNode(true));
+      manualPersonalSelect.appendChild(karmaGroup.cloneNode(true));
+    }
     
     // Restore selections
     timerPersonalSelect.value = prevTimerPersonal;
@@ -3388,6 +3476,8 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderTargetsList() {
     activeTargetsList.innerHTML = '';
     completedTargetsList.innerHTML = '';
+    
+    renderAlchemyList();
     
     const active = state.targets.filter(t => !t.completed);
     const completed = state.targets.filter(t => t.completed);
@@ -4320,7 +4410,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const startT = new Date(dates.start + 'T00:00:00').getTime();
         const endT = new Date(dates.end + 'T23:59:59').getTime();
         const now = Date.now();
-        if (now >= startT && now <= endT) {
+        if (now >= startT && now <= endT + (24 * 60 * 60 * 1000)) {
           isRunning = true;
         }
       }
@@ -5405,7 +5495,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </label>
             <input type="number" class="campaign-target-input" data-id="${c.id}" value="${targets[c.id] || 100}" min="1" max="100000" style="width:60px; padding:6px; border-radius:6px; border:var(--border); background:var(--accent-cream); color:var(--text-main); font-size:12px; text-align:center; outline:none;" disabled>
             <span style="font-size:11px; color:var(--text-muted);">hours</span>
-            <button class="btn-edit-campaign" data-id="${c.id}" style="background:transparent; border:none; color:var(--text-main); cursor:pointer; padding:4px 6px; font-size:13px;" title="Edit Campaign"><i class="fa-solid fa-pen-to-square"></i></button>
+            <button class="btn-edit-campaign" data-id="${c.id}" ${isExpired ? 'disabled style="background:transparent; border:none; color:var(--text-main); opacity:0.4; cursor:not-allowed; padding:4px 6px; font-size:13px;"' : 'style="background:transparent; border:none; color:var(--text-main); cursor:pointer; padding:4px 6px; font-size:13px;"'} title="${isExpired ? 'Expired campaign cannot be edited' : 'Edit Campaign'}"><i class="fa-solid fa-pen-to-square"></i></button>
             <button class="btn-delete-campaign" data-id="${c.id}" style="background:transparent; border:none; color:var(--accent-danger); cursor:pointer; padding:4px 6px; font-size:13px;" title="Delete Campaign"><i class="fa-regular fa-trash-can"></i></button>
           </div>
         </div>
@@ -5416,7 +5506,7 @@ document.addEventListener('DOMContentLoaded', () => {
       
       // Edit button handler
       const editBtn = div.querySelector('.btn-edit-campaign');
-      if (editBtn) {
+      if (editBtn && !isExpired) {
         editBtn.addEventListener('click', (e) => {
           const id = e.currentTarget.getAttribute('data-id');
           editingCampaignId = id;
@@ -6038,6 +6128,21 @@ document.addEventListener('DOMContentLoaded', () => {
   PlantRenderer.init(canvasElement);
   if (typeof PlantRenderer.stopAnimation === 'function') {
     PlantRenderer.stopAnimation(); // Stop rendering loop until navigation routes to dashboard
+  }
+  
+  if (canvasElement) {
+    canvasElement.addEventListener('click', (e) => {
+      const rect = canvasElement.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const clickY = e.clientY - rect.top;
+      
+      const inCenterX = (clickX >= rect.width * 0.25) && (clickX <= rect.width * 0.75);
+      const inCenterY = (clickY >= rect.height * 0.1) && (clickY <= rect.height * 0.7);
+      
+      if (inCenterX && inCenterY) {
+        openLeavesModal();
+      }
+    });
   }
   
   // Run notification check immediately on boot, and check every 5 minutes
@@ -7313,10 +7418,11 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const email = currentUser ? currentUser.email : 'guest';
     const selfMember = alliance.members.find(m => m.email.toLowerCase() === email.toLowerCase());
-    const partnerMember = alliance.members.find(m => m.email.toLowerCase() !== email.toLowerCase());
+    const otherMembers = alliance.members.filter(m => m.email.toLowerCase() !== email.toLowerCase());
     
-    // 1. Conclusion check: if both finished, move status to completed
-    if (selfMember && selfMember.finished && partnerMember && partnerMember.finished && alliance.status === 'active') {
+    // 1. Conclusion check: if all finished, move status to completed (if there's more than 1 member)
+    const allFinished = alliance.members.every(m => m.finished);
+    if (allFinished && alliance.status === 'active' && alliance.members.length > 1) {
       alliance.status = 'completed';
       MockFirebase.db.saveAlliance(alliance);
       return; // DB update will trigger re-render
@@ -7331,15 +7437,26 @@ document.addEventListener('DOMContentLoaded', () => {
       stopAllianceAnimation();
       lastBothChanting = false;
       
-      const selfTimeMin = Math.round((selfMember ? selfMember.secondsLogged : 0) / 60);
-      const partnerTimeMin = Math.round((partnerMember ? partnerMember.secondsLogged : 0) / 60);
-      
-      document.getElementById('alliance-summary-self-time').textContent = `${selfTimeMin}m`;
-      document.getElementById('alliance-summary-partner-time').textContent = `${partnerTimeMin}m`;
-      
-      const partnerLabel = document.getElementById('alliance-summary-partner-label');
-      if (partnerLabel) {
-        partnerLabel.textContent = partnerMember ? `${partnerMember.username}'s Time` : "Partner's Time";
+      const summaryList = document.getElementById('alliance-summary-list');
+      if (summaryList) {
+        summaryList.innerHTML = '';
+        alliance.members.forEach(member => {
+          const mRow = document.createElement('div');
+          mRow.style.cssText = "display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding: 8px 0;";
+          
+          const isSelf = member.email.toLowerCase() === email.toLowerCase();
+          const nameSpan = document.createElement('span');
+          nameSpan.style.cssText = "font-size: 12.5px; font-weight: 600; color: var(--text-main);";
+          nameSpan.textContent = member.username + (isSelf ? " (You)" : "") + (member.block ? ` (${member.block})` : "");
+          
+          const timeSpan = document.createElement('span');
+          timeSpan.style.cssText = "font-size: 13.5px; font-weight: 800; color: " + (isSelf ? "var(--primary)" : "var(--accent-gold)") + ";";
+          timeSpan.textContent = `${Math.round(member.secondsLogged / 60)}m`;
+          
+          mRow.appendChild(nameSpan);
+          mRow.appendChild(timeSpan);
+          summaryList.appendChild(mRow);
+        });
       }
       return;
     }
@@ -7352,67 +7469,79 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('alliance-room-target').textContent = alliance.title;
     document.getElementById('alliance-room-code-display').textContent = alliance.code;
     
-    // Render Self status
-    if (selfMember) {
-      document.getElementById('alliance-name-self').textContent = selfMember.username + " (You)";
-      const statusSelf = document.getElementById('alliance-status-self');
-      const avatarSelf = document.getElementById('alliance-avatar-self');
-      if (selfMember.finished) {
-        statusSelf.textContent = '✓ Finished';
-        statusSelf.style.color = '#ffb300';
-        statusSelf.style.background = 'rgba(255, 179, 0, 0.1)';
-        avatarSelf.classList.remove('active');
-      } else if (selfMember.isChanting) {
-        statusSelf.textContent = '● Chanting';
-        statusSelf.style.color = '#4caf50';
-        statusSelf.style.background = 'rgba(76, 175, 80, 0.1)';
-        avatarSelf.classList.add('active');
-      } else {
-        statusSelf.textContent = '○ Idle';
-        statusSelf.style.color = 'var(--text-muted)';
-        statusSelf.style.background = 'rgba(0,0,0,0.04)';
-        avatarSelf.classList.remove('active');
-      }
+    // Render dynamic participants grid
+    const participantsGrid = document.getElementById('alliance-participants-grid');
+    if (participantsGrid) {
+      participantsGrid.innerHTML = '';
+      
+      alliance.members.forEach(member => {
+        const isSelf = member.email.toLowerCase() === email.toLowerCase();
+        
+        const mCol = document.createElement('div');
+        mCol.style.cssText = "display: flex; flex-direction: column; align-items: center; gap: 8px; width: 95px;";
+        
+        // Avatar circle
+        const avContainer = document.createElement('div');
+        avContainer.className = "alliance-avatar-container";
+        avContainer.style.cssText = "position: relative; width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: " + 
+          (isSelf ? "rgba(var(--primary-rgb), 0.12)" : "rgba(255, 193, 7, 0.12)") + "; border: 2px " + (isSelf ? "dashed var(--primary)" : "dashed var(--accent-gold)") + ";";
+        
+        const icon = document.createElement('i');
+        icon.className = isSelf ? "fa-solid fa-user-astronaut" : "fa-solid fa-user-friends";
+        icon.style.cssText = "font-size: 24px; color: " + (isSelf ? "var(--primary)" : "var(--accent-gold)") + ";";
+        avContainer.appendChild(icon);
+        
+        // Pulsating halo circle
+        const halo = document.createElement('div');
+        halo.className = "alliance-halo";
+        halo.style.cssText = "display: " + (member.isChanting && !member.finished ? "block" : "none") + "; position: absolute; top: -6px; left: -6px; right: -6px; bottom: -6px; border-radius: 50%; border: 2px solid " + 
+          (isSelf ? "rgba(var(--primary-rgb), 0.4)" : "rgba(255, 193, 7, 0.4)") + "; animation: pulseHalo 1.5s infinite;";
+        avContainer.appendChild(halo);
+        
+        mCol.appendChild(avContainer);
+        
+        // Username & Block
+        const nameSpan = document.createElement('span');
+        nameSpan.style.cssText = "font-size: 11px; font-weight: 700; color: var(--text-main); text-align: center; text-overflow: ellipsis; overflow: hidden; width: 100%; white-space: nowrap;";
+        nameSpan.textContent = member.username + (isSelf ? " (You)" : "");
+        mCol.appendChild(nameSpan);
+        
+        if (member.block) {
+          const blockSpan = document.createElement('span');
+          blockSpan.style.cssText = "font-size: 9px; color: var(--text-muted); font-weight: 600; margin-top: -6px;";
+          blockSpan.textContent = member.block;
+          mCol.appendChild(blockSpan);
+        }
+        
+        // Status Badge
+        const statusSpan = document.createElement('span');
+        statusSpan.style.cssText = "font-size: 9.5px; font-weight: 600; padding: 2px 8px; border-radius: 10px;";
+        if (member.finished) {
+          statusSpan.textContent = `✓ Done (${Math.round(member.secondsLogged / 60)}m)`;
+          statusSpan.style.color = '#ffb300';
+          statusSpan.style.background = 'rgba(255, 179, 0, 0.1)';
+        } else if (member.isChanting) {
+          statusSpan.textContent = '● Chanting';
+          statusSpan.style.color = '#4caf50';
+          statusSpan.style.background = 'rgba(76, 175, 80, 0.1)';
+        } else {
+          statusSpan.textContent = '○ Idle';
+          statusSpan.style.color = 'var(--text-muted)';
+          statusSpan.style.background = 'rgba(0,0,0,0.04)';
+        }
+        mCol.appendChild(statusSpan);
+        
+        participantsGrid.appendChild(mCol);
+      });
     }
     
-    // Render Partner status
-    const namePartner = document.getElementById('alliance-name-partner');
-    const statusPartner = document.getElementById('alliance-status-partner');
-    const avatarPartner = document.getElementById('alliance-avatar-partner');
+    // Determine if both/multiple are actively chanting (Self is chanting AND at least one partner is chanting)
+    const selfChanting = selfMember && selfMember.isChanting && !selfMember.finished;
+    const partnerChanting = otherMembers.some(m => m.isChanting && !m.finished);
+    const bothChantingNow = selfChanting && partnerChanting;
+    const banner = document.getElementById('alliance-glow-banner');
     
-    if (!partnerMember) {
-      namePartner.textContent = 'Waiting for partner...';
-      statusPartner.textContent = 'Offline';
-      statusPartner.style.color = 'var(--text-muted)';
-      statusPartner.style.background = 'rgba(0,0,0,0.04)';
-      avatarPartner.classList.remove('active');
-      
-      document.getElementById('alliance-glow-banner').style.display = 'none';
-      stopAllianceAnimation();
-      lastBothChanting = false;
-    } else {
-      namePartner.textContent = partnerMember.username;
-      if (partnerMember.finished) {
-        statusPartner.textContent = `✓ Finished (${Math.round(partnerMember.secondsLogged / 60)}m)`;
-        statusPartner.style.color = '#ffb300';
-        statusPartner.style.background = 'rgba(255, 179, 0, 0.1)';
-        avatarPartner.classList.remove('active');
-      } else if (partnerMember.isChanting) {
-        statusPartner.textContent = '● Chanting';
-        statusPartner.style.color = '#4caf50';
-        statusPartner.style.background = 'rgba(76, 175, 80, 0.1)';
-        avatarPartner.classList.add('active');
-      } else {
-        statusPartner.textContent = '○ Idle';
-        statusPartner.style.color = 'var(--text-muted)';
-        statusPartner.style.background = 'rgba(0,0,0,0.04)';
-        avatarPartner.classList.remove('active');
-      }
-      
-      // Determine if both are actively chanting
-      const bothChantingNow = (selfMember && selfMember.isChanting && !selfMember.finished) && (partnerMember && partnerMember.isChanting && !partnerMember.finished);
-      const banner = document.getElementById('alliance-glow-banner');
-      
+    if (banner) {
       if (bothChantingNow) {
         banner.style.display = 'block';
         startAllianceAnimation();
@@ -7427,6 +7556,79 @@ document.addEventListener('DOMContentLoaded', () => {
         stopAllianceAnimation();
         drawAllianceConnection(false); // clear canvas
         lastBothChanting = false;
+      }
+    }
+    
+    // Render determinations of other members
+    const partnerLeavesCard = document.getElementById('alliance-partner-leaves-card');
+    const partnerLeavesList = document.getElementById('alliance-partner-leaves-list');
+    if (partnerLeavesCard && partnerLeavesList) {
+      partnerLeavesCard.style.display = 'block';
+      partnerLeavesList.innerHTML = '';
+      
+      let totalDetsCount = 0;
+      otherMembers.forEach(partner => {
+        const partnerDets = partner.determinations || [];
+        partnerDets.forEach(det => {
+          totalDetsCount++;
+          const itemDiv = document.createElement('div');
+          itemDiv.style.cssText = "display: flex; justify-content: space-between; align-items: center; background: rgba(var(--primary-rgb), 0.04); border: var(--border); padding: 8px 12px; border-radius: 10px; margin-bottom: 4px;";
+          
+          const textCol = document.createElement('div');
+          textCol.style.cssText = "display: flex; flex-direction: column; gap: 2px; text-align: left;";
+          
+          const txtSpan = document.createElement('span');
+          txtSpan.style.cssText = "font-size: 11.5px; font-weight: 600; color: var(--text-main);";
+          txtSpan.textContent = `${partner.username}: ${det.text}`;
+          textCol.appendChild(txtSpan);
+          
+          const lSpan = document.createElement('span');
+          lSpan.style.cssText = "font-size: 9.5px; color: var(--accent-gold); font-weight: 700;";
+          lSpan.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> Sent: ${det.lightCount || 0}`;
+          textCol.appendChild(lSpan);
+          
+          itemDiv.appendChild(textCol);
+          
+          const cheerBtn = document.createElement('button');
+          cheerBtn.className = "btn-small btn-primary";
+          cheerBtn.style.cssText = "padding: 4px 10px; font-size: 10px; height: 26px; border-radius: 8px;";
+          cheerBtn.innerHTML = `<i class="fa-solid fa-fire-burner"></i> Send Light`;
+          cheerBtn.addEventListener('click', () => {
+            sendLightToPartner(partner.email, det.id);
+          });
+          itemDiv.appendChild(cheerBtn);
+          
+          partnerLeavesList.appendChild(itemDiv);
+        });
+      });
+      
+      if (totalDetsCount === 0) {
+        partnerLeavesList.innerHTML = `
+          <div style="text-align: center; padding: 10px; font-size: 11px; color: var(--text-muted);">
+            No leaf determinations pinned yet.
+          </div>
+        `;
+      }
+    }
+    
+    // Sync received lights from alliance db document to local tree determinations
+    if (selfMember && selfMember.determinations) {
+      let localStateChanged = false;
+      const treeDets = state.treeDeterminations || [];
+      selfMember.determinations.forEach(servDet => {
+        const localDet = treeDets.find(d => d.id === servDet.id);
+        if (localDet && servDet.lightCount > localDet.lightCount) {
+          localDet.lightCount = servDet.lightCount;
+          localStateChanged = true;
+          // Trigger beautiful sparkles on the main tree canvas!
+          if (typeof PlantRenderer.triggerSparkles === 'function') {
+            PlantRenderer.triggerSparkles();
+          }
+        }
+      });
+      if (localStateChanged) {
+        saveState();
+        renderLeavesList();
       }
     }
   }
@@ -7454,10 +7656,12 @@ document.addEventListener('DOMContentLoaded', () => {
           {
             email: currentUser ? currentUser.email : 'guest',
             username: selfName,
+            block: (currentUser && currentUser.block) ? currentUser.block : 'Active',
             isChanting: false,
             secondsLogged: 0,
             finished: false,
-            lastActive: Date.now()
+            lastActive: Date.now(),
+            determinations: state.treeDeterminations || []
           }
         ],
         status: 'active',
@@ -7512,10 +7716,12 @@ document.addEventListener('DOMContentLoaded', () => {
       alliance.members.push({
         email: email,
         username: selfName,
+        block: (currentUser && currentUser.block) ? currentUser.block : 'Active',
         isChanting: false,
         secondsLogged: 0,
         finished: false,
-        lastActive: Date.now()
+        lastActive: Date.now(),
+        determinations: state.treeDeterminations || []
       });
       
       try {
@@ -7592,6 +7798,514 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
   }
+
+  // --- Ceremony in the Air (Pagoda) Animation & UI logic ---
+  let cosmicAnimationId = null;
+
+  function drawCosmicPagoda(progress) {
+    const canvas = document.getElementById('cosmic-pagoda-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    
+    // Auto resize canvas
+    const rect = canvas.getBoundingClientRect();
+    if (canvas.width !== rect.width || canvas.height !== rect.height) {
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+    }
+    
+    const w = canvas.width;
+    const h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+    
+    // Draw background nebula dust particles
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+    const numStars = 25;
+    const time = Date.now();
+    for (let i = 0; i < numStars; i++) {
+      const sx = ((Math.sin(i * 456.78) + 1) / 2) * w;
+      const sy = ((Math.cos(i * 123.45) + 1) / 2) * h;
+      const sz = ((Math.sin(time * 0.001 + i) + 1) / 2) * 1.5 + 0.5;
+      ctx.beginPath();
+      ctx.arc(sx, sy, sz, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    
+    // Pagoda height ratio matches progress (0.0 to 1.0)
+    // We let the pagoda rise from the bottom Y level (h) up to h - 180
+    const maxRise = 180;
+    const rise = progress * maxRise;
+    
+    const bx = w / 2;
+    const by = h - 20 - rise; // Base Y position
+    
+    // Draw earth energy field glow
+    const gradGlow = ctx.createRadialGradient(bx, by + 10, 10, bx, by + 10, 60);
+    gradGlow.addColorStop(0, 'rgba(103, 58, 183, 0.3)');
+    gradGlow.addColorStop(1, 'rgba(103, 58, 183, 0)');
+    ctx.fillStyle = gradGlow;
+    ctx.beginPath();
+    ctx.arc(bx, by + 10, 60, 0, Math.PI, true);
+    ctx.fill();
+    
+    ctx.save();
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = 'rgba(255, 193, 7, 0.5)';
+    
+    // Pagoda colors
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.07)';
+    ctx.strokeStyle = 'rgba(255, 193, 7, 0.6)';
+    ctx.lineWidth = 1.5;
+    
+    // Draw 5 tiers from bottom to top
+    const tierHeights = [20, 18, 16, 14, 12];
+    const tierWidths = [44, 38, 32, 26, 20];
+    
+    let currentY = by;
+    for (let i = 0; i < 5; i++) {
+      const th = tierHeights[i];
+      const tw = tierWidths[i];
+      
+      // Draw body
+      ctx.beginPath();
+      ctx.rect(bx - tw/2, currentY - th, tw, th);
+      ctx.fill();
+      ctx.stroke();
+      
+      // Draw roof (flared edges)
+      ctx.beginPath();
+      ctx.moveTo(bx - tw/2 - 6, currentY - th);
+      ctx.quadraticCurveTo(bx, currentY - th - 3, bx + tw/2 + 6, currentY - th);
+      ctx.lineTo(bx + tw/2, currentY - th - 4);
+      ctx.lineTo(bx - tw/2, currentY - th - 4);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(255, 193, 7, 0.2)';
+      ctx.fill();
+      ctx.stroke();
+      
+      currentY -= (th + 4);
+    }
+    
+    // Draw spire (Sorin) on top
+    ctx.beginPath();
+    ctx.moveTo(bx, currentY);
+    ctx.lineTo(bx, currentY - 25);
+    ctx.stroke();
+    
+    // Spire rings
+    for (let r = 0; r < 5; r++) {
+      ctx.beginPath();
+      ctx.arc(bx, currentY - 6 - r*4, 3 - r*0.4, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    
+    // Glowing jewel at the very top (chintamani)
+    ctx.fillStyle = '#ffc107';
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = '#ffc107';
+    ctx.beginPath();
+    ctx.arc(bx, currentY - 26, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    
+    // Orbiting Golden Letters (Nam-myoho-renge-kyo)
+    const letters = ["南", "無", "妙", "法", "蓮", "華", "経"];
+    ctx.fillStyle = 'rgba(255, 193, 7, 0.8)';
+    ctx.font = 'bold 11px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    const radiusX = 80;
+    const radiusY = 15;
+    const orbitSpeed = time * 0.0008;
+    
+    letters.forEach((char, idx) => {
+      const angle = orbitSpeed + (idx * (Math.PI * 2 / letters.length));
+      const lx = bx + Math.cos(angle) * radiusX;
+      const ly = (by - 50) + Math.sin(angle) * radiusY;
+      
+      const scale = (Math.sin(angle) + 1) / 2 * 0.4 + 0.8;
+      ctx.save();
+      ctx.globalAlpha = (Math.sin(angle) + 1.2) / 2.2;
+      ctx.translate(lx, ly);
+      ctx.scale(scale, scale);
+      ctx.fillText(char, 0, 0);
+      ctx.restore();
+    });
+  }
+
+  function startCosmicAnimation() {
+    if (cosmicAnimationId) return;
+    function loop() {
+      if (!isCosmicModeActive) return;
+      
+      let progress = 0;
+      if (timerType === 'countdown' && countdownTargetSeconds > 0) {
+        progress = Math.min(1.0, timerSecondsElapsed / countdownTargetSeconds);
+      } else {
+        // stopwatch mode: loop every 10 mins (600s)
+        progress = (timerSecondsElapsed % 600) / 600;
+      }
+      
+      drawCosmicPagoda(progress);
+      cosmicAnimationId = requestAnimationFrame(loop);
+    }
+    loop();
+  }
+
+  function stopCosmicAnimation() {
+    if (cosmicAnimationId) {
+      cancelAnimationFrame(cosmicAnimationId);
+      cosmicAnimationId = null;
+    }
+  }
+
+  function syncCosmicTimerUI() {
+    if (!isCosmicModeActive) return;
+    if (cosmicTimerDisplay) {
+      cosmicTimerDisplay.textContent = timerTimeDisplay.textContent;
+    }
+    if (cosmicTimerState) {
+      cosmicTimerState.textContent = timerStateLabel.textContent;
+    }
+    if (btnCosmicControl) {
+      if (timerState === 'running') {
+        btnCosmicControl.innerHTML = `<i class="fa-solid fa-pause"></i> Pause`;
+        btnCosmicControl.className = "btn btn-secondary";
+      } else {
+        btnCosmicControl.innerHTML = `<i class="fa-solid fa-play"></i> Start`;
+        btnCosmicControl.className = "btn btn-primary";
+      }
+    }
+  }
+
+  function enterCosmicMode() {
+    isCosmicModeActive = true;
+    if (cosmicModeOverlay) cosmicModeOverlay.style.display = 'block';
+    if (btnToggleCosmicMode) {
+      btnToggleCosmicMode.innerHTML = `<i class="fa-solid fa-sun"></i> Exit Ceremony in the Air`;
+    }
+    syncCosmicTimerUI();
+    startCosmicAnimation();
+  }
+
+  function exitCosmicMode() {
+    isCosmicModeActive = false;
+    if (cosmicModeOverlay) cosmicModeOverlay.style.display = 'none';
+    if (btnToggleCosmicMode) {
+      btnToggleCosmicMode.innerHTML = `<i class="fa-solid fa-moon"></i> Enter Ceremony in the Air`;
+    }
+    stopCosmicAnimation();
+  }
+
+  if (btnToggleCosmicMode) {
+    btnToggleCosmicMode.addEventListener('click', () => {
+      if (isCosmicModeActive) {
+        exitCosmicMode();
+      } else {
+        enterCosmicMode();
+      }
+    });
+  }
+
+  if (btnExitCosmicMode) {
+    btnExitCosmicMode.addEventListener('click', () => {
+      exitCosmicMode();
+    });
+  }
+
+  if (btnCosmicControl) {
+    btnCosmicControl.addEventListener('click', () => {
+      if (timerState === 'running') {
+        if (btnTimerPause) btnTimerPause.click();
+      } else {
+        if (btnTimerStart) btnTimerStart.click();
+      }
+    });
+  }
+
+  // --- Tree of Wisdom Leaf Pinned Determinations Logic ---
+
+  function openLeavesModal() {
+    if (treeLeavesModal) {
+      renderLeavesList();
+      treeLeavesModal.style.display = 'flex';
+    }
+  }
+
+  if (btnCloseLeavesModal) {
+    btnCloseLeavesModal.addEventListener('click', () => {
+      if (treeLeavesModal) treeLeavesModal.style.display = 'none';
+    });
+  }
+
+  function renderLeavesList() {
+    if (!leavesListContainer) return;
+    leavesListContainer.innerHTML = '';
+    
+    const determinations = state.treeDeterminations || [];
+    if (determinations.length === 0) {
+      leavesListContainer.innerHTML = `
+        <div style="text-align: center; padding: 12px; font-size: 11.5px; color: var(--text-muted);">
+          No determinations pinned to your tree yet.
+        </div>
+      `;
+      return;
+    }
+    
+    determinations.forEach((item, idx) => {
+      const row = document.createElement('div');
+      row.style.cssText = "display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); padding:8px 12px; border-radius:10px;";
+      
+      const textCol = document.createElement('div');
+      textCol.style.cssText = "display:flex; flex-direction:column; gap:2px;";
+      
+      const textSpan = document.createElement('span');
+      textSpan.style.cssText = "font-size:12px; font-weight:600; color:var(--text-main); text-align:left;";
+      textSpan.textContent = item.text;
+      textCol.appendChild(textSpan);
+      
+      const infoSpan = document.createElement('span');
+      infoSpan.style.cssText = "font-size:10px; color:var(--accent-gold); font-weight:700; text-align:left;";
+      infoSpan.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> Daimoku Light: ${item.lightCount || 0}`;
+      textCol.appendChild(infoSpan);
+      
+      row.appendChild(textCol);
+      
+      const delBtn = document.createElement('button');
+      delBtn.className = "btn-icon";
+      delBtn.style.cssText = "color:var(--text-muted); cursor:pointer; background:none; border:none;";
+      delBtn.innerHTML = `<i class="fa-solid fa-trash-can"></i>`;
+      delBtn.addEventListener('click', () => {
+        state.treeDeterminations.splice(idx, 1);
+        saveState();
+        syncLocalDeterminationsToAlliance();
+        renderLeavesList();
+      });
+      row.appendChild(delBtn);
+      
+      leavesListContainer.appendChild(row);
+    });
+  }
+
+  if (addLeafForm) {
+    addLeafForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const txt = leafTextInput.value.trim();
+      if (!txt) return;
+      
+      if (!state.treeDeterminations) state.treeDeterminations = [];
+      if (state.treeDeterminations.length >= 3) {
+        alert("Maximum of 3 determinations pinned to the tree leaves at a time.");
+        return;
+      }
+      
+      state.treeDeterminations.push({
+        id: Date.now().toString() + '_' + Math.random().toString(36).substr(2, 4),
+        text: txt,
+        lightCount: 0
+      });
+      
+      saveState();
+      syncLocalDeterminationsToAlliance();
+      leafTextInput.value = '';
+      renderLeavesList();
+    });
+  }
+
+  async function syncLocalDeterminationsToAlliance() {
+    if (!state.activeAllianceId) return;
+    const alliances = MockFirebase.db.getAlliances();
+    const alliance = alliances.find(a => a.id === state.activeAllianceId);
+    if (!alliance) return;
+    
+    const email = currentUser ? currentUser.email : 'guest';
+    const member = alliance.members.find(m => m.email.toLowerCase() === email.toLowerCase());
+    if (member) {
+      member.determinations = state.treeDeterminations || [];
+      try {
+        await MockFirebase.db.saveAlliance(alliance);
+      } catch (e) {
+        console.warn("Failed to sync determinations to Alliance:", e);
+      }
+    }
+  }
+
+  async function sendLightToPartner(partnerEmail, determinationId) {
+    if (!state.activeAllianceId) return;
+    const alliances = MockFirebase.db.getAlliances();
+    const alliance = alliances.find(a => a.id === state.activeAllianceId);
+    if (!alliance) return;
+    
+    const partner = alliance.members.find(m => m.email.toLowerCase() === partnerEmail.toLowerCase());
+    if (partner && partner.determinations) {
+      const det = partner.determinations.find(d => d.id === determinationId);
+      if (det) {
+        det.lightCount = (det.lightCount || 0) + 1;
+        try {
+          await MockFirebase.db.saveAlliance(alliance);
+          playAllianceChime();
+          alert(`Sent Daimoku Light to support: "${det.text}"! ⚡✨`);
+        } catch (e) {
+          console.warn("Failed to send light:", e);
+        }
+      }
+    }
+  }
+
+  // --- Karma to Mission Alchemist Vault Logic ---
+
+  function renderAlchemyList() {
+    if (!alchemyListContainer) return;
+    alchemyListContainer.innerHTML = '';
+    
+    const obstacles = state.karmaObstacles || [];
+    if (obstacles.length === 0) {
+      alchemyListContainer.innerHTML = `
+        <div class="empty-state" style="padding: 12px; border: 1px dashed rgba(255,255,255,0.05); border-radius: 12px;">
+          <i class="fa-solid fa-flask"></i>
+          <p style="font-size:12px; color:var(--text-muted); margin: 4px 0 0 0;">No worries sowed yet. Plant one to begin alchemizing!</p>
+        </div>
+      `;
+      return;
+    }
+    
+    obstacles.forEach((item, idx) => {
+      const card = document.createElement('div');
+      
+      const targetSecs = item.targetHours * 3600;
+      const accHours = (item.accumulatedSeconds / 3600).toFixed(1);
+      const percent = Math.min(100, Math.round((item.accumulatedSeconds / targetSecs) * 100));
+      
+      if (item.completed) {
+        card.style.cssText = "background: linear-gradient(135deg, rgba(255, 193, 7, 0.08) 0%, rgba(233, 30, 99, 0.04) 100%); border: 1px solid rgba(255, 193, 7, 0.25); padding: 14px; border-radius: 12px; display: flex; gap: 12px; align-items: flex-start; margin-bottom: 8px;";
+        card.innerHTML = `
+          <div style="background: rgba(255, 193, 7, 0.15); color: var(--accent-gold); width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 18px; box-shadow: 0 0 8px rgba(255,193,7,0.3);">
+            <i class="fa-solid fa-seedling"></i>
+          </div>
+          <div style="flex: 1; text-align: left;">
+            <h4 style="margin: 0 0 2px 0; font-size: 13px; font-weight: 700; color: var(--text-main); text-decoration: line-through;">${item.obstacle}</h4>
+            <p style="margin: 0 0 6px 0; font-size: 11px; color: var(--accent-gold); font-weight: 600;">
+              <i class="fa-solid fa-trophy"></i> Golden Lotus Fruit Unlocked (100% complete)
+            </p>
+            <div style="background: rgba(255,255,255,0.03); border-left: 2px solid var(--accent-gold); padding: 6px 10px; border-radius: 4px; font-size: 11.5px; color: var(--text-muted); font-style: italic;">
+              "${item.reflection || 'Victoriously alchemized!'}"
+            </div>
+          </div>
+          <button class="btn-icon" style="color: var(--text-muted); background: none; border: none; cursor: pointer; padding: 0 4px;" data-idx="${idx}"><i class="fa-solid fa-trash-can"></i></button>
+        `;
+      } else {
+        card.style.cssText = "background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 14px; border-radius: 12px; display: flex; gap: 12px; align-items: flex-start; margin-bottom: 8px;";
+        card.innerHTML = `
+          <div style="background: rgba(255,255,255,0.04); color: var(--text-muted); width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px;">
+            <i class="fa-solid fa-gem"></i>
+          </div>
+          <div style="flex: 1; text-align: left;">
+            <h4 style="margin: 0 0 4px 0; font-size: 13px; font-weight: 600; color: var(--text-main);">${item.obstacle}</h4>
+            <div style="display: flex; justify-content: space-between; font-size: 10.5px; color: var(--text-muted); font-weight: 600; margin-bottom: 6px;">
+              <span>Alchemizing: ${percent}%</span>
+              <span>${accHours}h / ${item.targetHours}h</span>
+            </div>
+            <div class="progress-bar-track" style="height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow:hidden;">
+              <div class="progress-bar-fill" style="width: ${percent}%; height: 100%; background: var(--primary); border-radius: 3px; box-shadow: 0 0 8px var(--primary);"></div>
+            </div>
+          </div>
+          <button class="btn-icon" style="color: var(--text-muted); background: none; border: none; cursor: pointer; padding: 0 4px;" data-idx="${idx}"><i class="fa-solid fa-trash-can"></i></button>
+        `;
+      }
+      
+      const delBtn = card.querySelector('.btn-icon');
+      if (delBtn) {
+        delBtn.addEventListener('click', (e) => {
+          const idx = parseInt(e.currentTarget.getAttribute('data-idx'));
+          if (confirm("Are you sure you want to delete this alchemist seed? This will delete its logged target seconds.")) {
+            state.karmaObstacles.splice(idx, 1);
+            saveState();
+            populateTargetDropdowns();
+            renderAlchemyList();
+          }
+        });
+      }
+      
+      alchemyListContainer.appendChild(card);
+    });
+  }
+
+  if (addAlchemyForm) {
+    addAlchemyForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const obs = alchemyObstacleInput.value.trim();
+      const hrs = parseInt(alchemyHoursInput.value);
+      if (!obs || isNaN(hrs) || hrs <= 0) return;
+      
+      if (!state.karmaObstacles) state.karmaObstacles = [];
+      state.karmaObstacles.push({
+        id: 'alchemy_' + Date.now().toString() + '_' + Math.random().toString(36).substr(2, 4),
+        obstacle: obs,
+        targetHours: hrs,
+        accumulatedSeconds: 0,
+        completed: false,
+        reflection: ''
+      });
+      
+      saveState();
+      populateTargetDropdowns();
+      renderAlchemyList();
+      
+      alchemyObstacleInput.value = '';
+      alchemyHoursInput.value = '10';
+      alert("Obstacle seed sowed into the alchemist vault! Focus your chanting on this determination.");
+    });
+  }
+
+  // --- Daimoku Target Estimator Logic ---
+
+  function updateEstimatorCalculations() {
+    if (!estimatorTargetInput || !estimatorSpeedInput || !estimatorDailyInput) return;
+
+    const target = parseInt(estimatorTargetInput.value) || 100000;
+    const speed = parseInt(estimatorSpeedInput.value) || 3000;
+    const dailyMinutes = parseInt(estimatorDailyInput.value) || 30;
+
+    // Display updates
+    if (displayEstimatorTarget) {
+      displayEstimatorTarget.textContent = target.toLocaleString();
+    }
+    if (displayEstimatorSpeed) {
+      displayEstimatorSpeed.textContent = speed.toLocaleString() + ' / hr';
+    }
+    if (displayEstimatorDaily) {
+      const hrs = Math.floor(dailyMinutes / 60);
+      const mins = dailyMinutes % 60;
+      let timeStr = "";
+      if (hrs > 0) timeStr += hrs + " hr" + (hrs > 1 ? "s" : "") + " ";
+      if (mins > 0 || timeStr === "") timeStr += mins + " min" + (mins > 1 ? "s" : "");
+      displayEstimatorDaily.textContent = timeStr + ' / day';
+    }
+
+    // Calculations
+    const hours = target / speed;
+    const dailyHours = dailyMinutes / 60;
+    const days = Math.ceil(hours / dailyHours);
+
+    if (resultHours) resultHours.textContent = hours.toFixed(1);
+    if (resultDays) resultDays.textContent = days.toLocaleString();
+
+    if (summaryTargetCount) summaryTargetCount.textContent = target.toLocaleString();
+    if (summaryChantSpeed) summaryChantSpeed.textContent = speed.toLocaleString();
+    if (summaryDailyMinutes) summaryDailyMinutes.textContent = dailyMinutes;
+  }
+
+  const estimatorInputs = [estimatorTargetInput, estimatorSpeedInput, estimatorDailyInput];
+  estimatorInputs.forEach(input => {
+    if (input) {
+      input.addEventListener('input', updateEstimatorCalculations);
+      input.addEventListener('change', updateEstimatorCalculations);
+    }
+  });
+
+  // Initial calculation trigger on boot
+  updateEstimatorCalculations();
 
   // Real-time synchronization listeners
   window.addEventListener('db-alliances-updated', () => {
