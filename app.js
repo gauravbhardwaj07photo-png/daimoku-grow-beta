@@ -6824,6 +6824,8 @@ document.addEventListener('DOMContentLoaded', () => {
           console.log('Service Worker registered successfully!', reg.scope);
           
           // Force update check
+          reg.update();
+          
           reg.addEventListener('updatefound', () => {
             const newWorker = reg.installing;
             newWorker.addEventListener('statechange', () => {

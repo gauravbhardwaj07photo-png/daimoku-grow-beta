@@ -1,4 +1,4 @@
-const CACHE_NAME = 'daimoku-grow-v105';
+const CACHE_NAME = 'daimoku-grow-v106';
 const ASSETS = [
   './',
   './index.html',
@@ -59,7 +59,7 @@ self.addEventListener('fetch', (e) => {
         return res;
       })
       .catch(() => {
-        return caches.match(e.request);
+        return caches.match(e.request, { ignoreSearch: true });
       })
   );
 });
