@@ -734,6 +734,24 @@ const PlantRenderer = (function() {
     ctx.restore();
   }
 
+  function triggerSparkles() {
+    ambientParticles = ambientParticles || [];
+    const potX = (canvas ? canvas.width : 320) / 2;
+    const soilY = (canvas ? canvas.height : 260) - 98 + 14 - 3;
+    for (let i = 0; i < 15; i++) {
+      ambientParticles.push({
+        x: potX + (Math.random() - 0.5) * 60,
+        y: soilY - 15,
+        vy: -0.8 - Math.random() * 1.5,
+        vx: (Math.random() - 0.5) * 1.2,
+        size: 2.5 + Math.random() * 2.5,
+        alpha: 0.9,
+        fadeSpeed: 0.008 + Math.random() * 0.008,
+        color: '255, 215, 0'
+      });
+    }
+  }
+
   /**
    * Main Draw Function
    */
@@ -2955,7 +2973,8 @@ const PlantRenderer = (function() {
     getGrowthStage: getGrowthStage,
     getPlantMood: getPlantMood,
     resizeCanvas: resizeCanvas,
-    setPotStyle: setPotStyle
+    setPotStyle: setPotStyle,
+    triggerSparkles: triggerSparkles
   };
   } catch (err) {
     console.error("PlantRenderer load error:", err);

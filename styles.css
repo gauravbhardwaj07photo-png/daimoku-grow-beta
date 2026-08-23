@@ -4202,4 +4202,183 @@ body.theme-forest-dark .streak-badge {
   opacity: 1;
 }
 
+/* -------------------------------------------------------------
+ * Collapsible Side Menu Navigation Drawer Styles
+ * ------------------------------------------------------------- */
+.side-menu-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 1500;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+.side-menu-backdrop.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.side-menu {
+  position: fixed;
+  top: 0;
+  left: -280px;
+  width: 280px;
+  height: 100vh;
+  background: rgba(18, 12, 30, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  z-index: 1600;
+  display: flex;
+  flex-direction: column;
+  transition: left 0.3s cubic-bezier(0.1, 0.9, 0.2, 1);
+  box-shadow: 10px 0 30px rgba(0, 0, 0, 0.3);
+}
+.side-menu.active {
+  left: 0;
+}
+
+.side-menu-header {
+  height: 72px;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  box-sizing: border-box;
+}
+.side-menu-user-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.side-menu-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--primary-light);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.side-menu-user-details {
+  display: flex;
+  flex-direction: column;
+}
+#side-menu-username {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-main);
+  max-width: 140px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#side-menu-level {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+.btn-close-menu {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 6px;
+  outline: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+.btn-close-menu:hover {
+  color: var(--text-main);
+}
+
+.side-menu-nav {
+  flex: 1;
+  padding: 20px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+.side-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  padding: 12px 24px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+.side-menu-item i {
+  font-size: 16px;
+  width: 20px;
+  text-align: center;
+  color: var(--primary);
+}
+.side-menu-item span {
+  transition: transform 0.2s;
+}
+.side-menu-item:hover {
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-main);
+}
+.side-menu-item:hover span {
+  transform: translateX(4px);
+}
+.side-menu-item.active {
+  background: rgba(var(--primary-rgb), 0.1);
+  color: var(--primary);
+  border-left: 3px solid var(--primary);
+  font-weight: 600;
+}
+
+.side-menu-footer {
+  padding: 16px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  box-sizing: border-box;
+}
+.side-menu-logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 16px;
+  background: rgba(211, 47, 47, 0.1);
+  border: 1px solid rgba(211, 47, 47, 0.2);
+  border-radius: 8px;
+  color: #e57373;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  justify-content: center;
+  transition: all 0.2s;
+  box-sizing: border-box;
+}
+.side-menu-logout-btn:hover {
+  background: rgba(211, 47, 47, 0.2);
+  color: #ef5350;
+}
+
 
