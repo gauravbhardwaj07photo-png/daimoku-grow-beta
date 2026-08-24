@@ -4632,6 +4632,279 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 50);
   }
 
+  function initCampaignVaseCanvas(canvasId, progressPercent, blockName) {
+    // Run after a tiny timeout to ensure element exists in DOM
+    setTimeout(() => {
+      const canvas = document.getElementById(canvasId);
+      if (!canvas) return;
+      
+      if (campaignLoops[canvasId]) {
+        cancelAnimationFrame(campaignLoops[canvasId]);
+      }
+      
+      const ctx = canvas.getContext('2d');
+      const rect = canvas.getBoundingClientRect();
+      const w = rect.width || 220;
+      const h = rect.height || 260;
+      canvas.width = w;
+      canvas.height = h;
+      
+      // Let's create beautiful petals falling
+      const petals = [];
+      const maxPetals = 12;
+      for (let i = 0; i < maxPetals; i++) {
+        petals.push({
+          x: Math.random() * w,
+          y: -20 - Math.random() * h,
+          r: 3 + Math.random() * 4,
+          speedY: 0.8 + Math.random() * 1.0,
+          speedX: Math.random() * 0.6 - 0.3,
+          rot: Math.random() * Math.PI * 2,
+          rotSpeed: 0.01 + Math.random() * 0.03,
+          color: blockName === 'Wisdom' ? 'rgba(255, 215, 0, 0.7)' : 'rgba(255, 182, 193, 0.7)'
+        });
+      }
+      
+      // Floating lotuses
+      const lotuses = [
+        { x: w * 0.35, y: 0, targetX: w * 0.35, speed: 0.15, phase: 0 },
+        { x: w * 0.65, y: 0, targetX: w * 0.65, speed: 0.25, phase: Math.PI }
+      ];
+      
+      let time = 0;
+      
+      function tick() {
+        if (!document.getElementById(canvasId)) {
+          delete campaignLoops[canvasId];
+          return;
+        }
+        
+        time += 0.025;
+        ctx.clearRect(0, 0, w, h);
+        
+        const cx = w / 2;
+        const neckY = h * 0.35;
+        const bulbMaxY = h * 0.7;
+        const baseY = h * 0.9;
+        
+        function defineInnerVasePath(ctx) {
+          ctx.beginPath();
+          ctx.moveTo(cx - w * 0.16, neckY);
+          ctx.quadraticCurveTo(cx - w * 0.4, bulbMaxY - h * 0.1, cx - w * 0.36, bulbMaxY);
+          ctx.quadraticCurveTo(cx - w * 0.26, baseY, cx - w * 0.2, baseY);
+          ctx.lineTo(cx + w * 0.2, baseY);
+          ctx.quadraticCurveTo(cx + w * 0.26, baseY, cx + w * 0.36, bulbMaxY);
+          ctx.quadraticCurveTo(cx + w * 0.4, bulbMaxY - h * 0.1, cx + w * 0.16, neckY);
+          ctx.closePath();
+        }
+        
+        // Draw Vase Background Glow
+        ctx.save();
+        defineInnerVasePath(ctx);
+        const innerVaseBg = ctx.createRadialGradient(cx, bulbMaxY - 20, 10, cx, bulbMaxY - 20, w * 0.4);
+        innerVaseBg.addColorStop(0, 'rgba(255, 255, 255, 0.05)');
+        innerVaseBg.addColorStop(1, 'rgba(0, 0, 0, 0.3)');
+        ctx.fillStyle = innerVaseBg;
+        ctx.fill();
+        ctx.restore();
+        
+        // Draw Liquid
+        const fillHeight = (baseY - neckY) * (progressPercent / 100);
+        const liquidLevelY = baseY - fillHeight;
+        
+        if (fillHeight > 0) {
+          ctx.save();
+          defineInnerVasePath(ctx);
+          ctx.clip();
+          
+          const liquidGrad = ctx.createLinearGradient(0, liquidLevelY, 0, baseY);
+          if (blockName === 'Wisdom') {
+            liquidGrad.addColorStop(0, 'rgba(255, 215, 0, 0.85)');
+            liquidGrad.addColorStop(1, 'rgba(184, 134, 11, 0.95)');
+          } else {
+            liquidGrad.addColorStop(0, 'rgba(0, 150, 136, 0.85)');
+            liquidGrad.addColorStop(1, 'rgba(0, 77, 64, 0.95)');
+          }
+          
+          ctx.fillStyle = liquidGrad;
+          ctx.beginPath();
+          ctx.moveTo(0, baseY + 20);
+          for (let x = 0; x <= w; x += 10) {
+            const waveY = liquidLevelY + 4 * Math.sin(x * 0.04 + time * 2.2);
+            ctx.lineTo(x, waveY);
+          }
+          ctx.lineTo(w, baseY + 20);
+          ctx.closePath();
+          ctx.fill();
+          
+          // Draw floating lotuses
+          lotuses.forEach(lotus => {
+            lotus.phase += 0.02;
+            const lotusX = lotus.targetX + 8 * Math.sin(lotus.phase);
+            const lotusY = liquidLevelY + 4 * Math.sin(lotusX * 0.04 + time * 2.2) - 2;
+            
+            ctx.fillStyle = '#ff80ab';
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 1;
+            
+            ctx.save();
+            ctx.translate(lotusX, lotusY);
+            
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 8, 4, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = '#ff4081';
+            ctx.beginPath();
+            ctx.ellipse(-4, -2, 6, 3, -Math.PI/6, 0, Math.PI * 2);
+            ctx.ellipse(4, -2, 6, 3, Math.PI/6, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = '#f50057';
+            ctx.beginPath();
+            ctx.ellipse(0, -4, 4, 8, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = '#ffd600';
+            ctx.beginPath();
+            ctx.arc(0, -1, 2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.restore();
+          });
+          
+          ctx.restore();
+        }
+        
+        // Draw Falling Lotus Petals
+        petals.forEach(p => {
+          p.y += p.speedY;
+          p.x += p.speedX + 0.5 * Math.sin(time + p.rot);
+          p.rot += p.rotSpeed;
+          
+          if (p.y > liquidLevelY && progressPercent > 0) {
+            p.y = -20;
+            p.x = Math.random() * w;
+          } else if (p.y > baseY) {
+            p.y = -20;
+            p.x = Math.random() * w;
+          }
+          
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.rot);
+          
+          ctx.fillStyle = p.color;
+          ctx.beginPath();
+          ctx.moveTo(0, -p.r);
+          ctx.quadraticCurveTo(p.r * 1.5, 0, 0, p.r * 1.5);
+          ctx.quadraticCurveTo(-p.r * 1.5, 0, 0, -p.r);
+          ctx.fill();
+          
+          ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+          ctx.lineWidth = 0.5;
+          ctx.beginPath();
+          ctx.moveTo(0, -p.r);
+          ctx.lineTo(0, p.r * 0.8);
+          ctx.stroke();
+          
+          ctx.restore();
+        });
+        
+        // Draw The Glass/Crystal Vase Container
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+        ctx.lineWidth = 3;
+        
+        ctx.beginPath();
+        ctx.moveTo(cx - w * 0.24, neckY - 12);
+        ctx.quadraticCurveTo(cx - w * 0.2, neckY - 4, cx - w * 0.16, neckY);
+        ctx.quadraticCurveTo(cx - w * 0.4, bulbMaxY - h * 0.1, cx - w * 0.36, bulbMaxY);
+        ctx.quadraticCurveTo(cx - w * 0.26, baseY, cx - w * 0.2, baseY);
+        ctx.quadraticCurveTo(cx, baseY + 6, cx + w * 0.2, baseY);
+        ctx.quadraticCurveTo(cx + w * 0.26, baseY, cx + w * 0.36, bulbMaxY);
+        ctx.quadraticCurveTo(cx + w * 0.4, bulbMaxY - h * 0.1, cx + w * 0.16, neckY);
+        ctx.quadraticCurveTo(cx + w * 0.2, neckY - 4, cx + w * 0.24, neckY - 12);
+        ctx.quadraticCurveTo(cx, neckY - 18, cx - w * 0.24, neckY - 12);
+        ctx.stroke();
+        
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.ellipse(cx, neckY - 12, w * 0.24, 4, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.moveTo(cx - w * 0.18, baseY);
+        ctx.lineTo(cx - w * 0.18, baseY + 8);
+        ctx.quadraticCurveTo(cx, baseY + 14, cx + w * 0.18, baseY + 8);
+        ctx.lineTo(cx + w * 0.18, baseY);
+        ctx.stroke();
+        
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(cx - w * 0.26, bulbMaxY - 10, w * 0.08, Math.PI * 0.8, Math.PI * 1.3);
+        ctx.stroke();
+        
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(cx + w * 0.28, bulbMaxY + 10, w * 0.05, Math.PI * -0.2, Math.PI * 0.3);
+        ctx.stroke();
+        
+        ctx.restore();
+        
+        // 100% Celebration Golden Lotus
+        if (progressPercent >= 100) {
+          ctx.save();
+          ctx.translate(cx, neckY - 12);
+          
+          ctx.shadowColor = 'rgba(255, 215, 0, 0.8)';
+          ctx.shadowBlur = 15 + 5 * Math.sin(time * 3);
+          
+          ctx.fillStyle = '#ffd700';
+          ctx.strokeStyle = '#fff';
+          ctx.lineWidth = 1.5;
+          
+          ctx.beginPath();
+          ctx.moveTo(0, -18);
+          ctx.quadraticCurveTo(6, -6, 0, 4);
+          ctx.quadraticCurveTo(-6, -6, 0, -18);
+          ctx.fill();
+          ctx.stroke();
+          
+          ctx.beginPath();
+          ctx.moveTo(-2, -14);
+          ctx.quadraticCurveTo(-14, -8, -6, 2);
+          ctx.quadraticCurveTo(2, -4, -2, -14);
+          ctx.fill();
+          ctx.stroke();
+          
+          ctx.beginPath();
+          ctx.moveTo(2, -14);
+          ctx.quadraticCurveTo(14, -8, 6, 2);
+          ctx.quadraticCurveTo(-2, -4, 2, -14);
+          ctx.fill();
+          ctx.stroke();
+          
+          ctx.fillStyle = '#ffaa00';
+          ctx.beginPath();
+          ctx.ellipse(-8, 2, 10, 5, -Math.PI/8, 0, Math.PI*2);
+          ctx.ellipse(8, 2, 10, 5, Math.PI/8, 0, Math.PI*2);
+          ctx.fill();
+          ctx.stroke();
+          
+          ctx.restore();
+        }
+        
+        campaignLoops[canvasId] = requestAnimationFrame(tick);
+      }
+      
+      tick();
+    }, 40);
+  }
+
   // --- Campaign View Dashboard Renderer ---
   function renderCampaignDashboard() {
     const detailsContainer = document.getElementById('campaign-view-details');
@@ -4663,11 +4936,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const activeList = MockFirebase.db.getActiveCampaigns();
     const campaignDates = MockFirebase.db.getCampaignDates();
     const campaignNames = MockFirebase.db.getCampaignNames();
+    const targetBlocks = MockFirebase.db.getCampaignTargetBlocks();
     const customCampaigns = MockFirebase.db.getCustomCampaigns();
     
     const allCampaignIds = [...customCampaigns];
     const campaigns = allCampaignIds
       .filter(id => isCampaignActiveToday(id))
+      .filter(id => {
+        const targetBlock = targetBlocks[id] || 'All';
+        return targetBlock === 'All' || targetBlock.toLowerCase() === currentUser.block.toLowerCase();
+      })
       .map(id => {
         const name = campaignNames[id] || id;
         return {
@@ -4789,18 +5067,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
       
-      htmlContent += `
-        <div class="card campaign-view-card active-campaign-container" style="margin-bottom: 24px; padding: 20px; border: var(--border); border-radius: 16px; background: var(--bg-card);">
-          <div class="campaign-title-row" style="display:flex; flex-direction:column; gap:4px; margin-bottom: 16px; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 10px;">
-            <div style="display:flex; align-items:center; gap:10px;">
-              <span class="campaign-header-icon" style="font-size:20px; color:var(--primary);"><i class="fa-solid ${campaign.icon || 'fa-bullhorn'}"></i></span>
-              <h3 style="margin:0; font-family:var(--font-serif); font-size:20px; color:var(--text-main);">${campaign.name}</h3>
+      const targetBlock = targetBlocks[selectedCampaignId] || 'All';
+      
+      let visualHtml = '';
+      if (targetBlock !== 'All') {
+        visualHtml = `
+          <!-- The Great Treasure Vase of Wisdom -->
+          <div class="vase-wrapper" style="position: relative; display: flex; justify-content: center; align-items: center; margin: 30px auto 10px auto; width: 100%; max-width: 320px;">
+            <div class="vase-container" style="position: relative; width: 220px; height: 260px;">
+              <canvas id="campaign-vase-canvas-${selectedCampaignId}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; display: block;"></canvas>
+              <div class="vase-progress-value" style="font-size: 26px; font-weight: 800; color: #ffffff; text-shadow: 0 2px 10px rgba(0,0,0,0.65), 0 0 15px rgba(255,193,7,0.45); pointer-events: none; z-index: 6; position: absolute; top: 58%; left: 50%; transform: translate(-50%, -50%); transition: all 0.3s ease;">${progressPercent}%</div>
             </div>
-            <div class="campaign-period-badge" style="font-size: 11.5px; color: var(--text-muted); font-weight: 500; margin-left: 30px; margin-top: 2px;">
-              <i class="fa-regular fa-calendar-days" style="margin-right: 4px;"></i> <strong>Period:</strong> ${periodStr}
-            </div>
+            
+            <!-- Fireworks Celebration Overlay Canvas -->
+            <canvas id="fireworks-canvas-${selectedCampaignId}" class="fireworks-canvas"></canvas>
           </div>
-          
+        `;
+      } else {
+        visualHtml = `
           <!-- Grand Glass Bucket Visual Card -->
           <div class="grand-bucket-wrapper" style="position: relative; display: flex; justify-content: center; align-items: center; margin: 30px auto 10px auto; width: 100%; max-width: 320px;">
             <div class="grand-bucket-container" style="position: relative; width: 160px; height: 220px; margin-right: 40px;">
@@ -4831,6 +5115,25 @@ document.addEventListener('DOMContentLoaded', () => {
             <!-- Fireworks Celebration Overlay Canvas -->
             <canvas id="fireworks-canvas-${selectedCampaignId}" class="fireworks-canvas"></canvas>
           </div>
+        `;
+      }
+      
+      htmlContent += `
+        <div class="card campaign-view-card active-campaign-container" style="margin-bottom: 24px; padding: 20px; border: var(--border); border-radius: 16px; background: var(--bg-card);">
+          <div class="campaign-title-row" style="display:flex; flex-direction:column; gap:4px; margin-bottom: 16px; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 10px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; width:100%; flex-wrap:wrap; gap:4px;">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <span class="campaign-header-icon" style="font-size:20px; color:var(--primary);"><i class="fa-solid ${campaign.icon || 'fa-bullhorn'}"></i></span>
+                <h3 style="margin:0; font-family:var(--font-serif); font-size:20px; color:var(--text-main);">${campaign.name}</h3>
+              </div>
+              ${targetBlock !== 'All' ? `<span style="background:rgba(255,215,0,0.12); color:#ffaa00; font-size:10px; font-weight:700; padding:4px 10px; border-radius:20px; border:1px solid rgba(255,215,0,0.25);"><i class="fa-solid fa-users"></i> ${targetBlock} Block Campaign</span>` : ''}
+            </div>
+            <div class="campaign-period-badge" style="font-size: 11.5px; color: var(--text-muted); font-weight: 500; margin-left: 30px; margin-top: 2px;">
+              <i class="fa-regular fa-calendar-days" style="margin-right: 4px;"></i> <strong>Period:</strong> ${periodStr}
+            </div>
+          </div>
+          
+          ${visualHtml}
           
           <div class="campaign-dates-desc" style="text-align: center; margin-top: 14px; margin-bottom: 4px;">
             <span style="font-size:13.5px; color:var(--text-main); font-weight:700;"><i class="fa-solid fa-calculator" style="color:var(--primary); margin-right:4px;"></i> Total Chanted: ${globalHours.toFixed(1)} / ${targetHours} hours</span>
@@ -4880,7 +5183,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 (${Math.round((personalHours / Math.max(blockSummaries.find(b => b.isOwn).hours, 0.001)) * 100)}% of your block's total)
               </div>
             </div>
-          </div>
       `;
     });
     
@@ -4924,7 +5226,12 @@ document.addEventListener('DOMContentLoaded', () => {
         };
       });
       
-      initCampaignBucketCanvas(canvasId, progressPercent, campaignBlockSummaries);
+      const targetBlock = targetBlocks[selectedCampaignId] || 'All';
+      if (targetBlock !== 'All') {
+        initCampaignVaseCanvas(`campaign-vase-canvas-${selectedCampaignId}`, progressPercent, targetBlock);
+      } else {
+        initCampaignBucketCanvas(canvasId, progressPercent, campaignBlockSummaries);
+      }
     });
     
     if (completedCampaignId) {
@@ -5269,6 +5576,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const start = document.getElementById('campaign-create-start').value;
       const end = document.getElementById('campaign-create-end').value;
       const isActive = document.getElementById('campaign-create-active').checked;
+      const targetBlock = document.getElementById('campaign-create-target-block').value;
       
       const btn = adminCreateCampaignForm.querySelector('button[type="submit"]');
       
@@ -5286,7 +5594,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (editingCampaignId) {
           // Editing mode
           btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
-          await MockFirebase.db.editCampaign(editingCampaignId, name, targetHours, { start, end }, isActive);
+          await MockFirebase.db.editCampaign(editingCampaignId, name, targetHours, { start, end }, isActive, targetBlock);
           alert(`Campaign "${name}" updated successfully!`);
           resetCampaignFormState();
         } else {
@@ -5298,7 +5606,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
           }
           btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creating...';
-          await MockFirebase.db.createCampaign(id, name, targetHours, { start, end }, isActive);
+          await MockFirebase.db.createCampaign(id, name, targetHours, { start, end }, isActive, targetBlock);
           alert(`Campaign "${name}" created successfully!`);
           adminCreateCampaignForm.reset();
         }
@@ -5447,6 +5755,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const targets = MockFirebase.db.getCampaignTargets();
     const activeCampaigns = MockFirebase.db.getActiveCampaigns();
     const campaignDates = MockFirebase.db.getCampaignDates();
+    const targetBlocks = MockFirebase.db.getCampaignTargetBlocks();
     container.innerHTML = '';
     
     const campaignNames = MockFirebase.db.getCampaignNames();
@@ -5476,6 +5785,7 @@ document.addEventListener('DOMContentLoaded', () => {
       
       const isActive = activeCampaigns.includes(c.id);
       const dates = campaignDates[c.id] || { start: '', end: '' };
+      const blockAudience = targetBlocks[c.id] || 'All';
       
       let isExpired = false;
       if (dates && dates.end) {
@@ -5499,8 +5809,9 @@ document.addEventListener('DOMContentLoaded', () => {
             <button class="btn-delete-campaign" data-id="${c.id}" style="background:transparent; border:none; color:var(--accent-danger); cursor:pointer; padding:4px 6px; font-size:13px;" title="Delete Campaign"><i class="fa-regular fa-trash-can"></i></button>
           </div>
         </div>
-        <div style="font-size:11px; color:var(--text-muted);">
+        <div style="font-size:11px; color:var(--text-muted); display:flex; justify-content:space-between; flex-wrap:wrap; gap:4px;">
           <span>Period: ${dates.start || 'N/A'} to ${dates.end || 'N/A'} ${isExpired ? '<strong style="color:var(--accent-danger);">(Expired)</strong>' : ''}</span>
+          <span style="font-weight:600; color:var(--primary);">Audience: ${blockAudience === 'All' ? 'All Blocks' : blockAudience + ' Block'}</span>
         </div>
       `;
       
@@ -5515,6 +5826,11 @@ document.addEventListener('DOMContentLoaded', () => {
           document.getElementById('campaign-create-target').value = targets[c.id] || 100;
           document.getElementById('campaign-create-start').value = dates.start || '';
           document.getElementById('campaign-create-end').value = dates.end || '';
+          
+          const blockDropdown = document.getElementById('campaign-create-target-block');
+          if (blockDropdown) {
+            blockDropdown.value = blockAudience;
+          }
           
           const activeToggleEl = document.getElementById('campaign-create-active');
           activeToggleEl.checked = isActive;
@@ -7803,6 +8119,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- Ceremony in the Air (Pagoda) Animation & UI logic ---
   let cosmicAnimationId = null;
+  let isCosmicModeActive = false;
 
   function drawCosmicPagoda(progress) {
     const canvas = document.getElementById('cosmic-pagoda-canvas');
