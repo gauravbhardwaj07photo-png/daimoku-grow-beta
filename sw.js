@@ -1,10 +1,11 @@
-const CACHE_NAME = 'daimoku-grow-v107';
+const CACHE_NAME = 'daimoku-grow-v108';
 const ASSETS = [
   './',
   './index.html',
   './styles.css',
   './plant.js',
   './app.js',
+  './firebase-config.js',
   './manifest.json',
   './sounds/gong.mp3',
   './icons/lion-head.png',

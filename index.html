@@ -639,6 +639,16 @@
                       <span class="slider"></span>
                     </label>
                   </div>
+                  <div style="display:flex; flex-direction:column; gap:4px; margin-bottom:8px; width: 100%;">
+                    <label for="campaign-create-target-block" style="font-size:10px; font-weight:600; color:var(--text-muted); text-align: left;">Target Block Audience</label>
+                    <select id="campaign-create-target-block" style="padding:10px; border-radius:10px; border:var(--border); background:var(--accent-cream); color:var(--text-main); font-size:14px; outline:none; width: 100%;">
+                      <option value="All">All Blocks (General Campaign)</option>
+                      <option value="Wisdom">Wisdom Block</option>
+                      <option value="Joy">Joy Block</option>
+                      <option value="Victory">Victory Block</option>
+                      <option value="Courage">Courage Block</option>
+                    </select>
+                  </div>
                   <button type="submit" class="btn btn-primary btn-full" style="padding: 10px 14px; font-size: 13px;"><i class="fa-solid fa-bullhorn"></i> Create Campaign</button>
                 </form>
               </div>
@@ -1632,8 +1642,8 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js" crossorigin="anonymous"></script>
 
   <!-- Include App Logic and Scripts -->
-  <script src="plant.js"></script>
-  <script src="firebase-config.js"></script>
-  <script src="app.js"></script>
+  <script src="plant.js?v=2"></script>
+  <script src="firebase-config.js?v=2"></script>
+  <script src="app.js?v=2"></script>
 </body>
 </html>
