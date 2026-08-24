@@ -90,12 +90,15 @@ const defaultCampaignDates = {};
 
 const defaultCampaignNames = {};
 
+const defaultCampaignTargetBlocks = {};
+
 // --- Real-time Firebase Sync Cache & Load Flags ---
 let cachedWhitelist = [...defaultWhitelist];
 let cachedCampaignTargets = { ...defaultCampaignTargets };
 let cachedCampaignDates = { ...defaultCampaignDates };
 let cachedActiveCampaigns = [];
 let cachedCampaignNames = { ...defaultCampaignNames };
+let cachedCampaignTargetBlocks = { ...defaultCampaignTargetBlocks };
 let cachedCustomCampaigns = [];
 let cachedContributions = [];
 let cachedBlockGoals = null;
@@ -145,6 +148,7 @@ if (isFirebaseConfigured && db) {
       if (data.dates) cachedCampaignDates = data.dates;
       if (data.active) cachedActiveCampaigns = data.active;
       if (data.names) cachedCampaignNames = data.names;
+      if (data.targetBlocks) cachedCampaignTargetBlocks = data.targetBlocks;
       if (data.customCampaigns) cachedCustomCampaigns = data.customCampaigns;
       isCampaignsLoaded = true;
       window.dispatchEvent(new Event('db-campaigns-updated'));
@@ -154,6 +158,7 @@ if (isFirebaseConfigured && db) {
       cachedCampaignDates = { ...defaultCampaignDates };
       cachedActiveCampaigns = [];
       cachedCampaignNames = { ...defaultCampaignNames };
+      cachedCampaignTargetBlocks = { ...defaultCampaignTargetBlocks };
       cachedCustomCampaigns = [];
       isCampaignsLoaded = true;
       window.dispatchEvent(new Event('db-campaigns-updated'));
@@ -512,6 +517,32 @@ const MockFirebase = {
       }
     },
     
+    // Shared Campaigns Target Blocks
+    getCampaignTargetBlocks() {
+      if (isFirebaseConfigured) {
+        return cachedCampaignTargetBlocks;
+      } else {
+        const saved = localStorage.getItem('daimoku_db_campaign_target_blocks');
+        if (saved) return JSON.parse(saved);
+        localStorage.setItem('daimoku_db_campaign_target_blocks', JSON.stringify(defaultCampaignTargetBlocks));
+        return defaultCampaignTargetBlocks;
+      }
+    },
+    saveCampaignTargetBlocks(targetBlocks) {
+      if (isFirebaseConfigured && db) {
+        try {
+          db.collection('settings').doc('campaigns').update({ targetBlocks }).catch(e => {
+            console.warn("Firestore update campaign target blocks error:", e);
+          });
+        } catch (e) {
+          console.warn("Firestore update campaign target blocks sync error:", e);
+        }
+      } else {
+        localStorage.setItem('daimoku_db_campaign_target_blocks', JSON.stringify(targetBlocks));
+        window.dispatchEvent(new Event('db-campaigns-updated'));
+      }
+    },
+    
     // Shared Campaign Dates
     getCampaignDates() {
       if (isFirebaseConfigured) {
@@ -597,7 +628,7 @@ const MockFirebase = {
     },
 
     // Create a new campaign (validation ensures only 1 active at a time)
-    async createCampaign(id, name, targetHours, dates, isActive) {
+    async createCampaign(id, name, targetHours, dates, isActive, targetBlock = 'All') {
       if (isFirebaseConfigured && db) {
         try {
           const docRef = db.collection('settings').doc('campaigns');
@@ -606,6 +637,7 @@ const MockFirebase = {
           let targets = { ...defaultCampaignTargets };
           let campaignDates = { ...defaultCampaignDates };
           let names = { ...defaultCampaignNames };
+          let targetBlocks = { ...defaultCampaignTargetBlocks };
           let customCampaigns = [];
           let active = [];
           
@@ -614,6 +646,7 @@ const MockFirebase = {
             if (data.targets) targets = data.targets;
             if (data.dates) campaignDates = data.dates;
             if (data.names) names = data.names;
+            if (data.targetBlocks) targetBlocks = data.targetBlocks;
             if (data.customCampaigns) customCampaigns = data.customCampaigns;
             if (data.active) active = data.active;
           }
@@ -627,6 +660,7 @@ const MockFirebase = {
           targets[id] = targetHours;
           campaignDates[id] = dates;
           names[id] = name;
+          targetBlocks[id] = targetBlock;
           if (!customCampaigns.includes(id)) {
             customCampaigns.push(id);
           }
@@ -639,6 +673,7 @@ const MockFirebase = {
             targets,
             dates: campaignDates,
             names,
+            targetBlocks,
             customCampaigns,
             active
           });
@@ -651,6 +686,7 @@ const MockFirebase = {
         const targets = this.getCampaignTargets();
         const campaignDates = this.getCampaignDates();
         const names = this.getCampaignNames();
+        const targetBlocks = this.getCampaignTargetBlocks();
         const customCampaigns = this.getCustomCampaigns();
         let active = this.getActiveCampaigns();
         
@@ -661,6 +697,7 @@ const MockFirebase = {
         targets[id] = targetHours;
         campaignDates[id] = dates;
         names[id] = name;
+        targetBlocks[id] = targetBlock;
         customCampaigns.push(id);
         
         if (isActive) {
@@ -670,6 +707,7 @@ const MockFirebase = {
         localStorage.setItem('daimoku_db_campaign_targets', JSON.stringify(targets));
         localStorage.setItem('daimoku_db_campaign_dates', JSON.stringify(campaignDates));
         localStorage.setItem('daimoku_db_campaign_names', JSON.stringify(names));
+        localStorage.setItem('daimoku_db_campaign_target_blocks', JSON.stringify(targetBlocks));
         localStorage.setItem('daimoku_db_custom_campaigns', JSON.stringify(customCampaigns));
         localStorage.setItem('daimoku_db_active_campaigns', JSON.stringify(active));
         
@@ -678,7 +716,7 @@ const MockFirebase = {
     },
 
     // Edit an existing campaign
-    async editCampaign(id, name, targetHours, dates, isActive) {
+    async editCampaign(id, name, targetHours, dates, isActive, targetBlock = 'All') {
       if (isFirebaseConfigured && db) {
         try {
           const docRef = db.collection('settings').doc('campaigns');
@@ -687,6 +725,7 @@ const MockFirebase = {
           let targets = {};
           let campaignDates = {};
           let names = {};
+          let targetBlocks = {};
           let customCampaigns = [];
           let active = [];
           
@@ -695,6 +734,7 @@ const MockFirebase = {
             if (data.targets) targets = data.targets;
             if (data.dates) campaignDates = data.dates;
             if (data.names) names = data.names;
+            if (data.targetBlocks) targetBlocks = data.targetBlocks;
             if (data.customCampaigns) customCampaigns = data.customCampaigns;
             if (data.active) active = data.active;
           }
@@ -702,6 +742,7 @@ const MockFirebase = {
           targets[id] = targetHours;
           campaignDates[id] = dates;
           names[id] = name;
+          targetBlocks[id] = targetBlock;
           
           if (!customCampaigns.includes(id)) {
             customCampaigns.push(id);
@@ -717,6 +758,7 @@ const MockFirebase = {
             targets,
             dates: campaignDates,
             names,
+            targetBlocks,
             customCampaigns,
             active
           });
@@ -728,12 +770,14 @@ const MockFirebase = {
         const targets = this.getCampaignTargets();
         const campaignDates = this.getCampaignDates();
         const names = this.getCampaignNames();
+        const targetBlocks = this.getCampaignTargetBlocks();
         const customCampaigns = this.getCustomCampaigns();
         let active = this.getActiveCampaigns();
         
         targets[id] = targetHours;
         campaignDates[id] = dates;
         names[id] = name;
+        targetBlocks[id] = targetBlock;
         
         if (!customCampaigns.includes(id)) {
           customCampaigns.push(id);
@@ -748,6 +792,7 @@ const MockFirebase = {
         localStorage.setItem('daimoku_db_campaign_targets', JSON.stringify(targets));
         localStorage.setItem('daimoku_db_campaign_dates', JSON.stringify(campaignDates));
         localStorage.setItem('daimoku_db_campaign_names', JSON.stringify(names));
+        localStorage.setItem('daimoku_db_campaign_target_blocks', JSON.stringify(targetBlocks));
         localStorage.setItem('daimoku_db_custom_campaigns', JSON.stringify(customCampaigns));
         localStorage.setItem('daimoku_db_active_campaigns', JSON.stringify(active));
         
@@ -766,6 +811,7 @@ const MockFirebase = {
             const targets = data.targets || {};
             const dates = data.dates || {};
             const names = data.names || {};
+            const targetBlocks = data.targetBlocks || {};
             let customCampaigns = data.customCampaigns || [];
             let active = data.active || [];
             
@@ -773,6 +819,7 @@ const MockFirebase = {
             delete targets[id];
             delete dates[id];
             delete names[id];
+            delete targetBlocks[id];
             customCampaigns = customCampaigns.filter(cid => cid !== id);
             active = active.filter(cid => cid !== id);
             
@@ -780,6 +827,7 @@ const MockFirebase = {
               targets,
               dates,
               names,
+              targetBlocks,
               customCampaigns,
               active
             });
@@ -793,18 +841,21 @@ const MockFirebase = {
         const targets = this.getCampaignTargets();
         const campaignDates = this.getCampaignDates();
         const names = this.getCampaignNames();
+        const targetBlocks = this.getCampaignTargetBlocks();
         let customCampaigns = this.getCustomCampaigns();
         let active = this.getActiveCampaigns();
         
         delete targets[id];
         delete campaignDates[id];
         delete names[id];
+        delete targetBlocks[id];
         customCampaigns = customCampaigns.filter(cid => cid !== id);
         active = active.filter(cid => cid !== id);
         
         localStorage.setItem('daimoku_db_campaign_targets', JSON.stringify(targets));
         localStorage.setItem('daimoku_db_campaign_dates', JSON.stringify(campaignDates));
         localStorage.setItem('daimoku_db_campaign_names', JSON.stringify(names));
+        localStorage.setItem('daimoku_db_campaign_target_blocks', JSON.stringify(targetBlocks));
         localStorage.setItem('daimoku_db_custom_campaigns', JSON.stringify(customCampaigns));
         localStorage.setItem('daimoku_db_active_campaigns', JSON.stringify(active));
         
