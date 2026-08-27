@@ -1108,28 +1108,62 @@
           </div>
 
           <!-- Growth Stages (Ranks) -->
-          <div class="card" style="border: var(--border);">
-            <h3 style="margin: 0 0 12px 0; font-family: var(--font-serif); font-size: 17px; font-weight: 700;">Plant Growth Stages</h3>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px;">
-              <div style="background: rgba(255,255,255,0.03); border-radius: 6px; padding: 6px 10px; display: flex; align-items: center; gap: 6px;">
-                <span style="color: #ffb300; font-size: 11px;"><i class="fa-solid fa-star"></i></span>
-                <div style="font-size: 11px; font-weight: 600; color: var(--text-main);">1★ Seeker</div>
+          <div class="card" style="border: var(--border); padding: 18px 16px;">
+            <h3 style="margin: 0 0 14px 0; font-family: var(--font-serif); font-size: 17px; font-weight: 700;">Plant Growth Stages</h3>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <!-- 1 Star: Seeker -->
+              <div style="background: rgba(255,255,255,0.03); border-radius: 8px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+                  <span style="color: #ffb300; font-size: 11px; white-space: nowrap; display: inline-flex; gap: 2px; flex-shrink: 0;">
+                    <i class="fa-solid fa-star"></i>
+                  </span>
+                  <span style="font-size: 12.5px; font-weight: 700; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Seeker</span>
+                </div>
+                <span style="font-size: 12px; color: var(--text-muted); font-weight: 600; white-space: nowrap; flex-shrink: 0;">&lt; 5 hours</span>
               </div>
-              <div style="background: rgba(255,255,255,0.03); border-radius: 6px; padding: 6px 10px; display: flex; align-items: center; gap: 6px;">
-                <span style="color: #ffb300; font-size: 11px;"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></span>
-                <div style="font-size: 11px; font-weight: 600; color: var(--text-main);">2★ Believer</div>
+              
+              <!-- 2 Star: Believer -->
+              <div style="background: rgba(255,255,255,0.03); border-radius: 8px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+                  <span style="color: #ffb300; font-size: 11px; white-space: nowrap; display: inline-flex; gap: 2px; flex-shrink: 0;">
+                    <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+                  </span>
+                  <span style="font-size: 12.5px; font-weight: 700; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Believer</span>
+                </div>
+                <span style="font-size: 12px; color: var(--text-muted); font-weight: 600; white-space: nowrap; flex-shrink: 0;">5 hours</span>
               </div>
-              <div style="background: rgba(255,255,255,0.03); border-radius: 6px; padding: 6px 10px; display: flex; align-items: center; gap: 6px;">
-                <span style="color: #ffb300; font-size: 11px;"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></span>
-                <div style="font-size: 11px; font-weight: 600; color: var(--text-main);">3★ Practitioner</div>
+              
+              <!-- 3 Star: Practitioner -->
+              <div style="background: rgba(255,255,255,0.03); border-radius: 8px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+                  <span style="color: #ffb300; font-size: 11px; white-space: nowrap; display: inline-flex; gap: 2px; flex-shrink: 0;">
+                    <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+                  </span>
+                  <span style="font-size: 12.5px; font-weight: 700; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Practitioner</span>
+                </div>
+                <span style="font-size: 12px; color: var(--text-muted); font-weight: 600; white-space: nowrap; flex-shrink: 0;">20 hours</span>
               </div>
-              <div style="background: rgba(255,255,255,0.03); border-radius: 6px; padding: 6px 10px; display: flex; align-items: center; gap: 6px;">
-                <span style="color: #ffb300; font-size: 11px;"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></span>
-                <div style="font-size: 11px; font-weight: 600; color: var(--text-main);">4★ Bodhisattva</div>
+              
+              <!-- 4 Star: Bodhisattva -->
+              <div style="background: rgba(255,255,255,0.03); border-radius: 8px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+                  <span style="color: #ffb300; font-size: 11px; white-space: nowrap; display: inline-flex; gap: 2px; flex-shrink: 0;">
+                    <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+                  </span>
+                  <span style="font-size: 12.5px; font-weight: 700; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Bodhisattva</span>
+                </div>
+                <span style="font-size: 12px; color: var(--text-muted); font-weight: 600; white-space: nowrap; flex-shrink: 0;">100 hours</span>
               </div>
-              <div style="background: rgba(255,255,255,0.03); border-radius: 6px; padding: 6px 10px; display: flex; align-items: center; gap: 6px;">
-                <span style="color: #ffb300; font-size: 11px;"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></span>
-                <div style="font-size: 11px; font-weight: 600; color: var(--text-main);">5★ Buddhahood</div>
+              
+              <!-- 5 Star: Buddhahood -->
+              <div style="background: rgba(255,255,255,0.03); border-radius: 8px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+                  <span style="color: #ffb300; font-size: 11px; white-space: nowrap; display: inline-flex; gap: 2px; flex-shrink: 0;">
+                    <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+                  </span>
+                  <span style="font-size: 12.5px; font-weight: 700; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Buddhahood</span>
+                </div>
+                <span style="font-size: 12px; color: var(--text-muted); font-weight: 600; white-space: nowrap; flex-shrink: 0;">300 hours</span>
               </div>
             </div>
           </div>
