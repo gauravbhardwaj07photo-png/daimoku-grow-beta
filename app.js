@@ -697,6 +697,8 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Apply header & visual updates instantly from local cache
     applyLoggedInUserVisuals(user);
+    applyTimeDecay();
+    updateUI();
     
     // 2. Fetch from cloud asynchronously to revalidate and sync
     MockFirebase.db.getUserState(user.email).then(cloudState => {
@@ -818,6 +820,7 @@ document.addEventListener('DOMContentLoaded', () => {
       localStorage.setItem(`daimoku_db_state_${normalizedEmail}`, JSON.stringify(state));
       
       // Redraw UI with fresh cloud data
+      applyTimeDecay();
       rebuildRevivalDates();
       updateUI();
       console.log("Firebase sync: cloud state fetched and loaded.");
@@ -897,6 +900,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (state.manualVictories === undefined) state.manualVictories = [];
     if (state.treeDeterminations === undefined) state.treeDeterminations = [];
     if (state.karmaObstacles === undefined) state.karmaObstacles = [];
+
+    // Ensure lastChantedDate reflects the most recent chanting session
+    if (state.sessions && state.sessions.length > 0) {
+      const sorted = [...state.sessions].sort((a, b) => new Date(b.date) - new Date(a.date));
+      if (sorted[0] && sorted[0].date && !isNaN(new Date(sorted[0].date).getTime())) {
+        state.lastChantedDate = sorted[0].date;
+      }
+    } else if (!state.lastChantedDate || isNaN(new Date(state.lastChantedDate).getTime())) {
+      state.lastChantedDate = new Date().toISOString();
+    }
     
     // Apply saved theme
     document.body.className = state.theme || 'theme-sage-light';
