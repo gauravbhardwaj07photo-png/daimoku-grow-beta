@@ -863,13 +863,12 @@ document.addEventListener('DOMContentLoaded', () => {
         return acc + (s.durationSeconds || 0);
       }, 0);
       
-      // Sort sessions ascending
-      state.sessions.sort((a, b) => new Date(a.date) - new Date(b.date));
+      // Sort sessions descending
+      state.sessions.sort((a, b) => new Date(b.date) - new Date(a.date));
       
-      // Recalculate health and streaks
-      state.health = 100;
-      state.isDead = false;
-      state.revivalSeconds = 0;
+      // Recalculate decay, streaks and revival
+      applyLoadedStateSafeguards();
+      applyTimeDecay();
       calculateStreak();
       
       // Save state to local storage and Firestore
@@ -1623,6 +1622,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (goalsViewTitle) {
       goalsViewTitle.textContent = `${currentYear} Goals`;
     }
+    applyTimeDecay();
     rebuildRevivalDates();
     const decimalHours = state.totalSeconds / 3600;
     const progressPercent = Math.min(100, Math.round((decimalHours / GOAL_HOURS) * 100));
@@ -7047,8 +7047,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const validDates = Object.keys(dateMap).filter(dateKey => dateMap[dateKey] >= 900);
     validDates.sort(); // Sort chronologically
 
-    // 3. Check if there are 3 consecutive days in the history
-    const consecutiveFound = checkThreeConsecutiveDays(validDates);
+    // 3. Check if there are 3 consecutive days in the current active revival streak
+    const activeRevivalCount = getActiveRevivalStreak(validDates);
+    const consecutiveFound = activeRevivalCount >= 3;
 
     if (consecutiveFound) {
       if (state.isDead) {
@@ -7070,7 +7071,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (user) {
           MockFirebase.db.saveUserState(user.email, state);
         }
-        console.log("Self-healing: Plant revived based on history logs.");
+        console.log("Self-healing: Plant revived based on 3-day active streak.");
       }
       return;
     }
