@@ -9,6 +9,14 @@ service cloud.firestore {
              get(/databases/$(database)/documents/users/$(request.auth.token.email)).data.isAdmin == true;
     }
 
+    // Helper function to check if the user is a designated Block Coordinator
+    function isCoordinator() {
+      return request.auth != null && 
+             exists(/databases/$(database)/documents/users/$(request.auth.token.email)) &&
+             (get(/databases/$(database)/documents/users/$(request.auth.token.email)).data.isCoordinator == true ||
+              get(/databases/$(database)/documents/users/$(request.auth.token.email)).data.isAdmin == true);
+    }
+
     // 1. Whitelist collection: holds pre-authorized email addresses and registration codes
     match /whitelist/{email} {
       // Checked anonymously on app load to verify registration codes and session access
@@ -23,7 +31,7 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // 3. Users collection: holds user profile information (email, username, block, isAdmin role)
+    // 3. Users collection: holds user profile information (email, username, block, isAdmin/isCoordinator roles)
     match /users/{email} {
       // Authenticated users can read other profiles to populate leaderboards and lists
       allow read: if request.auth != null;
@@ -39,14 +47,14 @@ service cloud.firestore {
       allow read, write: if request.auth != null && (request.auth.token.email == email || isAdmin());
     }
 
-    // 5. Contributions collection: logs individual chanting sessions for the active campaign
+    // 5. Contributions collection: logs individual chanting sessions and coordinator bulk entries
     match /contributions/{contribId} {
       // Authenticated users can read contributions to display leaderboard summaries
       allow read: if request.auth != null;
-      // Users can only create contributions under their own email address
-      allow create: if request.auth != null && request.resource.data.userEmail == request.auth.token.email;
-      // Only admins can update or delete contribution documents
-      allow update, delete: if isAdmin();
+      // Users can create contributions under their own email address, and Coordinators can log on behalf
+      allow create: if request.auth != null && (request.resource.data.userEmail == request.auth.token.email || isCoordinator());
+      // Admins and Coordinators can manage coordinator entries
+      allow update, delete: if isCoordinator() || isAdmin();
     }
   }
 }

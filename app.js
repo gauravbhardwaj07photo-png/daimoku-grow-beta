@@ -5185,7 +5185,7 @@ document.addEventListener('DOMContentLoaded', () => {
               <div style="display:flex; justify-content:space-between; align-items:center; font-size:13px; font-weight:600; color:var(--text-main);">
                 <span class="personal-contrib-label" style="display:flex; align-items:center; gap:6px;">
                   <i class="fa-solid fa-hands-praying" style="color:var(--primary);"></i>
-                  <strong>Your Contribution</strong>
+                  <strong>Your Personal Contribution</strong>
                 </span>
                 <span class="personal-contrib-value" style="color:var(--primary); font-weight:700;">${personalHours.toFixed(1)} hrs</span>
               </div>
@@ -5196,11 +5196,149 @@ document.addEventListener('DOMContentLoaded', () => {
                 (${Math.round((personalHours / Math.max(blockSummaries.find(b => b.isOwn).hours, 0.001)) * 100)}% of your block's total)
               </div>
             </div>
+          </div>
+
+          <!-- Block Coordinator Portal (On-Behalf Daimoku Entry) -->
+          ${(currentUser.isCoordinator || currentUser.isAdmin) ? `
+            <div class="card coordinator-portal-card" style="margin-top: 16px; padding: 16px; border: 1.5px dashed rgba(46, 125, 50, 0.45); border-radius: 14px; background: rgba(46, 125, 50, 0.04);">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px; border-bottom: 1px solid rgba(46, 125, 50, 0.15); padding-bottom: 8px;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="background: #2e7d32; color: #fff; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px;">
+                    <i class="fa-solid fa-clipboard-user"></i>
+                  </span>
+                  <h4 style="margin:0; font-size:14px; font-weight:700; color:var(--text-main);">Block Coordinator Portal</h4>
+                </div>
+                <span style="background: rgba(46, 125, 50, 0.15); color: #2e7d32; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 12px;">
+                  <i class="fa-solid fa-users"></i> ${currentUser.block} Block
+                </span>
+              </div>
+              
+              <p style="margin: 0 0 12px 0; font-size: 11.5px; color: var(--text-muted); line-height: 1.45;">
+                Log collective or on-behalf Daimoku hours for members who cannot use the app directly. These hours will add to your block's campaign total without affecting your personal garden stats.
+              </p>
+              
+              <form class="coordinator-bulk-entry-form" data-campaign-id="${selectedCampaignId}" style="display: flex; flex-direction: column; gap: 10px;">
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                  <div style="flex: 1.5; min-width: 130px;">
+                    <label style="font-size: 10.5px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 3px;">
+                      On Behalf of (Member Name / Note)
+                    </label>
+                    <input type="text" class="coord-member-name" placeholder="e.g. Mrs. Sharma / Sunday Meeting" required style="width: 100%; padding: 8px 10px; border-radius: 8px; border: var(--border); background: var(--accent-cream); color: var(--text-main); font-size: 13px; outline: none; box-sizing: border-box;">
+                  </div>
+                  
+                  <div style="flex: 1; min-width: 85px;">
+                    <label style="font-size: 10.5px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 3px;">
+                      Hours Chanted
+                    </label>
+                    <input type="number" step="0.1" min="0.1" max="500" class="coord-hours-input" placeholder="e.g. 2.5" required style="width: 100%; padding: 8px 10px; border-radius: 8px; border: var(--border); background: var(--accent-cream); color: var(--text-main); font-size: 13px; outline: none; box-sizing: border-box;">
+                  </div>
+                  
+                  <div style="flex: 1; min-width: 110px;">
+                    <label style="font-size: 10.5px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 3px;">
+                      Date
+                    </label>
+                    <input type="date" class="coord-date-input" value="${new Date().toISOString().split('T')[0]}" max="${new Date().toISOString().split('T')[0]}" required style="width: 100%; padding: 8px 10px; border-radius: 8px; border: var(--border); background: var(--accent-cream); color: var(--text-main); font-size: 13px; outline: none; box-sizing: border-box;">
+                  </div>
+                </div>
+                
+                <button type="submit" class="btn btn-primary" style="width: 100%; height: 38px; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; font-weight: 700; border-radius: 10px; margin-top: 2px;">
+                  <i class="fa-solid fa-plus-circle"></i> Submit Bulk Hours for Block
+                </button>
+              </form>
+              
+              <!-- Recent Coordinator Entries Table -->
+              <div class="coordinator-entries-list" style="margin-top: 12px; border-top: 1px dashed rgba(255,255,255,0.08); padding-top: 8px;">
+                <span style="font-size: 10.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px;">
+                  <i class="fa-solid fa-list-check"></i> Recent On-Behalf Submissions:
+                </span>
+                ${(() => {
+                  const coordEntries = campaignContribs.filter(c => c.isCoordinatorEntry && c.userEmail.toLowerCase() === currentUser.email.toLowerCase());
+                  if (coordEntries.length === 0) {
+                    return '<div style="font-size: 11px; color: var(--text-muted); font-style: italic; padding: 2px 0;">No on-behalf hours logged yet.</div>';
+                  }
+                  return coordEntries.map(entry => `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; background: rgba(255,255,255,0.02); border-radius: 6px; margin-bottom: 4px; font-size: 12px;">
+                      <div>
+                        <strong style="color: var(--text-main);">${entry.onBehalfOf || 'Member'}</strong>: 
+                        <span style="color: var(--primary); font-weight: 700;">${(entry.durationSeconds / 3600).toFixed(1)} hrs</span>
+                        <span style="color: var(--text-muted); font-size: 10.5px; margin-left: 6px;">(${entry.date.split('T')[0]})</span>
+                      </div>
+                      <button class="btn-delete-coord-entry" data-id="${entry.id || ''}" data-date="${entry.date}" data-duration="${entry.durationSeconds}" data-email="${entry.userEmail}" style="background: none; border: none; color: var(--accent-danger); cursor: pointer; padding: 4px;"><i class="fa-regular fa-trash-can"></i></button>
+                    </div>
+                  `).join('');
+                })()}
+              </div>
+            </div>
+          ` : ''}
+        </div>
       `;
     });
     
     detailsContainer.innerHTML = htmlContent;
     
+    // Setup Coordinator Portal Bulk Entry submissions
+    const coordForms = detailsContainer.querySelectorAll('.coordinator-bulk-entry-form');
+    coordForms.forEach(form => {
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const campaignId = form.getAttribute('data-campaign-id');
+        const memberName = form.querySelector('.coord-member-name').value.trim();
+        const hours = parseFloat(form.querySelector('.coord-hours-input').value);
+        const date = form.querySelector('.coord-date-input').value;
+        const submitBtn = form.querySelector('button[type="submit"]');
+
+        if (!memberName || isNaN(hours) || hours <= 0 || !date) {
+          alert("Please fill in all fields with valid hours.");
+          return;
+        }
+
+        const durationSeconds = Math.round(hours * 3600);
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting...';
+
+        try {
+          await MockFirebase.db.addCoordinatorBulkContribution(
+            currentUser.email,
+            currentUser.username,
+            currentUser.block,
+            campaignId,
+            durationSeconds,
+            date + 'T12:00:00.000Z',
+            memberName
+          );
+          alert(`Logged ${hours.toFixed(1)} hours on behalf of "${memberName}" for ${currentUser.block} Block!`);
+          window.dispatchEvent(new Event('db-contributions-updated'));
+        } catch (err) {
+          alert("Failed to submit hours: " + err.message);
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<i class="fa-solid fa-plus-circle"></i> Submit Bulk Hours for Block';
+        }
+      });
+    });
+
+    // Setup Coordinator Entry delete buttons
+    const deleteCoordBtns = detailsContainer.querySelectorAll('.btn-delete-coord-entry');
+    deleteCoordBtns.forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const id = btn.getAttribute('data-id');
+        const date = btn.getAttribute('data-date');
+        const duration = parseInt(btn.getAttribute('data-duration'));
+        const email = btn.getAttribute('data-email');
+
+        if (confirm("Are you sure you want to delete this on-behalf contribution?")) {
+          btn.disabled = true;
+          try {
+            await MockFirebase.db.deleteCoordinatorContributionById(id, email, date, duration);
+            window.dispatchEvent(new Event('db-contributions-updated'));
+          } catch (err) {
+            alert("Failed to delete entry: " + err.message);
+            btn.disabled = false;
+          }
+        }
+      });
+    });
+
     // Setup loops for each active campaign bucket
     campaigns.forEach(campaign => {
       const selectedCampaignId = campaign.id;
@@ -5347,7 +5485,7 @@ document.addEventListener('DOMContentLoaded', () => {
         div.innerHTML = `
           <div class="user-view-row" style="display:flex; justify-content:space-between; align-items:center; width:100%;">
             <div style="display:flex; flex-direction:column; gap:2px;">
-              <span style="font-weight:700; font-size:14px; color:var(--text-main);">${u.username} ${u.isAdmin ? '<span style="background:var(--primary); color:#fff; font-size:9px; padding:2px 4px; border-radius:4px; margin-left:4px; font-weight:700;">ADMIN</span>' : ''}</span>
+              <span style="font-weight:700; font-size:14px; color:var(--text-main);">${u.username} ${u.isAdmin ? '<span style="background:var(--primary); color:#fff; font-size:9px; padding:2px 4px; border-radius:4px; margin-left:4px; font-weight:700;">ADMIN</span>' : (u.isCoordinator ? '<span style="background:#0284c7; color:#fff; font-size:9px; padding:2px 4px; border-radius:4px; margin-left:4px; font-weight:700;">COORDINATOR</span>' : '')}</span>
               <span style="color:var(--text-muted); font-size:12px;">${u.email}</span>
               <span style="font-size:11px; font-weight:600; color:var(--primary); margin-top:2px;">${u.block} Block</span>
             </div>
@@ -5380,7 +5518,8 @@ document.addEventListener('DOMContentLoaded', () => {
               <div style="flex:1; min-width:100px;">
                 <label style="font-size:10px; font-weight:700; color:var(--text-muted);">Role</label>
                 <select class="edit-user-role" style="width:100%; padding:6px; border-radius:6px; border:var(--border); font-size:12px; background:var(--accent-cream); color:var(--text-main);">
-                  <option value="member" ${!u.isAdmin ? 'selected' : ''}>Member</option>
+                  <option value="member" ${!u.isAdmin && !u.isCoordinator ? 'selected' : ''}>Member</option>
+                  <option value="coordinator" ${u.isCoordinator && !u.isAdmin ? 'selected' : ''}>Block Coordinator</option>
                   <option value="admin" ${u.isAdmin ? 'selected' : ''}>Admin</option>
                 </select>
               </div>
@@ -5425,7 +5564,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const newUsername = div.querySelector('.edit-user-username').value.trim();
             const newEmail = div.querySelector('.edit-user-email').value.trim().toLowerCase();
             const newBlock = div.querySelector('.edit-user-block').value;
-            const newIsAdmin = (div.querySelector('.edit-user-role').value === 'admin');
+            const selectedRole = div.querySelector('.edit-user-role').value;
+            const newIsAdmin = (selectedRole === 'admin');
+            const newIsCoordinator = (selectedRole === 'coordinator');
             
             if (!newUsername || !newEmail) {
               alert("Username and Email are required.");
@@ -5436,13 +5577,15 @@ document.addEventListener('DOMContentLoaded', () => {
             saveBtn.textContent = 'Saving...';
             
             try {
-              await MockFirebase.db.adminUpdateUser(oldEmail, newEmail, newUsername, newBlock, newIsAdmin);
+              await MockFirebase.db.adminUpdateUser(oldEmail, newEmail, newUsername, newBlock, newIsAdmin, newIsCoordinator);
               alert("Member account updated successfully!");
               
               if (currentUser && currentUser.email.toLowerCase() === oldEmail.toLowerCase()) {
                 currentUser.username = newUsername;
                 currentUser.email = newEmail;
                 currentUser.block = newBlock;
+                currentUser.isAdmin = newIsAdmin;
+                currentUser.isCoordinator = newIsCoordinator;
                 localStorage.setItem('daimoku_session_user', JSON.stringify(currentUser));
                 
                 const blockBadge = document.getElementById('user-block-badge');
@@ -5491,14 +5634,16 @@ document.addEventListener('DOMContentLoaded', () => {
       const email = document.getElementById('admin-create-email').value.trim().toLowerCase();
       const block = document.getElementById('admin-create-block').value;
       const isAdminChecked = document.getElementById('admin-create-is-admin').checked;
+      const isCoordEl = document.getElementById('admin-create-is-coordinator');
+      const isCoordChecked = isCoordEl ? isCoordEl.checked : false;
       const btn = adminCreateUserForm.querySelector('button[type="submit"]');
       
       btn.disabled = true;
       btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creating...';
       
       try {
-        const code = await MockFirebase.db.adminCreateUser(username, email, block, isAdminChecked);
-        alert(`Account profile pre-created successfully!\n\nMember: ${username}\nEmail: ${email}\nBlock: ${block}\nRole: ${isAdminChecked ? 'Administrator' : 'Member'}\nRegistration Code: ${code}\n\nThis email has also been added to the whitelist automatically.`);
+        const code = await MockFirebase.db.adminCreateUser(username, email, block, isAdminChecked, isCoordChecked);
+        alert(`Account profile pre-created successfully!\n\nMember: ${username}\nEmail: ${email}\nBlock: ${block}\nRole: ${isAdminChecked ? 'Administrator' : (isCoordChecked ? 'Block Coordinator' : 'Member')}\nRegistration Code: ${code}\n\nThis email has also been added to the whitelist automatically.`);
         adminCreateUserForm.reset();
         await renderUsersList();
         renderWhitelist();

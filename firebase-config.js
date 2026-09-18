@@ -283,7 +283,13 @@ const MockFirebase = {
           throw new Error("Invalid email or password.");
         }
         
-        const profile = { username: user.username, email: user.email, block: user.block, isAdmin: user.isAdmin };
+        const profile = { 
+          username: user.username, 
+          email: user.email, 
+          block: user.block, 
+          isAdmin: !!user.isAdmin,
+          isCoordinator: !!user.isCoordinator
+        };
         this.currentUser = profile;
         localStorage.setItem('daimoku_session_user', JSON.stringify(profile));
         return profile;
@@ -973,6 +979,65 @@ const MockFirebase = {
       }
     },
     
+    // Coordinator: Add on-behalf / bulk Daimoku for members
+    async addCoordinatorBulkContribution(coordinatorEmail, coordinatorName, block, campaignId, durationSeconds, date, onBehalfOf) {
+      const contribData = {
+        campaignId,
+        userEmail: coordinatorEmail.toLowerCase().trim(),
+        username: coordinatorName,
+        block,
+        durationSeconds,
+        date,
+        isCoordinatorEntry: true,
+        onBehalfOf: onBehalfOf || `${block} Block Member`
+      };
+      
+      if (isFirebaseConfigured && db) {
+        try {
+          const docRef = await db.collection('contributions').add(contribData);
+          contribData.id = docRef.id;
+          return contribData;
+        } catch (e) {
+          console.error("Firestore add coordinator contribution error:", e);
+          throw e;
+        }
+      } else {
+        const contributions = this.getCampaignContributions();
+        contribData.id = 'coord_' + Date.now().toString() + '_' + Math.random().toString(36).substr(2, 5);
+        contributions.push(contribData);
+        this.saveCampaignContributions(contributions);
+        return contribData;
+      }
+    },
+
+    // Coordinator/Admin: Delete a coordinator bulk entry by document ID or fields
+    async deleteCoordinatorContributionById(contribId, coordinatorEmail, date, durationSeconds) {
+      if (isFirebaseConfigured && db) {
+        try {
+          if (contribId && !contribId.startsWith('coord_')) {
+            await db.collection('contributions').doc(contribId).delete();
+          } else {
+            const email = (coordinatorEmail || '').toLowerCase().trim();
+            const snapshot = await db.collection('contributions')
+              .where('userEmail', '==', email)
+              .where('date', '==', date)
+              .where('durationSeconds', '==', durationSeconds)
+              .get();
+            const batch = db.batch();
+            snapshot.forEach(doc => batch.delete(doc.ref));
+            await batch.commit();
+          }
+        } catch (e) {
+          console.error("Firestore delete coordinator contribution error:", e);
+          throw e;
+        }
+      } else {
+        let contributions = this.getCampaignContributions();
+        contributions = contributions.filter(c => c.id !== contribId && !(c.userEmail.toLowerCase() === (coordinatorEmail || '').toLowerCase().trim() && c.date === date && c.durationSeconds === durationSeconds));
+        this.saveCampaignContributions(contributions);
+      }
+    },
+    
     // Admin: Get all registered user profiles
     async getAllUsers() {
       if (isFirebaseConfigured && db) {
@@ -980,7 +1045,8 @@ const MockFirebase = {
           const snapshot = await db.collection('users').get();
           const list = [];
           snapshot.forEach(doc => {
-            list.push(doc.data());
+            const d = doc.data();
+            list.push({ ...d, isCoordinator: !!d.isCoordinator });
           });
           return list;
         } catch (e) {
@@ -989,12 +1055,12 @@ const MockFirebase = {
         }
       } else {
         const users = JSON.parse(localStorage.getItem('daimoku_db_users') || '[]');
-        return users.map(u => ({ username: u.username, email: u.email, block: u.block, isAdmin: u.isAdmin }));
+        return users.map(u => ({ username: u.username, email: u.email, block: u.block, isAdmin: !!u.isAdmin, isCoordinator: !!u.isCoordinator }));
       }
     },
     
     // Admin: Update user profile. If email is changed, migrates profile/states/whitelist docs
-    async adminUpdateUser(oldEmail, newEmail, username, block, isAdmin) {
+    async adminUpdateUser(oldEmail, newEmail, username, block, isAdmin, isCoordinator) {
       const normOld = oldEmail.toLowerCase().trim();
       const normNew = newEmail.toLowerCase().trim();
       
@@ -1013,11 +1079,18 @@ const MockFirebase = {
               userData.username = username;
               userData.block = block;
               if (isAdmin !== undefined) userData.isAdmin = !!isAdmin;
+              if (isCoordinator !== undefined) userData.isCoordinator = !!isCoordinator;
               batch.set(newUserRef, userData);
               batch.delete(oldUserRef);
             } else {
               // If profile doesn't exist, create it fresh
-              batch.set(newUserRef, { email: normNew, username, block, isAdmin: !!isAdmin });
+              batch.set(newUserRef, { 
+                email: normNew, 
+                username, 
+                block, 
+                isAdmin: !!isAdmin,
+                isCoordinator: !!isCoordinator
+              });
             }
             
             // 2. Copy userState (keeps chanting hours and plant state)
@@ -1055,10 +1128,11 @@ const MockFirebase = {
             await batch.commit();
             console.log("Admin email change completed in Firestore.");
           } else {
-            // Just update username, block, and role on the existing document
+            // Just update username, block, and roles on the existing document
             const userRef = db.collection('users').doc(normOld);
             const updates = { username, block };
             if (isAdmin !== undefined) updates.isAdmin = !!isAdmin;
+            if (isCoordinator !== undefined) updates.isCoordinator = !!isCoordinator;
             await userRef.update(updates);
             console.log("Admin profile update completed in Firestore (no email change).");
           }
@@ -1101,6 +1175,7 @@ const MockFirebase = {
           users[userIdx].username = username;
           users[userIdx].block = block;
           if (isAdmin !== undefined) users[userIdx].isAdmin = !!isAdmin;
+          if (isCoordinator !== undefined) users[userIdx].isCoordinator = !!isCoordinator;
           localStorage.setItem('daimoku_db_users', JSON.stringify(users));
           window.dispatchEvent(new Event('db-users-updated'));
           window.dispatchEvent(new Event('db-whitelist-updated'));
@@ -1151,7 +1226,7 @@ const MockFirebase = {
     },
     
     // Admin: Pre-create user profile and whitelist
-    async adminCreateUser(username, email, block, isAdmin = false) {
+    async adminCreateUser(username, email, block, isAdmin = false, isCoordinator = false) {
       const normEmail = email.toLowerCase().trim();
       const code = block.substr(0, 3).toUpperCase() + '-' + Math.floor(100 + Math.random() * 900);
       
@@ -1168,7 +1243,8 @@ const MockFirebase = {
             username,
             email: normEmail,
             block,
-            isAdmin: !!isAdmin
+            isAdmin: !!isAdmin,
+            isCoordinator: !!isCoordinator
           });
           return code;
         } catch (e) {
@@ -1189,7 +1265,8 @@ const MockFirebase = {
           email: normEmail,
           block,
           password: 'password123',
-          isAdmin: !!isAdmin
+          isAdmin: !!isAdmin,
+          isCoordinator: !!isCoordinator
         });
         localStorage.setItem('daimoku_db_users', JSON.stringify(users));
         window.dispatchEvent(new Event('db-users-updated'));
