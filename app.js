@@ -5237,7 +5237,7 @@ document.addEventListener('DOMContentLoaded', () => {
                   <i class="fa-solid fa-list-check"></i> Recent On-Behalf Submissions:
                 </span>
                 ${(() => {
-                  const coordEntries = campaignContribs.filter(c => c.isCoordinatorEntry && c.userEmail.toLowerCase() === currentUser.email.toLowerCase());
+                  const coordEntries = campaignContribs.filter(c => c.isCoordinatorEntry && (c.userEmail.toLowerCase() === currentUser.email.toLowerCase() || currentUser.isAdmin));
                   if (coordEntries.length === 0) {
                     return '<div style="font-size: 11px; color: var(--text-muted); font-style: italic; padding: 2px 0;">No on-behalf hours logged yet.</div>';
                   }
@@ -5467,6 +5467,7 @@ document.addEventListener('DOMContentLoaded', () => {
         div.style.marginBottom = '8px';
         div.style.fontSize = '13px';
         
+        const isSelf = currentUser && (u.email.toLowerCase() === currentUser.email.toLowerCase());
         div.innerHTML = `
           <div class="user-view-row" style="display:flex; justify-content:space-between; align-items:center; width:100%;">
             <div style="display:flex; flex-direction:column; gap:2px;">
@@ -5476,7 +5477,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             <div style="display:flex; gap:6px;">
               <button class="btn-edit-user btn btn-secondary" style="padding:6px 10px; font-size:12px;" data-email="${u.email}"><i class="fa-solid fa-user-pen"></i> Edit</button>
-              ${u.isAdmin ? '' : `<button class="btn-delete-user" style="background:transparent; border:none; color:var(--accent-danger); cursor:pointer; padding:6px;" data-email="${u.email}"><i class="fa-regular fa-trash-can"></i></button>`}
+              ${isSelf ? '' : `<button class="btn-delete-user" title="Delete Account" style="background:transparent; border:none; color:var(--accent-danger); cursor:pointer; padding:6px;" data-email="${u.email}"><i class="fa-regular fa-trash-can"></i></button>`}
             </div>
           </div>
           
@@ -5551,7 +5552,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const newBlock = div.querySelector('.edit-user-block').value;
             const selectedRole = div.querySelector('.edit-user-role').value;
             const newIsAdmin = (selectedRole === 'admin');
-            const newIsCoordinator = (selectedRole === 'coordinator');
+            const newIsCoordinator = (selectedRole === 'coordinator' || newIsAdmin);
             
             if (!newUsername || !newEmail) {
               alert("Username and Email are required.");
@@ -5571,7 +5572,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentUser.email = newEmail;
                 currentUser.block = newBlock;
                 currentUser.isAdmin = newIsAdmin;
-                currentUser.isCoordinator = newIsCoordinator;
+                currentUser.isCoordinator = (newIsCoordinator || newIsAdmin);
                 localStorage.setItem('daimoku_session_user', JSON.stringify(currentUser));
                 
                 const blockBadge = document.getElementById('user-block-badge');
@@ -5613,15 +5614,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Handle new account pre-creation form
   const adminCreateUserForm = document.getElementById('admin-create-user-form');
+  const adminCreateIsAdmin = document.getElementById('admin-create-is-admin');
+  const adminCreateIsCoord = document.getElementById('admin-create-is-coordinator');
+  if (adminCreateIsAdmin && adminCreateIsCoord) {
+    adminCreateIsAdmin.addEventListener('change', () => {
+      if (adminCreateIsAdmin.checked) {
+        adminCreateIsCoord.checked = true;
+        adminCreateIsCoord.disabled = true;
+      } else {
+        adminCreateIsCoord.disabled = false;
+      }
+    });
+  }
+
   if (adminCreateUserForm) {
     adminCreateUserForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const username = document.getElementById('admin-create-username').value.trim();
       const email = document.getElementById('admin-create-email').value.trim().toLowerCase();
       const block = document.getElementById('admin-create-block').value;
-      const isAdminChecked = document.getElementById('admin-create-is-admin').checked;
-      const isCoordEl = document.getElementById('admin-create-is-coordinator');
-      const isCoordChecked = isCoordEl ? isCoordEl.checked : false;
+      const isAdminChecked = adminCreateIsAdmin ? adminCreateIsAdmin.checked : false;
+      const isCoordChecked = adminCreateIsCoord ? (adminCreateIsCoord.checked || isAdminChecked) : isAdminChecked;
       const btn = adminCreateUserForm.querySelector('button[type="submit"]');
       
       btn.disabled = true;
@@ -5631,6 +5644,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const code = await MockFirebase.db.adminCreateUser(username, email, block, isAdminChecked, isCoordChecked);
         alert(`Account profile pre-created successfully!\n\nMember: ${username}\nEmail: ${email}\nBlock: ${block}\nRole: ${isAdminChecked ? 'Administrator' : (isCoordChecked ? 'Block Coordinator' : 'Member')}\nRegistration Code: ${code}\n\nThis email has also been added to the whitelist automatically.`);
         adminCreateUserForm.reset();
+        if (adminCreateIsCoord) adminCreateIsCoord.disabled = false;
         await renderUsersList();
         renderWhitelist();
       } catch (err) {

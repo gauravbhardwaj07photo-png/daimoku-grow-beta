@@ -223,10 +223,22 @@ const MockFirebase = {
         'admin@email.com', 'admin1@email.com', 'admin2@email.com', 
         'admin3@email.com', 'admin4@email.com', 'admin5@email.com'
       ];
-      const isAdmin = adminEmails.includes(normalizedEmail);
-      const userProfile = { username, email: normalizedEmail, block, isAdmin };
+      let isAdmin = adminEmails.includes(normalizedEmail);
+      let isCoordinator = !!isAdmin;
 
       if (isFirebaseConfigured && auth && db) {
+        // Check if user was pre-created with custom roles
+        try {
+          const preDoc = await db.collection('users').doc(normalizedEmail).get();
+          if (preDoc.exists) {
+            const d = preDoc.data();
+            if (d.isAdmin !== undefined) isAdmin = !!d.isAdmin;
+            if (d.isCoordinator !== undefined) isCoordinator = !!(d.isCoordinator || isAdmin);
+          }
+        } catch (e) {}
+
+        const userProfile = { username, email: normalizedEmail, block, isAdmin, isCoordinator };
+
         // Register in Firebase Auth
         const userCredential = await auth.createUserWithEmailAndPassword(normalizedEmail, password);
         
@@ -239,12 +251,21 @@ const MockFirebase = {
       } else {
         // Local Mock Fallback
         const users = JSON.parse(localStorage.getItem('daimoku_db_users') || '[]');
-        if (users.some(u => u.email.toLowerCase() === normalizedEmail)) {
-          throw new Error("An account with this email already exists.");
+        const existingIdx = users.findIndex(u => u.email.toLowerCase() === normalizedEmail);
+        if (existingIdx !== -1) {
+          // If already has password, throw error
+          if (users[existingIdx].password && users[existingIdx].password !== 'password123') {
+            throw new Error("An account with this email already exists.");
+          }
+          isAdmin = !!users[existingIdx].isAdmin;
+          isCoordinator = !!(users[existingIdx].isCoordinator || isAdmin);
+          users[existingIdx] = { username, email: normalizedEmail, block, password, isAdmin, isCoordinator };
+        } else {
+          users.push({ username, email: normalizedEmail, block, password, isAdmin, isCoordinator });
         }
-        users.push({ ...userProfile, password });
         localStorage.setItem('daimoku_db_users', JSON.stringify(users));
         
+        const userProfile = { username, email: normalizedEmail, block, isAdmin, isCoordinator };
         this.currentUser = userProfile;
         localStorage.setItem('daimoku_session_user', JSON.stringify(userProfile));
         return userProfile;
@@ -272,6 +293,7 @@ const MockFirebase = {
         }
         
         const profile = userDoc.data();
+        if (profile.isAdmin) profile.isCoordinator = true;
         this.currentUser = profile;
         localStorage.setItem('daimoku_session_user', JSON.stringify(profile));
         return profile;
@@ -288,7 +310,7 @@ const MockFirebase = {
           email: user.email, 
           block: user.block, 
           isAdmin: !!user.isAdmin,
-          isCoordinator: !!user.isCoordinator
+          isCoordinator: !!(user.isCoordinator || user.isAdmin)
         };
         this.currentUser = profile;
         localStorage.setItem('daimoku_session_user', JSON.stringify(profile));
@@ -333,11 +355,15 @@ const MockFirebase = {
     
     // Get Current Session (synchronous check)
     getCurrentUser() {
-      if (this.currentUser) return this.currentUser;
+      if (this.currentUser) {
+        if (this.currentUser.isAdmin) this.currentUser.isCoordinator = true;
+        return this.currentUser;
+      }
       const saved = localStorage.getItem('daimoku_session_user');
       if (saved) {
         try {
           const user = JSON.parse(saved);
+          if (user.isAdmin) user.isCoordinator = true;
           this.currentUser = user;
           return user;
         } catch (e) {
@@ -1046,7 +1072,7 @@ const MockFirebase = {
           const list = [];
           snapshot.forEach(doc => {
             const d = doc.data();
-            list.push({ ...d, isCoordinator: !!d.isCoordinator });
+            list.push({ ...d, isCoordinator: !!(d.isCoordinator || d.isAdmin) });
           });
           return list;
         } catch (e) {
@@ -1055,7 +1081,7 @@ const MockFirebase = {
         }
       } else {
         const users = JSON.parse(localStorage.getItem('daimoku_db_users') || '[]');
-        return users.map(u => ({ username: u.username, email: u.email, block: u.block, isAdmin: !!u.isAdmin, isCoordinator: !!u.isCoordinator }));
+        return users.map(u => ({ username: u.username, email: u.email, block: u.block, isAdmin: !!u.isAdmin, isCoordinator: !!(u.isCoordinator || u.isAdmin) }));
       }
     },
     
@@ -1063,6 +1089,9 @@ const MockFirebase = {
     async adminUpdateUser(oldEmail, newEmail, username, block, isAdmin, isCoordinator) {
       const normOld = oldEmail.toLowerCase().trim();
       const normNew = newEmail.toLowerCase().trim();
+      const assignedCoord = (isAdmin !== undefined || isCoordinator !== undefined)
+        ? !!(isCoordinator || isAdmin)
+        : undefined;
       
       if (isFirebaseConfigured && db) {
         try {
@@ -1079,7 +1108,8 @@ const MockFirebase = {
               userData.username = username;
               userData.block = block;
               if (isAdmin !== undefined) userData.isAdmin = !!isAdmin;
-              if (isCoordinator !== undefined) userData.isCoordinator = !!isCoordinator;
+              if (assignedCoord !== undefined) userData.isCoordinator = assignedCoord;
+              else if (userData.isAdmin) userData.isCoordinator = true;
               batch.set(newUserRef, userData);
               batch.delete(oldUserRef);
             } else {
@@ -1089,7 +1119,7 @@ const MockFirebase = {
                 username, 
                 block, 
                 isAdmin: !!isAdmin,
-                isCoordinator: !!isCoordinator
+                isCoordinator: assignedCoord !== undefined ? assignedCoord : !!isAdmin
               });
             }
             
@@ -1132,7 +1162,7 @@ const MockFirebase = {
             const userRef = db.collection('users').doc(normOld);
             const updates = { username, block };
             if (isAdmin !== undefined) updates.isAdmin = !!isAdmin;
-            if (isCoordinator !== undefined) updates.isCoordinator = !!isCoordinator;
+            if (assignedCoord !== undefined) updates.isCoordinator = assignedCoord;
             await userRef.update(updates);
             console.log("Admin profile update completed in Firestore (no email change).");
           }
@@ -1175,7 +1205,7 @@ const MockFirebase = {
           users[userIdx].username = username;
           users[userIdx].block = block;
           if (isAdmin !== undefined) users[userIdx].isAdmin = !!isAdmin;
-          if (isCoordinator !== undefined) users[userIdx].isCoordinator = !!isCoordinator;
+          if (assignedCoord !== undefined) users[userIdx].isCoordinator = assignedCoord;
           localStorage.setItem('daimoku_db_users', JSON.stringify(users));
           window.dispatchEvent(new Event('db-users-updated'));
           window.dispatchEvent(new Event('db-whitelist-updated'));
@@ -1229,6 +1259,7 @@ const MockFirebase = {
     async adminCreateUser(username, email, block, isAdmin = false, isCoordinator = false) {
       const normEmail = email.toLowerCase().trim();
       const code = block.substr(0, 3).toUpperCase() + '-' + Math.floor(100 + Math.random() * 900);
+      const assignedCoord = !!(isCoordinator || isAdmin);
       
       if (isFirebaseConfigured && db) {
         try {
@@ -1244,7 +1275,7 @@ const MockFirebase = {
             email: normEmail,
             block,
             isAdmin: !!isAdmin,
-            isCoordinator: !!isCoordinator
+            isCoordinator: assignedCoord
           });
           return code;
         } catch (e) {
@@ -1266,7 +1297,7 @@ const MockFirebase = {
           block,
           password: 'password123',
           isAdmin: !!isAdmin,
-          isCoordinator: !!isCoordinator
+          isCoordinator: assignedCoord
         });
         localStorage.setItem('daimoku_db_users', JSON.stringify(users));
         window.dispatchEvent(new Event('db-users-updated'));
