@@ -197,6 +197,41 @@ if (isFirebaseConfigured && db) {
     isAlliancesLoaded = true;
     window.dispatchEvent(new Event('db-alliances-updated'));
   }, err => console.warn("Firestore Alliances listener error:", err));
+
+  // 6. Real-time Live Listener for Current Logged-in User Profile
+  const initialSavedUser = localStorage.getItem('daimoku_session_user');
+  if (initialSavedUser) {
+    try {
+      const u = JSON.parse(initialSavedUser);
+      if (u && u.email) {
+        attachUserProfileListener(u.email);
+      }
+    } catch(e) {}
+  }
+}
+
+let userProfileUnsubscribe = null;
+
+function attachUserProfileListener(email) {
+  if (!isFirebaseConfigured || !db || !email) return;
+  if (userProfileUnsubscribe) {
+    userProfileUnsubscribe();
+    userProfileUnsubscribe = null;
+  }
+  const normEmail = email.toLowerCase().trim();
+  userProfileUnsubscribe = db.collection('users').doc(normEmail).onSnapshot((doc) => {
+    if (doc.exists) {
+      const data = doc.data();
+      const updatedProfile = {
+        ...data,
+        isAdmin: !!data.isAdmin,
+        isCoordinator: !!(data.isCoordinator || data.isAdmin)
+      };
+      MockFirebase.auth.currentUser = updatedProfile;
+      localStorage.setItem('daimoku_session_user', JSON.stringify(updatedProfile));
+      window.dispatchEvent(new Event('db-user-profile-updated'));
+    }
+  }, err => console.warn("Firestore user profile listener error:", err));
 }
 
 // Define the namespace matching MockFirebase API
@@ -247,6 +282,7 @@ const MockFirebase = {
         
         this.currentUser = userProfile;
         localStorage.setItem('daimoku_session_user', JSON.stringify(userProfile));
+        attachUserProfileListener(normalizedEmail);
         return userProfile;
       } else {
         // Local Mock Fallback
@@ -296,6 +332,7 @@ const MockFirebase = {
         if (profile.isAdmin) profile.isCoordinator = true;
         this.currentUser = profile;
         localStorage.setItem('daimoku_session_user', JSON.stringify(profile));
+        attachUserProfileListener(normalizedEmail);
         return profile;
       } else {
         // Local Mock Fallback
@@ -348,6 +385,10 @@ const MockFirebase = {
     signOut() {
       if (isFirebaseConfigured && auth) {
         auth.signOut().catch(e => console.error(e));
+      }
+      if (userProfileUnsubscribe) {
+        userProfileUnsubscribe();
+        userProfileUnsubscribe = null;
       }
       this.currentUser = null;
       localStorage.removeItem('daimoku_session_user');

@@ -8570,6 +8570,26 @@ document.addEventListener('DOMContentLoaded', () => {
     updateAllianceUI();
   });
 
+  window.addEventListener('db-user-profile-updated', () => {
+    const user = MockFirebase.auth.getCurrentUser();
+    if (user) {
+      updateAdminCardsVisibility(user.isAdmin);
+      updateCampaignTabVisibility();
+      
+      const badge = document.getElementById('user-block-badge');
+      if (badge && user.block) {
+        badge.textContent = `${user.block} Block`;
+      }
+      
+      const headerUsername = document.getElementById('header-user-name');
+      if (headerUsername && user.username) {
+        headerUsername.textContent = user.username;
+      }
+      
+      updateUI();
+    }
+  });
+
   } catch (err) {
     console.error("Initialization Error:", err);
     var banner = document.getElementById('debug-error-banner');
