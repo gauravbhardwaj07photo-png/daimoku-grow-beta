@@ -548,8 +548,7 @@ document.addEventListener('DOMContentLoaded', () => {
       startTime: timerStartTime,
       accumulated: timerAccumulatedPaused,
       target: countdownTargetSeconds,
-      personalTargetId: timerPersonalSelect.value || null,
-      campaignId: timerCampaignSelect.value || null,
+      personalTargetId: timerPersonalSelect ? timerPersonalSelect.value : null,
       lastActiveTime: Date.now()
     };
     localStorage.setItem('daimoku_active_timer', JSON.stringify(timerData));
@@ -568,11 +567,9 @@ document.addEventListener('DOMContentLoaded', () => {
           
           if (elapsedSecs >= 5) {
             // Restore target selections so the auto-saved session is credited correctly
-            timerPersonalSelect.value = t.personalTargetId || '';
-            timerCampaignSelect.value = t.campaignId || '';
+            if (timerPersonalSelect) timerPersonalSelect.value = t.personalTargetId || '';
             saveChantSession(elapsedSecs, t.type);
-            timerPersonalSelect.value = ''; // Reset selection
-            timerCampaignSelect.value = '';
+            if (timerPersonalSelect) timerPersonalSelect.value = ''; // Reset selection
             
             const mins = Math.floor(elapsedSecs / 60);
             const secs = elapsedSecs % 60;
@@ -2160,42 +2157,46 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (actualDuration <= 0) return;
     
-    const personalTargetId = timerPersonalSelect.value || null;
-    const campaignId = timerCampaignSelect.value || null;
+    const personalTargetId = timerPersonalSelect ? timerPersonalSelect.value : null;
     
     if (personalTargetId) {
       accumulateTimeToTarget(personalTargetId, actualDuration);
     }
     
-    if (campaignId) {
-      const currentUser = MockFirebase.auth.getCurrentUser();
-      if (currentUser) {
+    // Automatically contribute to all active campaigns for this user's block
+    const currentUser = MockFirebase.auth.getCurrentUser();
+    let primaryCampaignId = null;
+    if (currentUser) {
+      const activeCampaigns = getActiveCampaignsForUser(currentUser, now);
+      if (activeCampaigns.length > 0) {
+        primaryCampaignId = activeCampaigns[0];
         const targets = MockFirebase.db.getCampaignTargets();
         const contributions = MockFirebase.db.getCampaignContributions();
-        const targetHours = targets[campaignId] || 100;
         
-        const preSeconds = contributions
-          .filter(item => item.campaignId === campaignId)
-          .reduce((sum, item) => sum + item.durationSeconds, 0);
-        const preHours = preSeconds / 3600;
-        
-        MockFirebase.db.addCampaignContribution(
-          currentUser.email,
-          currentUser.username,
-          currentUser.block,
-          campaignId,
-          actualDuration,
-          now.toISOString()
-        );
-        
-        const postHours = preHours + (actualDuration / 3600);
-        
-        if (preHours < targetHours && postHours >= targetHours) {
-          setTimeout(() => {
-            playGong();
-            alert(`🎉 VICTORY! Our collective SGI campaign has reached 100% of its target! Thank you for your victorious chanting! 🌸`);
-          }, 600);
-        }
+        activeCampaigns.forEach(cId => {
+          const targetHours = targets[cId] || 100;
+          const preSeconds = contributions
+            .filter(item => item.campaignId === cId)
+            .reduce((sum, item) => sum + item.durationSeconds, 0);
+          const preHours = preSeconds / 3600;
+          
+          MockFirebase.db.addCampaignContribution(
+            currentUser.email,
+            currentUser.username,
+            currentUser.block,
+            cId,
+            actualDuration,
+            now.toISOString()
+          );
+          
+          const postHours = preHours + (actualDuration / 3600);
+          if (preHours < targetHours && postHours >= targetHours) {
+            setTimeout(() => {
+              playGong();
+              alert(`🎉 VICTORY! Our collective SGI campaign has reached 100% of its target! Thank you for your victorious chanting! 🌸`);
+            }, 600);
+          }
+        });
       }
     }
     
@@ -2206,7 +2207,7 @@ document.addEventListener('DOMContentLoaded', () => {
       durationSeconds: actualDuration,
       method: method,
       personalTargetId: personalTargetId,
-      campaignId: campaignId,
+      campaignId: primaryCampaignId,
       targetId: personalTargetId // fallback
     };
     
@@ -2379,42 +2380,46 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     
-    const personalTargetId = manualPersonalSelect.value || null;
-    const campaignId = manualCampaignSelect.value || null;
+    const personalTargetId = manualPersonalSelect ? manualPersonalSelect.value : null;
     
     if (personalTargetId) {
       accumulateTimeToTarget(personalTargetId, totalSecs);
     }
     
-    if (campaignId) {
-      const currentUser = MockFirebase.auth.getCurrentUser();
-      if (currentUser) {
+    // Automatically contribute to all active campaigns for this user's block on the logged date
+    const currentUser = MockFirebase.auth.getCurrentUser();
+    let primaryCampaignId = null;
+    if (currentUser) {
+      const activeCampaigns = getActiveCampaignsForUser(currentUser, sessionDateString);
+      if (activeCampaigns.length > 0) {
+        primaryCampaignId = activeCampaigns[0];
         const targets = MockFirebase.db.getCampaignTargets();
         const contributions = MockFirebase.db.getCampaignContributions();
-        const targetHours = targets[campaignId] || 100;
         
-        const preSeconds = contributions
-          .filter(item => item.campaignId === campaignId)
-          .reduce((sum, item) => sum + item.durationSeconds, 0);
-        const preHours = preSeconds / 3600;
-        
-        MockFirebase.db.addCampaignContribution(
-          currentUser.email,
-          currentUser.username,
-          currentUser.block,
-          campaignId,
-          totalSecs,
-          sessionDateString
-        );
-        
-        const postHours = preHours + (totalSecs / 3600);
-        
-        if (preHours < targetHours && postHours >= targetHours) {
-          setTimeout(() => {
-            playGong();
-            alert(`🎉 VICTORY! Our collective SGI campaign has reached 100% of its target! Thank you for your victorious chanting! 🌸`);
-          }, 600);
-        }
+        activeCampaigns.forEach(cId => {
+          const targetHours = targets[cId] || 100;
+          const preSeconds = contributions
+            .filter(item => item.campaignId === cId)
+            .reduce((sum, item) => sum + item.durationSeconds, 0);
+          const preHours = preSeconds / 3600;
+          
+          MockFirebase.db.addCampaignContribution(
+            currentUser.email,
+            currentUser.username,
+            currentUser.block,
+            cId,
+            totalSecs,
+            sessionDateString
+          );
+          
+          const postHours = preHours + (totalSecs / 3600);
+          if (preHours < targetHours && postHours >= targetHours) {
+            setTimeout(() => {
+              playGong();
+              alert(`🎉 VICTORY! Our collective SGI campaign has reached 100% of its target! Thank you for your victorious chanting! 🌸`);
+            }, 600);
+          }
+        });
       }
     }
     
@@ -2424,7 +2429,7 @@ document.addEventListener('DOMContentLoaded', () => {
       durationSeconds: totalSecs,
       method: 'manual',
       personalTargetId: personalTargetId,
-      campaignId: campaignId,
+      campaignId: primaryCampaignId,
       targetId: personalTargetId // fallback
     };
     
@@ -2459,8 +2464,8 @@ document.addEventListener('DOMContentLoaded', () => {
     logMinutes.value = 15;
     logMinutes.disabled = false;
     logMinutes.title = '';
-    manualPersonalSelect.value = '';
-    manualCampaignSelect.value = '';
+    if (manualPersonalSelect) manualPersonalSelect.value = '';
+    if (manualCampaignSelect) manualCampaignSelect.value = '';
     
     alert(`Successfully logged ${hrs}h ${mins}m!`);
     
@@ -3272,80 +3277,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Populate drop-down selectors
   function populateTargetDropdowns() {
+    if (!timerPersonalSelect || !manualPersonalSelect) return;
     const prevTimerPersonal = timerPersonalSelect.value;
-    const prevTimerCampaign = timerCampaignSelect.value;
     const prevManualPersonal = manualPersonalSelect.value;
-    const prevManualCampaign = manualCampaignSelect.value;
     
-    timerPersonalSelect.innerHTML = '<option value="">-- No Target (None) --</option>';
-    manualPersonalSelect.innerHTML = '<option value="">-- No Target (None) --</option>';
-    timerCampaignSelect.innerHTML = '<option value="">-- No Campaign (None) --</option>';
-    manualCampaignSelect.innerHTML = '<option value="">-- No Campaign (None) --</option>';
-    
-    const activeList = MockFirebase.db.getActiveCampaigns();
-    const campaignDates = MockFirebase.db.getCampaignDates();
-    
-    const campaignNames = MockFirebase.db.getCampaignNames();
-    const customCampaigns = MockFirebase.db.getCustomCampaigns();
-    const allCampaignIds = [...customCampaigns];
-    
-    const allCampaigns = allCampaignIds.map(id => {
-      const name = campaignNames[id] || id;
-      return {
-        id: id,
-        name: name.endsWith("Campaign") ? name : name + " Campaign"
-      };
-    });
-    
-    const now = new Date();
-    const timerTime = now.getTime();
-    
-    let manualTime = now.getTime();
-    const logDateVal = logDateInput ? logDateInput.value : '';
-    if (logDateVal) {
-      const logD = new Date(logDateVal + 'T12:00:00');
-      if (!isNaN(logD.getTime())) {
-        manualTime = logD.getTime();
-      }
-    }
-    
-    // 1. Filter campaigns active today for the Timer
-    const timerCampaigns = allCampaigns.filter(c => {
-      if (!activeList.includes(c.id)) return false;
-      const dates = campaignDates[c.id];
-      if (dates && dates.start && dates.end) {
-        const startT = new Date(dates.start + 'T00:00:00').getTime();
-        const endT = new Date(dates.end + 'T23:59:59').getTime();
-        return timerTime >= startT && timerTime <= endT;
-      }
-      return true;
-    });
-    
-    // 2. Filter campaigns active on the selected manual log date for the Manual Log
-    const manualCampaigns = allCampaigns.filter(c => {
-      if (!activeList.includes(c.id)) return false;
-      const dates = campaignDates[c.id];
-      if (dates && dates.start && dates.end) {
-        const startT = new Date(dates.start + 'T00:00:00').getTime();
-        const endT = new Date(dates.end + 'T23:59:59').getTime();
-        return manualTime >= startT && manualTime <= endT;
-      }
-      return true;
-    });
-    
-    timerCampaigns.forEach(c => {
-      const option = document.createElement('option');
-      option.value = c.id;
-      option.textContent = c.name;
-      timerCampaignSelect.appendChild(option);
-    });
-    
-    manualCampaigns.forEach(c => {
-      const option = document.createElement('option');
-      option.value = c.id;
-      option.textContent = c.name;
-      manualCampaignSelect.appendChild(option);
-    });
+    timerPersonalSelect.innerHTML = '<option value="">-- General Chanting (None) --</option>';
+    manualPersonalSelect.innerHTML = '<option value="">-- General Chanting (None) --</option>';
     
     const activeTargets = state.targets.filter(t => !t.completed);
     const determinationsGroup = document.createElement('optgroup');
@@ -3380,9 +3317,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Restore selections
     timerPersonalSelect.value = prevTimerPersonal;
-    timerCampaignSelect.value = prevTimerCampaign;
     manualPersonalSelect.value = prevManualPersonal;
-    manualCampaignSelect.value = prevManualCampaign;
     
     updateTargetPaceHint('timer-personal-select', 'timer-target-pace-tip');
     updateTargetPaceHint('manual-personal-select', 'manual-target-pace-tip');
@@ -4358,12 +4293,38 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // --- Campaign Helpers for Navigation Tab Visibility ---
+  // --- Campaign Helpers for Navigation Tab Visibility & Auto-Logging ---
+  function getActiveCampaignsForUser(user, dateToCheck = null) {
+    if (!user) return [];
+    const activeList = MockFirebase.db.getActiveCampaigns() || [];
+    const campaignDates = MockFirebase.db.getCampaignDates() || {};
+    const targetBlocks = MockFirebase.db.getCampaignTargetBlocks() || {};
+    const checkTime = dateToCheck ? new Date(dateToCheck).getTime() : Date.now();
+    
+    return activeList.filter(cId => {
+      // Check target block audience
+      const targetBlock = targetBlocks[cId] || 'All';
+      if (targetBlock !== 'All' && targetBlock.toLowerCase() !== (user.block || '').toLowerCase()) {
+        return false;
+      }
+      // Check start/end dates if set
+      const dates = campaignDates[cId];
+      if (dates && dates.start && dates.end) {
+        const startT = new Date(dates.start + 'T00:00:00').getTime();
+        const endT = new Date(dates.end + 'T23:59:59').getTime();
+        if (checkTime < startT || checkTime > endT) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }
+
   function isCampaignActiveToday(campaignId) {
-    const activeList = MockFirebase.db.getActiveCampaigns();
+    const activeList = MockFirebase.db.getActiveCampaigns() || [];
     if (!activeList.includes(campaignId)) return false;
     
-    const campaignDates = MockFirebase.db.getCampaignDates();
+    const campaignDates = MockFirebase.db.getCampaignDates() || {};
     const dates = campaignDates[campaignId];
     if (dates && dates.start && dates.end) {
       const now = new Date();
@@ -4372,57 +4333,32 @@ document.addEventListener('DOMContentLoaded', () => {
       const todayTime = now.getTime();
       return todayTime >= startT && todayTime <= endT;
     }
-    return false;
+    return true;
   }
   
   function hasActiveCampaignToday() {
-    const activeList = MockFirebase.db.getActiveCampaigns();
-    if (activeList.length === 0) return false;
-    return isCampaignActiveToday(activeList[0]);
+    const currentUser = MockFirebase.auth.getCurrentUser();
+    if (!currentUser) return false;
+    const active = getActiveCampaignsForUser(currentUser);
+    return active.length > 0;
   }
   
   function updateCampaignTabVisibility() {
     const navCampaign = document.getElementById('nav-campaign');
     if (!navCampaign) return;
     
-    const timerCampaignContainer = document.getElementById('timer-campaign-select-container');
-    const manualCampaignContainer = document.getElementById('manual-campaign-select-container');
-    
     const currentUser = MockFirebase.auth.getCurrentUser();
     if (!currentUser) {
       navCampaign.classList.add('hidden');
-      if (timerCampaignContainer) timerCampaignContainer.classList.add('hidden');
-      if (manualCampaignContainer) manualCampaignContainer.classList.add('hidden');
       return;
     }
     
-    const activeList = MockFirebase.db.getActiveCampaigns();
-    const campaignDates = MockFirebase.db.getCampaignDates();
-    
-    let isRunning = false;
-    let activeId = null;
-    if (activeList.length > 0) {
-      activeId = activeList[0];
-      const dates = campaignDates[activeId];
-      if (dates && dates.start && dates.end) {
-        const startT = new Date(dates.start + 'T00:00:00').getTime();
-        const endT = new Date(dates.end + 'T23:59:59').getTime();
-        const now = Date.now();
-        if (now >= startT && now <= endT + (24 * 60 * 60 * 1000)) {
-          isRunning = true;
-        }
-      }
-    }
-    
-    if (isRunning) {
+    const activeCampaigns = getActiveCampaignsForUser(currentUser);
+    if (activeCampaigns.length > 0) {
       navCampaign.classList.remove('hidden');
-      if (timerCampaignContainer) timerCampaignContainer.classList.remove('hidden');
-      if (manualCampaignContainer) manualCampaignContainer.classList.remove('hidden');
-      triggerCampaignAnnouncement(activeId);
+      triggerCampaignAnnouncement(activeCampaigns[0]);
     } else {
       navCampaign.classList.add('hidden');
-      if (timerCampaignContainer) timerCampaignContainer.classList.add('hidden');
-      if (manualCampaignContainer) manualCampaignContainer.classList.add('hidden');
       
       // Route user away if they are currently on the hidden campaign view
       const viewCampaign = document.getElementById('view-campaign');
@@ -4979,7 +4915,19 @@ document.addEventListener('DOMContentLoaded', () => {
       const globalSeconds = campaignContribs.reduce((sum, item) => sum + item.durationSeconds, 0);
       const globalHours = globalSeconds / 3600;
       const targetHours = targets[selectedCampaignId] || 100;
-      const progressPercent = Math.min(100, Math.round((globalHours / targetHours) * 100));
+      
+      const rawPercent = (globalHours / targetHours) * 100;
+      let progressPercentDisplay = "0%";
+      if (globalHours >= targetHours) {
+        progressPercentDisplay = "100%";
+      } else if (rawPercent >= 10) {
+        progressPercentDisplay = Math.round(rawPercent) + "%";
+      } else if (rawPercent > 0) {
+        progressPercentDisplay = rawPercent < 1 ? rawPercent.toFixed(1) + "%" : rawPercent.toFixed(1) + "%";
+      } else {
+        progressPercentDisplay = "0%";
+      }
+      const progressPercent = Math.min(100, Math.max(globalHours > 0 ? 3 : 0, Math.round(rawPercent)));
       
       const p1Mark = (targetHours / 4).toFixed(0);
       const p2Mark = (targetHours / 2).toFixed(0);
@@ -5037,32 +4985,106 @@ document.addEventListener('DOMContentLoaded', () => {
       
       // Calculate Est. Completion Date based on start date and daily average rate
       const now = new Date();
-      let estCompletionStr = "Est. Completion Date: -- (chant to calculate)";
+      const remainingHours = Math.max(0, targetHours - globalHours);
+      
+      let estFinishVal = "--";
+      let estFinishSub = "Active chanting needed";
+      let weeklyRate = 0;
+      let dailyRateFormatted = "";
       
       if (globalHours >= targetHours) {
-        estCompletionStr = "Goal achieved! Campaign target completed! 🎉";
+        estFinishVal = "Achieved! 🎉";
+        estFinishSub = "Target reached";
       } else if (dates.start) {
         const startD = new Date(dates.start + 'T00:00:00');
         const msActive = now.getTime() - startD.getTime();
         const daysActive = Math.max(1, Math.ceil(msActive / (24 * 60 * 60 * 1000)));
         
         if (msActive < 0) {
-          estCompletionStr = "Est. Completion Date: -- (campaign has not started)";
+          estFinishVal = "Starts Soon";
+          estFinishSub = `Starts on ${startD.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`;
         } else {
           const dailyRate = globalHours / daysActive; // hours per day
           if (dailyRate > 0.01) {
-            const daysRemaining = (targetHours - globalHours) / dailyRate;
+            const daysRemainingPace = Math.ceil(remainingHours / dailyRate);
             const targetDate = new Date();
-            targetDate.setDate(targetDate.getDate() + daysRemaining);
+            targetDate.setDate(targetDate.getDate() + daysRemainingPace);
             
-            const options = { year: 'numeric', month: 'long', day: 'numeric' };
-            const formattedDate = targetDate.toLocaleDateString(undefined, options);
-            const weeklyRate = dailyRate * 7;
-            estCompletionStr = `Est. Completion Date: ${formattedDate} (~${weeklyRate.toFixed(1)}h/wk total)`;
+            const options = { month: 'short', day: 'numeric', year: 'numeric' };
+            estFinishVal = targetDate.toLocaleDateString(undefined, options);
+            weeklyRate = dailyRate * 7;
+            
+            if (dailyRate >= 1) {
+              const h = Math.floor(dailyRate);
+              const m = Math.round((dailyRate % 1) * 60);
+              dailyRateFormatted = m > 0 ? `${h}h ${m}m/day` : `${h}h/day`;
+            } else {
+              dailyRateFormatted = `${Math.round(dailyRate * 60)}m/day`;
+            }
+            
+            estFinishSub = `Current pace: ${dailyRateFormatted} (~${weeklyRate.toFixed(1)}h/wk)`;
           } else {
-            estCompletionStr = "Est. Completion Date: -- (active chanting needed)";
+            estFinishVal = "In Progress";
+            estFinishSub = "Chant to compute projected finish";
           }
         }
+      }
+      
+      // Calculate Ideal Daily Pace Required to complete target within campaign period
+      let idealPaceVal = "--";
+      let idealPaceSub = "Set campaign period";
+      let timeLeftVal = "--";
+      let timeLeftSub = "Set end date";
+      let daysLeftBadge = "";
+      
+      if (globalHours >= targetHours) {
+        idealPaceVal = `<span style="color:#2e7d32; font-size:16px;">Goal Reached! 🎯</span>`;
+        idealPaceSub = "Target completed in time";
+        timeLeftVal = `<span style="color:#2e7d32; font-size:16px;">Goal Reached! 🎉</span>`;
+        timeLeftSub = "Completed!";
+        daysLeftBadge = "Completed";
+      } else if (dates.end) {
+        const endD = new Date(dates.end + 'T23:59:59');
+        const diffMs = endD.getTime() - now.getTime();
+        const daysLeft = Math.ceil(diffMs / (24 * 60 * 60 * 1000));
+        
+        if (diffMs > 0) {
+          const d = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+          const h = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+          const m = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+          
+          if (d > 0) {
+            timeLeftVal = `${d}d ${h}h <span style="font-size: 11px; font-weight: 600; color: var(--text-muted);">${m}m</span>`;
+          } else {
+            timeLeftVal = `${h}h ${m}m`;
+          }
+          const endFormatted = endD.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+          timeLeftSub = `Ends on ${endFormatted}`;
+          
+          const idealHoursPerDay = remainingHours / Math.max(1, daysLeft);
+          if (idealHoursPerDay >= 1) {
+            const ih = Math.floor(idealHoursPerDay);
+            const im = Math.round((idealHoursPerDay % 1) * 60);
+            idealPaceVal = im > 0 ? `${ih}h ${im}m <span style="font-size: 11px; font-weight: 600; color: var(--text-muted);">/ day</span>` : `${ih}h <span style="font-size: 11px; font-weight: 600; color: var(--text-muted);">/ day</span>`;
+          } else {
+            const im = Math.max(1, Math.round(idealHoursPerDay * 60));
+            idealPaceVal = `${im} mins <span style="font-size: 11px; font-weight: 600; color: var(--text-muted);">/ day</span>`;
+          }
+          idealPaceSub = `Needed to finish on time`;
+          daysLeftBadge = `${daysLeft} ${daysLeft === 1 ? 'day' : 'days'} left`;
+        } else {
+          timeLeftVal = `<span style="color:var(--accent-danger); font-size:15px;">Period Ended</span>`;
+          timeLeftSub = "Campaign finished";
+          idealPaceVal = `<span style="color:var(--accent-danger); font-size:15px;">Deadline Passed</span>`;
+          idealPaceSub = `${remainingHours.toFixed(1)}h remaining`;
+          daysLeftBadge = "Deadline passed";
+        }
+      } else {
+        idealPaceVal = "--";
+        idealPaceSub = "Set end date in Settings";
+        timeLeftVal = "--";
+        timeLeftSub = "Ongoing campaign";
+        daysLeftBadge = "Ongoing";
       }
       
       const targetBlock = targetBlocks[selectedCampaignId] || 'All';
@@ -5074,7 +5096,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="vase-wrapper" style="position: relative; display: flex; justify-content: center; align-items: center; margin: 30px auto 10px auto; width: 100%; max-width: 320px;">
             <div class="vase-container" style="position: relative; width: 220px; height: 260px;">
               <canvas id="campaign-vase-canvas-${selectedCampaignId}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; display: block;"></canvas>
-              <div class="vase-progress-value" style="font-size: 26px; font-weight: 800; color: #ffffff; text-shadow: 0 2px 10px rgba(0,0,0,0.65), 0 0 15px rgba(255,193,7,0.45); pointer-events: none; z-index: 6; position: absolute; top: 58%; left: 50%; transform: translate(-50%, -50%); transition: all 0.3s ease;">${progressPercent}%</div>
+              <div class="vase-progress-value" style="font-size: 26px; font-weight: 800; color: #ffffff; text-shadow: 0 2px 10px rgba(0,0,0,0.65), 0 0 15px rgba(255,193,7,0.45); pointer-events: none; z-index: 6; position: absolute; top: 58%; left: 50%; transform: translate(-50%, -50%); transition: all 0.3s ease;">${progressPercentDisplay}</div>
             </div>
             
             <!-- Fireworks Celebration Overlay Canvas -->
@@ -5090,7 +5112,7 @@ document.addEventListener('DOMContentLoaded', () => {
               <div class="grand-glass-bucket" style="width: 100%; height: 100%; background: rgba(255, 255, 255, 0.03); border: 3px solid rgba(255, 255, 255, 0.28); border-top: 1.5px solid rgba(255, 255, 255, 0.5); border-radius: 8px 8px 36px 36px; position: relative; overflow: hidden; box-shadow: 0 16px 36px rgba(0,0,0,0.2), inset 0 4px 15px rgba(255,255,255,0.1), inset 0 -10px 25px rgba(0,0,0,0.1); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 2;">
                 <!-- HTML5 Canvas liquid renderer -->
                 <canvas id="campaign-bucket-canvas-${selectedCampaignId}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; display: block;"></canvas>
-                <div class="grand-bucket-progress-value" style="font-size: 26px; font-weight: 800; color: #ffffff; text-shadow: 0 2px 10px rgba(0,0,0,0.65), 0 0 15px rgba(255,255,255,0.25); pointer-events: none; z-index: 6; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); transition: all 0.3s ease;">${progressPercent}%</div>
+                <div class="grand-bucket-progress-value" style="font-size: 26px; font-weight: 800; color: #ffffff; text-shadow: 0 2px 10px rgba(0,0,0,0.65), 0 0 15px rgba(255,255,255,0.25); pointer-events: none; z-index: 6; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); transition: all 0.3s ease;">${progressPercentDisplay}</div>
               </div>
               
               <!-- Dynamic Target Markers Overlaid -->
@@ -5134,13 +5156,65 @@ document.addEventListener('DOMContentLoaded', () => {
           ${visualHtml}
           
           <div class="campaign-dates-desc" style="text-align: center; margin-top: 14px; margin-bottom: 4px;">
-            <span style="font-size:13.5px; color:var(--text-main); font-weight:700;"><i class="fa-solid fa-calculator" style="color:var(--primary); margin-right:4px;"></i> Total Chanted: ${globalHours.toFixed(1)} / ${targetHours} hours</span>
+            <span style="font-size:14px; color:var(--text-main); font-weight:700;"><i class="fa-solid fa-calculator" style="color:var(--primary); margin-right:4px;"></i> Total Chanted: ${globalHours.toFixed(1)} / ${targetHours} hours (${progressPercentDisplay})</span>
           </div>
- 
-          <div class="campaign-est-completion" style="text-align: center; font-size: 12px; color: var(--text-muted); margin-bottom: 14px; font-weight: 500;">
-            <i class="fa-regular fa-clock" style="color:var(--primary); margin-right:4px;"></i> ${estCompletionStr}
+
+          <!-- Highlighted Pace & Countdown Showcase Card -->
+          <div class="campaign-pace-highlight-card">
+            <div class="campaign-pace-header">
+              <div class="campaign-pace-title">
+                <span style="background: var(--primary); color: #fff; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; box-shadow: 0 2px 6px rgba(var(--primary-rgb), 0.4);">
+                  <i class="fa-solid fa-bullseye"></i>
+                </span>
+                <span>Pace & Trajectory</span>
+              </div>
+              <span style="font-size: 11px; font-weight: 700; color: var(--primary); background: rgba(var(--primary-rgb), 0.12); border: 1px solid rgba(var(--primary-rgb), 0.25); padding: 3px 9px; border-radius: 12px; display: flex; align-items: center; gap: 4px;">
+                <i class="fa-regular fa-clock"></i> ${daysLeftBadge}
+              </span>
+            </div>
+
+            <div class="campaign-pace-grid">
+              <!-- Box 1 (Left): Time Left Countdown -->
+              <div class="campaign-pace-box">
+                <div class="campaign-pace-label">
+                  <i class="fa-solid fa-hourglass-half" style="color: var(--primary);"></i> Time Left
+                </div>
+                <div class="campaign-pace-val-large" style="font-size: 17px; margin-top: 2px;">
+                  ${timeLeftVal}
+                </div>
+                <div class="campaign-pace-sub">
+                  ${timeLeftSub}
+                </div>
+              </div>
+
+              <!-- Box 2 (Center): Required Ideal Daily Pace (Primary Highlight) -->
+              <div class="campaign-pace-box primary-highlight">
+                <div class="campaign-pace-label">
+                  <i class="fa-solid fa-fire" style="color: #ff9800;"></i> Ideal Daily Pace
+                </div>
+                <div class="campaign-pace-val-large" style="color: var(--primary); font-size: 18px;">
+                  ${idealPaceVal}
+                </div>
+                <div class="campaign-pace-sub">
+                  ${idealPaceSub}
+                </div>
+              </div>
+
+              <!-- Box 3 (Right): Projected Completion Date -->
+              <div class="campaign-pace-box">
+                <div class="campaign-pace-label">
+                  <i class="fa-regular fa-calendar-check" style="color: var(--primary);"></i> Est. Finish
+                </div>
+                <div class="campaign-pace-val-large" style="font-size: 16px; margin-top: 2px;">
+                  ${estFinishVal}
+                </div>
+                <div class="campaign-pace-sub">
+                  ${estFinishSub}
+                </div>
+              </div>
+            </div>
           </div>
- 
+
           <!-- SGI Blocks Contribution Leaderboard -->
           <div class="card campaign-leaderboard-card">
             <h3 class="leaderboard-title"><i class="fa-solid fa-ranking-star"></i> SGI Blocks Leaderboard</h3>
@@ -5332,7 +5406,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const targetHours = targets[selectedCampaignId] || 100;
       const globalSeconds = campaignContribs.reduce((sum, item) => sum + item.durationSeconds, 0);
       const globalHours = globalSeconds / 3600;
-      const progressPercent = Math.min(100, Math.round((globalHours / targetHours) * 100));
+      const rawPercent = (globalHours / targetHours) * 100;
+      const progressPercent = Math.min(100, Math.max(globalHours > 0 ? 3 : 0, Math.round(rawPercent)));
       
       const campaignBlockTotals = {};
       blocksList.forEach(b => {

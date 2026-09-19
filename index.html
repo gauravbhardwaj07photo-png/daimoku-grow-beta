@@ -215,20 +215,14 @@
               <button id="btn-manual-gong" class="btn-icon-gong" title="Sound Bell"><i class="fa-solid fa-bell"></i></button>
             </div>
 
-            <!-- Target & Campaign Associations Dropdowns -->
-            <div class="target-link-box double-selects" style="display:flex; gap:10px; margin: 12px 0;">
-              <div style="flex:1; display:flex; flex-direction:column; gap:4px;">
-                <label for="timer-personal-select" style="font-size:11px; font-weight:600; color:var(--text-muted);"><i class="fa-solid fa-bullseye"></i> Personal Target:</label>
+            <!-- Personal Target Link Dropdown (Chanting is automatically added to active SGI campaigns) -->
+            <div class="target-link-box" style="margin: 12px 0;">
+              <div style="width:100%; display:flex; flex-direction:column; gap:4px;">
+                <label for="timer-personal-select" style="font-size:11px; font-weight:600; color:var(--text-muted);"><i class="fa-solid fa-bullseye"></i> Connect to Personal Target (Optional):</label>
                 <select id="timer-personal-select" style="width:100%; border:var(--border); border-radius:10px; padding:10px; background:var(--accent-cream); color:var(--text-main); font-size:13px; outline:none;">
                   <option value="">-- General Chanting (None) --</option>
                 </select>
                 <span id="timer-target-pace-tip" style="font-size: 10px; color: var(--primary); font-weight: 600; display: none; margin-top: 2px;"></span>
-              </div>
-              <div id="timer-campaign-select-container" style="flex:1; display:flex; flex-direction:column; gap:4px;">
-                <label for="timer-campaign-select" style="font-size:11px; font-weight:600; color:var(--text-muted);"><i class="fa-solid fa-bullhorn"></i> SGI Campaign:</label>
-                <select id="timer-campaign-select" style="width:100%; border:var(--border); border-radius:10px; padding:10px; background:var(--accent-cream); color:var(--text-main); font-size:13px; outline:none;">
-                  <option value="">-- General Chanting (None) --</option>
-                </select>
               </div>
             </div>
 
@@ -260,20 +254,12 @@
                 <label for="log-date">Date</label>
                 <input type="date" id="log-date" required>
               </div>
-              <div class="form-group-row" style="margin-bottom:14px; gap:10px;">
-                <div class="form-group" style="flex:1; margin-bottom:0;">
-                  <label for="manual-personal-select"><i class="fa-solid fa-bullseye"></i> Personal Target</label>
-                  <select id="manual-personal-select" style="width:100%;">
-                    <option value="">-- General Chanting (None) --</option>
-                  </select>
-                  <span id="manual-target-pace-tip" style="font-size: 10px; color: var(--primary); font-weight: 600; display: none; margin-top: 2px;"></span>
-                </div>
-                <div id="manual-campaign-select-container" class="form-group" style="flex:1; margin-bottom:0;">
-                  <label for="manual-campaign-select"><i class="fa-solid fa-bullhorn"></i> SGI Campaign</label>
-                  <select id="manual-campaign-select" style="width:100%;">
-                    <option value="">-- General Chanting (None) --</option>
-                  </select>
-                </div>
+              <div class="form-group" style="margin-bottom:14px;">
+                <label for="manual-personal-select"><i class="fa-solid fa-bullseye"></i> Connect to Personal Target (Optional)</label>
+                <select id="manual-personal-select" style="width:100%; border:var(--border); border-radius:10px; padding:10px; background:var(--accent-cream); color:var(--text-main); font-size:13px; outline:none;">
+                  <option value="">-- General Chanting (None) --</option>
+                </select>
+                <span id="manual-target-pace-tip" style="font-size: 10px; color: var(--primary); font-weight: 600; display: none; margin-top: 2px;"></span>
               </div>
               <button type="submit" class="btn btn-secondary btn-full"><i class="fa-solid fa-plus"></i> Add Session</button>
             </form>
