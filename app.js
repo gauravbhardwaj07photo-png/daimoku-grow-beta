@@ -5447,6 +5447,7 @@ document.addEventListener('DOMContentLoaded', () => {
     container.innerHTML = '<div style="font-size:12px; color:var(--text-muted); padding:10px 0;"><i class="fa-solid fa-spinner fa-spin"></i> Loading users...</div>';
     
     try {
+      const currentUser = MockFirebase.auth.getCurrentUser();
       const users = await MockFirebase.db.getAllUsers();
       container.innerHTML = '';
       
