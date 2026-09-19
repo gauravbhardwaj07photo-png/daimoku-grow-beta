@@ -4233,16 +4233,24 @@ body.theme-forest-dark .streak-badge {
   left: -280px;
   width: 280px;
   height: 100vh;
-  background: rgba(18, 12, 30, 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--accent-cream);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  border-right: var(--border);
   z-index: 1600;
   display: flex;
   flex-direction: column;
   transition: left 0.3s cubic-bezier(0.1, 0.9, 0.2, 1);
-  box-shadow: 10px 0 30px rgba(0, 0, 0, 0.3);
+  box-shadow: 10px 0 30px var(--shadow);
 }
+
+body.theme-forest-dark .side-menu,
+body.diurnal-night .side-menu {
+  background: rgba(18, 12, 30, 0.92);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 10px 0 30px rgba(0, 0, 0, 0.5);
+}
+
 .side-menu.active {
   left: 0;
 }
@@ -4253,7 +4261,7 @@ body.theme-forest-dark .streak-badge {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: var(--border);
   box-sizing: border-box;
 }
 .side-menu-user-info {
@@ -4271,7 +4279,7 @@ body.theme-forest-dark .streak-badge {
   align-items: center;
   justify-content: center;
   font-size: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: var(--border);
 }
 .side-menu-user-details {
   display: flex;
@@ -4279,7 +4287,7 @@ body.theme-forest-dark .streak-badge {
 }
 #side-menu-username {
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-main);
   max-width: 140px;
   white-space: nowrap;
@@ -4287,8 +4295,9 @@ body.theme-forest-dark .streak-badge {
   text-overflow: ellipsis;
 }
 #side-menu-level {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text-muted);
+  font-weight: 500;
 }
 .btn-close-menu {
   background: none;
@@ -4324,9 +4333,9 @@ body.theme-forest-dark .streak-badge {
   padding: 12px 24px;
   background: none;
   border: none;
-  color: var(--text-muted);
+  color: var(--text-main);
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   text-align: left;
   cursor: pointer;
   outline: none;
@@ -4343,22 +4352,22 @@ body.theme-forest-dark .streak-badge {
   transition: transform 0.2s;
 }
 .side-menu-item:hover {
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--text-main);
+  background: var(--primary-light);
+  color: var(--primary);
 }
 .side-menu-item:hover span {
   transform: translateX(4px);
 }
 .side-menu-item.active {
-  background: rgba(var(--primary-rgb), 0.1);
+  background: var(--primary-light);
   color: var(--primary);
   border-left: 3px solid var(--primary);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .side-menu-footer {
   padding: 16px 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: var(--border);
   box-sizing: border-box;
 }
 .side-menu-logout-btn {
@@ -4367,12 +4376,12 @@ body.theme-forest-dark .streak-badge {
   gap: 12px;
   width: 100%;
   padding: 10px 16px;
-  background: rgba(211, 47, 47, 0.1);
-  border: 1px solid rgba(211, 47, 47, 0.2);
+  background: rgba(217, 83, 79, 0.08);
+  border: 1px solid rgba(217, 83, 79, 0.25);
   border-radius: 8px;
-  color: #e57373;
+  color: var(--accent-danger);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   outline: none;
   justify-content: center;
@@ -4380,8 +4389,8 @@ body.theme-forest-dark .streak-badge {
   box-sizing: border-box;
 }
 .side-menu-logout-btn:hover {
-  background: rgba(211, 47, 47, 0.2);
-  color: #ef5350;
+  background: rgba(217, 83, 79, 0.18);
+  color: var(--accent-danger);
 }
 
 
