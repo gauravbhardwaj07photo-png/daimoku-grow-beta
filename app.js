@@ -458,14 +458,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnTimerStop = document.getElementById('btn-timer-stop');
   const btnTimerCancel = document.getElementById('btn-timer-cancel');
   
-  // Cosmic Mode Controls
-  const btnToggleCosmicMode = document.getElementById('btn-toggle-cosmic-mode');
-  const cosmicModeOverlay = document.getElementById('cosmic-mode-overlay');
-  const btnExitCosmicMode = document.getElementById('btn-exit-cosmic-mode');
-  const cosmicTimerDisplay = document.getElementById('cosmic-timer-display');
-  const cosmicTimerState = document.getElementById('cosmic-timer-state');
-  const btnCosmicControl = document.getElementById('btn-cosmic-control');
-  
   // Manual Log
   const manualLogForm = document.getElementById('manual-log-form');
   const logHours = document.getElementById('log-hours');
@@ -2024,15 +2016,11 @@ document.addEventListener('DOMContentLoaded', () => {
     
     updateAllianceChantingState(true, 0);
     
-    syncCosmicTimerUI();
-    
     timerInterval = setInterval(() => {
       const now = Date.now();
       const elapsedMs = now - timerStartTime + timerAccumulatedPaused;
       
       saveActiveTimer(); // Keep active timer updated with the last active tick
-      
-      syncCosmicTimerUI();
       
       let displayTimeStr = '00:00:00';
       if (timerType === 'stopwatch') {
@@ -2091,8 +2079,6 @@ document.addEventListener('DOMContentLoaded', () => {
     saveActiveTimer();
     
     updateAllianceChantingState(false, timerSecondsElapsed);
-    
-    syncCosmicTimerUI();
   }
 
   // Stop and record
@@ -2145,7 +2131,6 @@ document.addEventListener('DOMContentLoaded', () => {
     PlantRenderer.updateState(parseFloat(totalHours), state.health, state.isDead, false, state.settings.treeTargetHours || 333, state.targets.filter(t => !t.completed), state.settings.skyBackground || 'diurnal', state.streak || 0);
     saveActiveTimer();
     resetTimerDisplay();
-    syncCosmicTimerUI();
   }
 
   function saveChantSession(durationSeconds, method) {
@@ -5180,19 +5165,19 @@ document.addEventListener('DOMContentLoaded', () => {
               }).join('')}
             </div>
             
-            <!-- Personal Campaign Contribution Info Box with Fills left to right -->
-            <div class="personal-campaign-contribution" style="margin-top: 16px; padding: 12px 14px; border: 1px dashed rgba(var(--primary-rgb), 0.25); border-radius: 12px; background: rgba(var(--primary-rgb), 0.02); display: flex; flex-direction: column; gap: 6px;">
-              <div style="display:flex; justify-content:space-between; align-items:center; font-size:13px; font-weight:600; color:var(--text-main);">
-                <span class="personal-contrib-label" style="display:flex; align-items:center; gap:6px;">
-                  <i class="fa-solid fa-hands-praying" style="color:var(--primary);"></i>
-                  <strong>Your Personal Contribution</strong>
+            <!-- Personal Campaign Contribution Info Box -->
+            <div class="personal-campaign-contribution" style="margin-top: 14px; padding: 12px 14px; border: 1px dashed rgba(var(--primary-rgb), 0.35); border-radius: 12px; background: rgba(var(--primary-rgb), 0.04); display: flex; flex-direction: column; gap: 8px; width: 100%; box-sizing: border-box;">
+              <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <span class="personal-contrib-label" style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: var(--text-main);">
+                  <i class="fa-solid fa-hands-praying" style="color: var(--primary); font-size: 14px;"></i>
+                  <span>Your Personal Contribution</span>
                 </span>
-                <span class="personal-contrib-value" style="color:var(--primary); font-weight:700;">${personalHours.toFixed(1)} hrs</span>
+                <span class="personal-contrib-value" style="color: var(--primary); font-weight: 800; font-size: 14px; margin-left: 12px; white-space: nowrap;">${personalHours.toFixed(1)} hrs</span>
               </div>
-              <div class="block-progress-track" style="background: rgba(255,255,255,0.05); height: 8px; border-radius: 4px; overflow: hidden;">
-                <div class="block-progress-fill" style="width: ${Math.min(100, Math.round((personalHours / Math.max(blockSummaries.find(b => b.isOwn).hours, 1)) * 100))}%; height: 100%; border-radius: 4px;"></div>
+              <div class="block-progress-track" style="background: rgba(0, 0, 0, 0.08); height: 8px; border-radius: 4px; overflow: hidden; width: 100%; position: relative;">
+                <div class="block-progress-fill" style="width: ${Math.min(100, Math.max(personalHours > 0 ? 3 : 0, Math.round((personalHours / Math.max(blockSummaries.find(b => b.isOwn).hours, 1)) * 100)))}%; background: var(--primary); height: 100%; border-radius: 4px; transition: width 0.4s ease;"></div>
               </div>
-              <div style="font-size: 10px; color: var(--text-muted); text-align: right; font-weight: 500;">
+              <div style="font-size: 11px; color: var(--text-muted); text-align: right; font-weight: 500;">
                 (${Math.round((personalHours / Math.max(blockSummaries.find(b => b.isOwn).hours, 0.001)) * 100)}% of your block's total)
               </div>
             </div>
@@ -5201,14 +5186,14 @@ document.addEventListener('DOMContentLoaded', () => {
           <!-- Block Coordinator Portal (On-Behalf Daimoku Entry) -->
           ${(currentUser.isCoordinator || currentUser.isAdmin) ? `
             <div class="card coordinator-portal-card" style="margin-top: 16px; padding: 16px; border: 1.5px dashed rgba(46, 125, 50, 0.45); border-radius: 14px; background: rgba(46, 125, 50, 0.04);">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px; border-bottom: 1px solid rgba(46, 125, 50, 0.15); padding-bottom: 8px;">
-                <div style="display:flex; align-items:center; gap:8px;">
-                  <span style="background: #2e7d32; color: #fff; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid rgba(46, 125, 50, 0.15); padding-bottom: 8px; flex-wrap: nowrap; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+                  <span style="background: #2e7d32; color: #fff; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0;">
                     <i class="fa-solid fa-clipboard-user"></i>
                   </span>
-                  <h4 style="margin:0; font-size:14px; font-weight:700; color:var(--text-main);">Block Coordinator Portal</h4>
+                  <h4 style="margin: 0; font-size: 13.5px; font-weight: 700; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Coordinator Portal</h4>
                 </div>
-                <span style="background: rgba(46, 125, 50, 0.15); color: #2e7d32; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 12px;">
+                <span style="background: rgba(46, 125, 50, 0.15); color: #2e7d32; font-size: 10.5px; font-weight: 700; padding: 4px 8px; border-radius: 12px; white-space: nowrap; flex-shrink: 0;">
                   <i class="fa-solid fa-users"></i> ${currentUser.block} Block
                 </span>
               </div>
@@ -5218,30 +5203,30 @@ document.addEventListener('DOMContentLoaded', () => {
               </p>
               
               <form class="coordinator-bulk-entry-form" data-campaign-id="${selectedCampaignId}" style="display: flex; flex-direction: column; gap: 10px;">
-                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                  <div style="flex: 1.5; min-width: 130px;">
-                    <label style="font-size: 10.5px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 3px;">
-                      On Behalf of (Member Name / Note)
-                    </label>
-                    <input type="text" class="coord-member-name" placeholder="e.g. Mrs. Sharma / Sunday Meeting" required style="width: 100%; padding: 8px 10px; border-radius: 8px; border: var(--border); background: var(--accent-cream); color: var(--text-main); font-size: 13px; outline: none; box-sizing: border-box;">
-                  </div>
-                  
-                  <div style="flex: 1; min-width: 85px;">
-                    <label style="font-size: 10.5px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 3px;">
+                <div style="width: 100%;">
+                  <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 4px;">
+                    On Behalf of (Member Name / Note)
+                  </label>
+                  <input type="text" class="coord-member-name" placeholder="e.g. Mrs. Sharma / Sunday Meeting" required style="width: 100%; padding: 9px 12px; border-radius: 8px; border: var(--border); background: var(--accent-cream); color: var(--text-main); font-size: 13px; outline: none; box-sizing: border-box;">
+                </div>
+                
+                <div style="display: flex; gap: 10px; width: 100%;">
+                  <div style="flex: 1; min-width: 0;">
+                    <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 4px;">
                       Hours Chanted
                     </label>
-                    <input type="number" step="0.1" min="0.1" max="500" class="coord-hours-input" placeholder="e.g. 2.5" required style="width: 100%; padding: 8px 10px; border-radius: 8px; border: var(--border); background: var(--accent-cream); color: var(--text-main); font-size: 13px; outline: none; box-sizing: border-box;">
+                    <input type="number" step="0.1" min="0.1" max="500" class="coord-hours-input" placeholder="e.g. 2.5" required style="width: 100%; padding: 9px 12px; border-radius: 8px; border: var(--border); background: var(--accent-cream); color: var(--text-main); font-size: 13px; outline: none; box-sizing: border-box;">
                   </div>
                   
-                  <div style="flex: 1; min-width: 110px;">
-                    <label style="font-size: 10.5px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 3px;">
+                  <div style="flex: 1; min-width: 0;">
+                    <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 4px;">
                       Date
                     </label>
-                    <input type="date" class="coord-date-input" value="${new Date().toISOString().split('T')[0]}" max="${new Date().toISOString().split('T')[0]}" required style="width: 100%; padding: 8px 10px; border-radius: 8px; border: var(--border); background: var(--accent-cream); color: var(--text-main); font-size: 13px; outline: none; box-sizing: border-box;">
+                    <input type="date" class="coord-date-input" value="${new Date().toISOString().split('T')[0]}" max="${new Date().toISOString().split('T')[0]}" required style="width: 100%; padding: 9px 10px; border-radius: 8px; border: var(--border); background: var(--accent-cream); color: var(--text-main); font-size: 13px; outline: none; box-sizing: border-box;">
                   </div>
                 </div>
                 
-                <button type="submit" class="btn btn-primary" style="width: 100%; height: 38px; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; font-weight: 700; border-radius: 10px; margin-top: 2px;">
+                <button type="submit" class="btn btn-primary" style="width: 100%; height: 42px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 13.5px; font-weight: 700; border-radius: 10px; margin-top: 4px;">
                   <i class="fa-solid fa-plus-circle"></i> Submit Bulk Hours for Block
                 </button>
               </form>
@@ -8274,232 +8259,6 @@ document.addEventListener('DOMContentLoaded', () => {
         console.warn("Failed to update finish status:", err);
       }
     }
-  }
-
-  // --- Ceremony in the Air (Pagoda) Animation & UI logic ---
-  let cosmicAnimationId = null;
-  let isCosmicModeActive = false;
-
-  function drawCosmicPagoda(progress) {
-    const canvas = document.getElementById('cosmic-pagoda-canvas');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    
-    // Auto resize canvas
-    const rect = canvas.getBoundingClientRect();
-    if (canvas.width !== rect.width || canvas.height !== rect.height) {
-      canvas.width = rect.width;
-      canvas.height = rect.height;
-    }
-    
-    const w = canvas.width;
-    const h = canvas.height;
-    ctx.clearRect(0, 0, w, h);
-    
-    // Draw background nebula dust particles
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
-    const numStars = 25;
-    const time = Date.now();
-    for (let i = 0; i < numStars; i++) {
-      const sx = ((Math.sin(i * 456.78) + 1) / 2) * w;
-      const sy = ((Math.cos(i * 123.45) + 1) / 2) * h;
-      const sz = ((Math.sin(time * 0.001 + i) + 1) / 2) * 1.5 + 0.5;
-      ctx.beginPath();
-      ctx.arc(sx, sy, sz, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    
-    // Pagoda height ratio matches progress (0.0 to 1.0)
-    // We let the pagoda rise from the bottom Y level (h) up to h - 180
-    const maxRise = 180;
-    const rise = progress * maxRise;
-    
-    const bx = w / 2;
-    const by = h - 20 - rise; // Base Y position
-    
-    // Draw earth energy field glow
-    const gradGlow = ctx.createRadialGradient(bx, by + 10, 10, bx, by + 10, 60);
-    gradGlow.addColorStop(0, 'rgba(103, 58, 183, 0.3)');
-    gradGlow.addColorStop(1, 'rgba(103, 58, 183, 0)');
-    ctx.fillStyle = gradGlow;
-    ctx.beginPath();
-    ctx.arc(bx, by + 10, 60, 0, Math.PI, true);
-    ctx.fill();
-    
-    ctx.save();
-    ctx.shadowBlur = 15;
-    ctx.shadowColor = 'rgba(255, 193, 7, 0.5)';
-    
-    // Pagoda colors
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.07)';
-    ctx.strokeStyle = 'rgba(255, 193, 7, 0.6)';
-    ctx.lineWidth = 1.5;
-    
-    // Draw 5 tiers from bottom to top
-    const tierHeights = [20, 18, 16, 14, 12];
-    const tierWidths = [44, 38, 32, 26, 20];
-    
-    let currentY = by;
-    for (let i = 0; i < 5; i++) {
-      const th = tierHeights[i];
-      const tw = tierWidths[i];
-      
-      // Draw body
-      ctx.beginPath();
-      ctx.rect(bx - tw/2, currentY - th, tw, th);
-      ctx.fill();
-      ctx.stroke();
-      
-      // Draw roof (flared edges)
-      ctx.beginPath();
-      ctx.moveTo(bx - tw/2 - 6, currentY - th);
-      ctx.quadraticCurveTo(bx, currentY - th - 3, bx + tw/2 + 6, currentY - th);
-      ctx.lineTo(bx + tw/2, currentY - th - 4);
-      ctx.lineTo(bx - tw/2, currentY - th - 4);
-      ctx.closePath();
-      ctx.fillStyle = 'rgba(255, 193, 7, 0.2)';
-      ctx.fill();
-      ctx.stroke();
-      
-      currentY -= (th + 4);
-    }
-    
-    // Draw spire (Sorin) on top
-    ctx.beginPath();
-    ctx.moveTo(bx, currentY);
-    ctx.lineTo(bx, currentY - 25);
-    ctx.stroke();
-    
-    // Spire rings
-    for (let r = 0; r < 5; r++) {
-      ctx.beginPath();
-      ctx.arc(bx, currentY - 6 - r*4, 3 - r*0.4, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-    
-    // Glowing jewel at the very top (chintamani)
-    ctx.fillStyle = '#ffc107';
-    ctx.shadowBlur = 20;
-    ctx.shadowColor = '#ffc107';
-    ctx.beginPath();
-    ctx.arc(bx, currentY - 26, 3, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-    
-    // Orbiting Golden Letters (Nam-myoho-renge-kyo)
-    const letters = ["南", "無", "妙", "法", "蓮", "華", "経"];
-    ctx.fillStyle = 'rgba(255, 193, 7, 0.8)';
-    ctx.font = 'bold 11px Inter, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    
-    const radiusX = 80;
-    const radiusY = 15;
-    const orbitSpeed = time * 0.0008;
-    
-    letters.forEach((char, idx) => {
-      const angle = orbitSpeed + (idx * (Math.PI * 2 / letters.length));
-      const lx = bx + Math.cos(angle) * radiusX;
-      const ly = (by - 50) + Math.sin(angle) * radiusY;
-      
-      const scale = (Math.sin(angle) + 1) / 2 * 0.4 + 0.8;
-      ctx.save();
-      ctx.globalAlpha = (Math.sin(angle) + 1.2) / 2.2;
-      ctx.translate(lx, ly);
-      ctx.scale(scale, scale);
-      ctx.fillText(char, 0, 0);
-      ctx.restore();
-    });
-  }
-
-  function startCosmicAnimation() {
-    if (cosmicAnimationId) return;
-    function loop() {
-      if (!isCosmicModeActive) return;
-      
-      let progress = 0;
-      if (timerType === 'countdown' && countdownTargetSeconds > 0) {
-        progress = Math.min(1.0, timerSecondsElapsed / countdownTargetSeconds);
-      } else {
-        // stopwatch mode: loop every 10 mins (600s)
-        progress = (timerSecondsElapsed % 600) / 600;
-      }
-      
-      drawCosmicPagoda(progress);
-      cosmicAnimationId = requestAnimationFrame(loop);
-    }
-    loop();
-  }
-
-  function stopCosmicAnimation() {
-    if (cosmicAnimationId) {
-      cancelAnimationFrame(cosmicAnimationId);
-      cosmicAnimationId = null;
-    }
-  }
-
-  function syncCosmicTimerUI() {
-    if (!isCosmicModeActive) return;
-    if (cosmicTimerDisplay) {
-      cosmicTimerDisplay.textContent = timerTimeDisplay.textContent;
-    }
-    if (cosmicTimerState) {
-      cosmicTimerState.textContent = timerStateLabel.textContent;
-    }
-    if (btnCosmicControl) {
-      if (timerState === 'running') {
-        btnCosmicControl.innerHTML = `<i class="fa-solid fa-pause"></i> Pause`;
-        btnCosmicControl.className = "btn btn-secondary";
-      } else {
-        btnCosmicControl.innerHTML = `<i class="fa-solid fa-play"></i> Start`;
-        btnCosmicControl.className = "btn btn-primary";
-      }
-    }
-  }
-
-  function enterCosmicMode() {
-    isCosmicModeActive = true;
-    if (cosmicModeOverlay) cosmicModeOverlay.style.display = 'block';
-    if (btnToggleCosmicMode) {
-      btnToggleCosmicMode.innerHTML = `<i class="fa-solid fa-sun"></i> Exit Ceremony in the Air`;
-    }
-    syncCosmicTimerUI();
-    startCosmicAnimation();
-  }
-
-  function exitCosmicMode() {
-    isCosmicModeActive = false;
-    if (cosmicModeOverlay) cosmicModeOverlay.style.display = 'none';
-    if (btnToggleCosmicMode) {
-      btnToggleCosmicMode.innerHTML = `<i class="fa-solid fa-moon"></i> Enter Ceremony in the Air`;
-    }
-    stopCosmicAnimation();
-  }
-
-  if (btnToggleCosmicMode) {
-    btnToggleCosmicMode.addEventListener('click', () => {
-      if (isCosmicModeActive) {
-        exitCosmicMode();
-      } else {
-        enterCosmicMode();
-      }
-    });
-  }
-
-  if (btnExitCosmicMode) {
-    btnExitCosmicMode.addEventListener('click', () => {
-      exitCosmicMode();
-    });
-  }
-
-  if (btnCosmicControl) {
-    btnCosmicControl.addEventListener('click', () => {
-      if (timerState === 'running') {
-        if (btnTimerPause) btnTimerPause.click();
-      } else {
-        if (btnTimerStart) btnTimerStart.click();
-      }
-    });
   }
 
   // --- Tree of Wisdom Leaf Pinned Determinations Logic ---
