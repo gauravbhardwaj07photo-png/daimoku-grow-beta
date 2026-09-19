@@ -5565,6 +5565,7 @@ document.addEventListener('DOMContentLoaded', () => {
               await MockFirebase.db.adminUpdateUser(oldEmail, newEmail, newUsername, newBlock, newIsAdmin, newIsCoordinator);
               alert("Member account updated successfully!");
               
+              const currentUser = MockFirebase.auth.getCurrentUser();
               if (currentUser && currentUser.email.toLowerCase() === oldEmail.toLowerCase()) {
                 currentUser.username = newUsername;
                 currentUser.email = newEmail;
@@ -7833,6 +7834,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const alliance = alliances.find(a => a.id === state.activeAllianceId);
     if (!alliance) return;
     
+    const currentUser = MockFirebase.auth.getCurrentUser();
     const email = currentUser ? currentUser.email : 'guest';
     const member = alliance.members.find(m => m.email.toLowerCase() === email.toLowerCase());
     if (member) {
@@ -7878,6 +7880,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     
+    const currentUser = MockFirebase.auth.getCurrentUser();
     const email = currentUser ? currentUser.email : 'guest';
     const selfMember = alliance.members.find(m => m.email.toLowerCase() === email.toLowerCase());
     const otherMembers = alliance.members.filter(m => m.email.toLowerCase() !== email.toLowerCase());
@@ -8100,6 +8103,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (createAllianceForm) {
     createAllianceForm.addEventListener('submit', async (e) => {
       e.preventDefault();
+      const currentUser = MockFirebase.auth.getCurrentUser();
       const targetInput = document.getElementById('alliance-target-input');
       const shareUsernameCheck = document.getElementById('alliance-share-username');
       
@@ -8149,6 +8153,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (joinAllianceForm) {
     joinAllianceForm.addEventListener('submit', async (e) => {
       e.preventDefault();
+      const currentUser = MockFirebase.auth.getCurrentUser();
       const codeInput = document.getElementById('alliance-code-input');
       const shareUsernameCheck = document.getElementById('alliance-join-share-username');
       
@@ -8245,6 +8250,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const alliance = alliances.find(a => a.id === state.activeAllianceId);
     if (!alliance) return;
     
+    const currentUser = MockFirebase.auth.getCurrentUser();
     const email = currentUser ? currentUser.email : 'guest';
     const member = alliance.members.find(m => m.email.toLowerCase() === email.toLowerCase());
     if (member) {
@@ -8356,6 +8362,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const alliance = alliances.find(a => a.id === state.activeAllianceId);
     if (!alliance) return;
     
+    const currentUser = MockFirebase.auth.getCurrentUser();
     const email = currentUser ? currentUser.email : 'guest';
     const member = alliance.members.find(m => m.email.toLowerCase() === email.toLowerCase());
     if (member) {
