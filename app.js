@@ -1645,8 +1645,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // Progress Card / Flanking Stats
-    const hours = Math.floor(state.totalSeconds / 3600);
-    const mins = Math.round((state.totalSeconds % 3600) / 60);
+    const totalMinutes = Math.floor(state.totalSeconds / 60);
+    const hours = Math.floor(totalMinutes / 60);
+    const mins = totalMinutes % 60;
     statTotalHours.textContent = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
     if (journeyPercentValue) {
       journeyPercentValue.textContent = `${progressPercent}%`;
@@ -2528,8 +2529,11 @@ document.addEventListener('DOMContentLoaded', () => {
         section.classList.add('collapsed');
       }
       
-      const totalHours = group.totalDuration >= 3600 ? `${Math.floor(group.totalDuration / 3600)}h ` : '';
-      const totalMins = `${Math.round((group.totalDuration % 3600) / 60)}m`;
+      const totalMinutes = Math.floor(group.totalDuration / 60);
+      const gHours = Math.floor(totalMinutes / 60);
+      const gMins = totalMinutes % 60;
+      const totalHours = gHours > 0 ? `${gHours}h ` : '';
+      const totalMins = `${gMins}m`;
       const totalText = `Total: ${totalHours}${totalMins}`;
       
       section.innerHTML = `
@@ -4114,8 +4118,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const div = document.createElement('div');
       div.className = 'event-item chanting';
       
-      const sh = Math.floor(s.durationSeconds / 3600);
-      const sm = Math.round((s.durationSeconds % 3600) / 60);
+      const totalMins = Math.floor(s.durationSeconds / 60);
+      const sh = Math.floor(totalMins / 60);
+      const sm = totalMins % 60;
       const durationText = sh > 0 ? `${sh}h ${sm}m` : `${sm}m`;
       const timeStr = new Date(s.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       
@@ -5159,14 +5164,14 @@ document.addEventListener('DOMContentLoaded', () => {
             <span style="font-size:14px; color:var(--text-main); font-weight:700;"><i class="fa-solid fa-calculator" style="color:var(--primary); margin-right:4px;"></i> Total Chanted: ${globalHours.toFixed(1)} / ${targetHours} hours (${progressPercentDisplay})</span>
           </div>
 
-          <!-- Highlighted Pace & Countdown Showcase Card -->
+          <!-- Highlighted Path to Victory & Countdown Showcase Card -->
           <div class="campaign-pace-highlight-card">
             <div class="campaign-pace-header">
               <div class="campaign-pace-title">
                 <span style="background: var(--primary); color: #fff; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; box-shadow: 0 2px 6px rgba(var(--primary-rgb), 0.4);">
-                  <i class="fa-solid fa-bullseye"></i>
+                  <i class="fa-solid fa-trophy"></i>
                 </span>
-                <span>Pace & Trajectory</span>
+                <span>Path to Victory</span>
               </div>
               <span style="font-size: 11px; font-weight: 700; color: var(--primary); background: rgba(var(--primary-rgb), 0.12); border: 1px solid rgba(var(--primary-rgb), 0.25); padding: 3px 9px; border-radius: 12px; display: flex; align-items: center; gap: 4px;">
                 <i class="fa-regular fa-clock"></i> ${daysLeftBadge}
@@ -5174,10 +5179,10 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
 
             <div class="campaign-pace-grid">
-              <!-- Box 1 (Left): Time Left Countdown -->
+              <!-- Box 1 (Left): Time Remaining Countdown -->
               <div class="campaign-pace-box">
                 <div class="campaign-pace-label">
-                  <i class="fa-solid fa-hourglass-half" style="color: var(--primary);"></i> Time Left
+                  <i class="fa-solid fa-hourglass-half" style="color: var(--primary);"></i> Time Remaining
                 </div>
                 <div class="campaign-pace-val-large" style="font-size: 17px; margin-top: 2px;">
                   ${timeLeftVal}
@@ -5187,10 +5192,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
               </div>
 
-              <!-- Box 2 (Center): Required Ideal Daily Pace (Primary Highlight) -->
+              <!-- Box 2 (Center): Daily Victory Stride (Primary Highlight) -->
               <div class="campaign-pace-box primary-highlight">
                 <div class="campaign-pace-label">
-                  <i class="fa-solid fa-fire" style="color: #ff9800;"></i> Ideal Daily Pace
+                  <i class="fa-solid fa-fire" style="color: #ff9800;"></i> Daily Victory Stride
                 </div>
                 <div class="campaign-pace-val-large" style="color: var(--primary); font-size: 18px;">
                   ${idealPaceVal}
@@ -5200,10 +5205,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
               </div>
 
-              <!-- Box 3 (Right): Projected Completion Date -->
+              <!-- Box 3 (Right): Projected Victory Date -->
               <div class="campaign-pace-box">
                 <div class="campaign-pace-label">
-                  <i class="fa-regular fa-calendar-check" style="color: var(--primary);"></i> Est. Finish
+                  <i class="fa-regular fa-calendar-check" style="color: var(--primary);"></i> Projected Victory
                 </div>
                 <div class="campaign-pace-val-large" style="font-size: 16px; margin-top: 2px;">
                   ${estFinishVal}
