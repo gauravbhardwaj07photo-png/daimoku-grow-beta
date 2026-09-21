@@ -3563,22 +3563,33 @@ body.diurnal-rainforest .block-row.own-block {
   font-size: 13px;
   font-weight: 600;
   color: var(--text-main);
+  flex-wrap: nowrap;
+  gap: 8px;
 }
 
-.block-meta strong,
+.block-meta strong {
+  color: var(--text-main);
+  white-space: nowrap;
+}
+
 .block-meta span {
   color: var(--text-main);
+  white-space: nowrap;
 }
 
 .block-badge {
   font-size: 9px;
   font-weight: 700;
-  padding: 2px 6px;
+  padding: 1px 6px;
   border-radius: 6px;
   text-transform: uppercase;
   background: var(--accent-cream);
   color: var(--accent-wood);
   border: 1px solid rgba(var(--primary-rgb), 0.15);
+  white-space: nowrap;
+  flex-shrink: 0;
+  display: inline-block;
+  line-height: 1.4;
 }
 
 .block-row.own-block .block-badge {

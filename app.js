@@ -3464,9 +3464,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
           ctx.textAlign = 'right';
           ctx.fillStyle = '#ffffff';
-          ctx.font = "bold 12.5px 'Outfit', sans-serif";
-          const dCount = formatDaimokuCount(bHours, true);
-          ctx.fillText(`${bHours.toFixed(1)}h (${dCount})`, 720, ry + 18);
+          ctx.font = "bold 13px 'Outfit', sans-serif";
+          ctx.fillText(`${bHours.toFixed(1)} hrs`, 720, ry + 18);
           ctx.textAlign = 'left';
         });
 
@@ -3480,7 +3479,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.textAlign = 'center';
         ctx.fillStyle = '#ffffff';
         ctx.font = "600 13.5px 'Outfit', sans-serif";
-        ctx.fillText(`🙏 Your Personal Contribution: ${personalHours.toFixed(1)} hrs (~${formatDaimokuCount(personalHours, true)})  •  ${personalPercent}% of ${userBlock} Block`, 400, pFooterY + 23);
+        ctx.fillText(`🙏 Your Personal Contribution: ${personalHours.toFixed(1)} hrs  •  ${personalPercent}% of ${userBlock} Block`, 400, pFooterY + 23);
 
         // Footer
         const footerY = 970;
@@ -3593,7 +3592,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.textAlign = 'center';
         ctx.fillStyle = '#ffffff';
         ctx.font = "600 14px 'Outfit', sans-serif";
-        ctx.fillText(`🙏 Your Personal Contribution: ${personalHours.toFixed(1)} hrs (~${formatDaimokuCount(personalHours, true)})  •  ${personalPercent}% of ${userBlock} Block`, 400, pFooterY + 25);
+        ctx.fillText(`🙏 Your Personal Contribution: ${personalHours.toFixed(1)} hrs  •  ${personalPercent}% of ${userBlock} Block`, 400, pFooterY + 25);
 
         // Footer
         const footerY = 730;
@@ -3692,9 +3691,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
           ctx.textAlign = 'right';
           ctx.fillStyle = '#ffffff';
-          ctx.font = "bold 12.5px 'Outfit', sans-serif";
-          const dCount = formatDaimokuCount(bHours, true);
-          ctx.fillText(`${bHours.toFixed(1)}h (${dCount})`, 720, ry + 18);
+          ctx.font = "bold 13px 'Outfit', sans-serif";
+          ctx.fillText(`${bHours.toFixed(1)} hrs`, 720, ry + 18);
           ctx.textAlign = 'left';
         });
 
@@ -3708,7 +3706,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.textAlign = 'center';
         ctx.fillStyle = '#ffffff';
         ctx.font = "600 14px 'Outfit', sans-serif";
-        ctx.fillText(`🙏 Your Personal Contribution: ${personalHours.toFixed(1)} hrs (~${formatDaimokuCount(personalHours, true)})  •  ${personalPercent}% of ${userBlock} Block`, 400, pFooterY + 25);
+        ctx.fillText(`🙏 Your Personal Contribution: ${personalHours.toFixed(1)} hrs  •  ${personalPercent}% of ${userBlock} Block`, 400, pFooterY + 25);
 
         // Footer
         const footerY = 790;
@@ -5960,13 +5958,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const relPercent = Math.min(100, Math.round((b.hours / maxBlockHours) * 100));
                 return `
                   <div class="block-row ${b.isOwn ? 'own-block' : ''}">
-                    <div class="block-meta" style="display:flex; justify-content:space-between; align-items:center;">
-                      <span style="display:flex; align-items:center; gap:8px;">
-                        <span style="width: 10px; height: 10px; border-radius: 50%; background: ${b.color}; display: inline-block;"></span>
-                        <strong style="color: var(--text-main); font-size: 13px;">${b.name} Block</strong>
-                        ${b.isOwn ? '<span class="block-badge" style="background: rgba(38,166,154,0.15); color: #26a69a; font-size: 9px; padding: 2px 6px; border-radius: 10px; font-weight: 700;">Your Block</span>' : ''}
-                      </span>
-                      <span style="font-size: 13px; font-weight: 600; color: var(--text-main);">${b.hours.toFixed(1)} hrs <span style="font-size:11px; color:var(--text-muted); font-weight:500;">(~${formatDaimokuCount(b.hours, true)})</span></span>
+                    <div class="block-meta" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:nowrap; gap:8px;">
+                      <div style="display:flex; align-items:center; gap:8px; min-width:0; flex-shrink:1;">
+                        <span style="width: 10px; height: 10px; border-radius: 50%; background: ${b.color}; display: inline-block; flex-shrink: 0;"></span>
+                        <strong style="color: var(--text-main); font-size: 13px; white-space: nowrap;">${b.name} Block${b.isOwn ? ' <span class="block-badge" style="background: rgba(38,166,154,0.18); color: #26a69a; font-size: 9px; padding: 2px 6px; border-radius: 6px; font-weight: 700; margin-left: 4px; vertical-align: middle; white-space: nowrap; display: inline-block; flex-shrink: 0;">Your Block</span>' : ''}</strong>
+                      </div>
+                      <span style="font-size: 13.5px; font-weight: 700; color: var(--text-main); white-space: nowrap; flex-shrink: 0;">${b.hours.toFixed(1)} hrs</span>
                     </div>
                     <div class="block-progress-track" style="background: rgba(255,255,255,0.05); height: 8px; border-radius: 4px; overflow: hidden; margin-top: 6px;">
                       <div class="block-progress-fill" style="width: ${relPercent}%; background: ${b.color}; height: 100%; border-radius: 4px; transition: width 0.5s ease;"></div>
@@ -5983,7 +5980,7 @@ document.addEventListener('DOMContentLoaded', () => {
                   <i class="fa-solid fa-hands-praying" style="color: var(--primary); font-size: 14px;"></i>
                   <span>Your Personal Contribution</span>
                 </span>
-                <span class="personal-contrib-value" style="color: var(--primary); font-weight: 800; font-size: 14px; margin-left: 12px; white-space: nowrap;">${personalHours.toFixed(1)} hrs <span style="font-size:11.5px; font-weight:600; color:var(--text-muted);">(~${formatDaimokuCount(personalHours, true)})</span></span>
+                <span class="personal-contrib-value" style="color: var(--primary); font-weight: 800; font-size: 14px; margin-left: 12px; white-space: nowrap;">${personalHours.toFixed(1)} hrs</span>
               </div>
               <div class="block-progress-track" style="background: rgba(0, 0, 0, 0.08); height: 8px; border-radius: 4px; overflow: hidden; width: 100%; position: relative;">
                 <div class="block-progress-fill" style="width: ${Math.min(100, Math.max(personalHours > 0 ? 3 : 0, Math.round((personalHours / Math.max(blockSummaries.find(b => b.isOwn)?.hours || 1, 1)) * 100)))}%; background: var(--primary); height: 100%; border-radius: 4px; transition: width 0.4s ease;"></div>
