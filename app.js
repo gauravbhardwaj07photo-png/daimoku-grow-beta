@@ -3277,7 +3277,7 @@ document.addEventListener('DOMContentLoaded', () => {
       ctx.fillRect(25, 25, cornerSize, cornerSize);
       ctx.fillRect(canvasW - 25 - cornerSize, 25, cornerSize, cornerSize);
       ctx.fillRect(25, canvasH - 25 - cornerSize, cornerSize, cornerSize);
-      ctx.fillRect(canvasW - 25 - cornerSize, canvasH - 25 - cornerSize, cornerSize);
+      ctx.fillRect(canvasW - 25 - cornerSize, canvasH - 25 - cornerSize, cornerSize, cornerSize);
 
       // --- Top Header ---
       drawLotusWatermark(ctx, 400, 68, 36, '#ffd54f');
@@ -5676,14 +5676,15 @@ document.addEventListener('DOMContentLoaded', () => {
           hours: hours,
           seconds: seconds,
           color: color,
-          isOwn: bName.toLowerCase() === currentUser.block.toLowerCase()
+          isOwn: (currentUser && currentUser.block) ? (bName.toLowerCase() === currentUser.block.toLowerCase()) : false
         };
       }).sort((a, b) => b.hours - a.hours);
       
       const maxBlockHours = Math.max(...blockSummaries.map(b => b.hours), 1);
       
+      const userEmail = (currentUser && currentUser.email) ? currentUser.email.toLowerCase() : '';
       const personalSeconds = campaignContribs
-        .filter(item => item.userEmail.toLowerCase() === currentUser.email.toLowerCase())
+        .filter(item => (item.userEmail || '').toLowerCase() === userEmail)
         .reduce((sum, item) => sum + item.durationSeconds, 0);
       const personalHours = personalSeconds / 3600;
       
@@ -5817,7 +5818,7 @@ document.addEventListener('DOMContentLoaded', () => {
         daysLeftBadge: daysLeftBadge,
         blockSummaries: blockSummaries,
         personalHours: personalHours,
-        userBlock: currentUser.block || 'Member',
+        userBlock: (currentUser && currentUser.block) ? currentUser.block : 'Member',
         personalPercent: Math.round((personalHours / Math.max(blockSummaries.find(b => b.isOwn)?.hours || 1, 0.001)) * 100)
       };
       
