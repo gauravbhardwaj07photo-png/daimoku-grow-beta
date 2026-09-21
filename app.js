@@ -5890,8 +5890,13 @@ document.addEventListener('DOMContentLoaded', () => {
           
           ${visualHtml}
           
-          <div class="campaign-dates-desc" style="text-align: center; margin-top: 14px; margin-bottom: 4px;">
-            <span style="font-size:14px; color:var(--text-main); font-weight:700;"><i class="fa-solid fa-calculator" style="color:var(--primary); margin-right:4px;"></i> Total Chanted: ${globalHours.toFixed(1)} / ${targetHours} hours (~${globalDaimokuStr} / ${targetDaimokuStr} Daimoku) (${progressPercentDisplay})</span>
+          <div class="campaign-dates-desc" style="text-align: center; margin-top: 14px; margin-bottom: 6px; display: flex; flex-direction: column; gap: 4px; align-items: center;">
+            <div style="font-size: 14.5px; color: var(--text-main); font-weight: 700;">
+              <i class="fa-solid fa-calculator" style="color: var(--primary); margin-right: 5px;"></i> Total Chanted: <span style="color: var(--primary);">${globalHours.toFixed(1)} hrs</span> <span style="font-size: 12.5px; color: var(--text-muted); font-weight: 600;">(~${globalDaimokuStr} Daimoku)</span>
+            </div>
+            <div style="font-size: 13px; color: var(--text-muted); font-weight: 600;">
+              <i class="fa-solid fa-bullseye" style="color: #e65100; margin-right: 4px;"></i> Target: <strong style="color: var(--text-main);">${targetHours} hrs</strong> (~${targetDaimokuStr} Daimoku) &nbsp;•&nbsp; <strong style="color: var(--primary);">${progressPercentDisplay}</strong>
+            </div>
           </div>
 
           <!-- Highlighted Path to Victory & Countdown Showcase Card -->
@@ -8151,7 +8156,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js')
+      navigator.serviceWorker.register('sw.js?v=133')
         .then(async (reg) => {
           console.log('Service Worker registered successfully!', reg.scope);
           
@@ -8171,6 +8176,18 @@ document.addEventListener('DOMContentLoaded', () => {
               }
             });
           });
+          
+          // Auto-check for updates on focus, tab visibility change, and every 60 seconds
+          const checkSWUpdate = () => {
+            if (navigator.onLine && reg && reg.update) {
+              reg.update().catch(() => {});
+            }
+          };
+          window.addEventListener('focus', checkSWUpdate);
+          document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') checkSWUpdate();
+          });
+          setInterval(checkSWUpdate, 60000);
           
           // Request permissions and register syncs
           try {
