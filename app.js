@@ -6078,12 +6078,43 @@ document.addEventListener('DOMContentLoaded', () => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         const campaignId = btn.getAttribute('data-campaign-id');
-        const cData = campaignShareDataMap[campaignId];
-        if (cData && campaignShareModal && campaignShareCardCanvas) {
+        let cData = campaignShareDataMap[campaignId];
+        if (!cData) {
+          const camp = (state.campaigns || []).find(c => c.id === campaignId) || { name: 'SGI Victory Campaign', targetHours: 1665 };
+          cData = {
+            id: campaignId,
+            name: camp.name,
+            targetBlock: 'All',
+            periodStr: 'Active Campaign',
+            globalHours: 0,
+            targetHours: camp.targetHours || 1665,
+            progressPercent: 0,
+            progressPercentDisplay: '0%',
+            timeLeftText: '--',
+            timeLeftSub: 'Active Campaign',
+            dailyStrideText: '--',
+            dailyStrideSub: 'Stride towards victory',
+            estFinishVal: '--',
+            estFinishSub: 'Target completion',
+            blockSummaries: [
+              { name: 'Wisdom', hours: 0, color: '#ffb300', isOwn: true },
+              { name: 'Compassion', hours: 0, color: '#d81b60', isOwn: false },
+              { name: 'Courage', hours: 0, color: '#b71c1c', isOwn: false },
+              { name: 'Harmony', hours: 0, color: '#1b5e20', isOwn: false },
+              { name: 'Faith', hours: 0, color: '#0d47a1', isOwn: false }
+            ],
+            personalHours: 0,
+            userBlock: (currentUser && currentUser.block) ? currentUser.block : 'Member',
+            personalPercent: 0
+          };
+        }
+        if (campaignShareModal && campaignShareCardCanvas) {
           currentShareCampaignData = cData;
           campaignShareModal.style.display = 'flex';
           campaignShareModal.classList.remove('hidden');
-          drawCampaignShareCard(campaignShareCardCanvas, currentShareMode, currentShareCampaignData);
+          requestAnimationFrame(() => {
+            drawCampaignShareCard(campaignShareCardCanvas, currentShareMode, currentShareCampaignData);
+          });
         }
       });
     });
