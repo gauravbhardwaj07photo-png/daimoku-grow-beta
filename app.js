@@ -436,6 +436,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const shareCardCanvas = document.getElementById('share-card-canvas');
   const btnDownloadShare = document.getElementById('btn-download-share');
 
+  // Campaign Share elements
+  const campaignShareModal = document.getElementById('campaign-share-modal');
+  const btnCloseCampaignShare = document.getElementById('btn-close-campaign-share');
+  const campaignShareCardCanvas = document.getElementById('campaign-share-card-canvas');
+  const btnDownloadCampaignShare = document.getElementById('btn-download-campaign-share');
+  const btnWhatsappShareCampaign = document.getElementById('btn-whatsapp-share-campaign');
+  let currentShareCampaignData = null;
+  let currentShareMode = 'all'; // 'all', 'bucket', 'leaderboard'
+  const campaignShareDataMap = {};
+
+
   // Timer elements
   const btnTimerStopwatch = document.getElementById('btn-timer-stopwatch');
   const btnTimerCountdown = document.getElementById('btn-timer-countdown');
@@ -3116,6 +3127,649 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // --- Daimoku Count Formatter (333 hours = 1 Million Daimoku) ---
+  function formatDaimokuCount(hours, brief = false) {
+    if (isNaN(hours) || hours <= 0) return brief ? "0" : "0 Daimoku";
+    const daimoku = (hours * 1000000) / 333;
+    if (daimoku >= 1000000) {
+      const m = daimoku / 1000000;
+      const mStr = m >= 10 ? m.toFixed(1) : (m % 1 === 0 ? m.toFixed(0) : m.toFixed(2).replace(/\.?0+$/, ''));
+      return brief ? `${mStr}M` : `${mStr}M Daimoku`;
+    } else if (daimoku >= 1000) {
+      const k = daimoku / 1000;
+      const kStr = k >= 10 ? k.toFixed(0) : k.toFixed(1).replace(/\.?0+$/, '');
+      return brief ? `${kStr}k` : `${kStr}k Daimoku`;
+    } else {
+      return brief ? `${Math.round(daimoku)}` : `${Math.round(daimoku)} Daimoku`;
+    }
+  }
+
+  // Canvas Rounded Rectangle Helper
+  function drawCanvasRoundRect(ctx, x, y, width, height, radius, fill = true, stroke = false) {
+    if (typeof radius === 'undefined') radius = 8;
+    if (typeof radius === 'number') {
+      radius = { tl: radius, tr: radius, br: radius, bl: radius };
+    }
+    ctx.beginPath();
+    ctx.moveTo(x + radius.tl, y);
+    ctx.lineTo(x + width - radius.tr, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + radius.tr);
+    ctx.lineTo(x + width, y + height - radius.br);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - radius.br, y + height);
+    ctx.lineTo(x + radius.bl, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - radius.bl);
+    ctx.lineTo(x, y + radius.tl);
+    ctx.quadraticCurveTo(x, y, x + radius.tl, y);
+    ctx.closePath();
+    if (fill) ctx.fill();
+    if (stroke) ctx.stroke();
+  }
+
+  // Render High-Resolution Campaign Share Poster on Canvas
+  function drawCampaignShareCard(canvas, mode = 'all', data) {
+    if (!canvas || !data) return;
+    const ctx = canvas.getContext('2d');
+    
+    // Set Canvas Dimensions based on mode
+    let canvasW = 800;
+    let canvasH = 1080;
+    if (mode === 'bucket') {
+      canvasH = 820;
+    } else if (mode === 'leaderboard') {
+      canvasH = 880;
+    }
+    canvas.width = canvasW;
+    canvas.height = canvasH;
+
+    // Palette & Colors (Rich Deep Forest/Sage Theme with Golden Accents)
+    const bgGrad = ctx.createLinearGradient(0, 0, canvasW, canvasH);
+    bgGrad.addColorStop(0, '#101c10');
+    bgGrad.addColorStop(0.5, '#162616');
+    bgGrad.addColorStop(1, '#0b140b');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, canvasW, canvasH);
+
+    // Subtle Star / Light Flecks in Background
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+    const seedPoints = [
+      [90, 110, 1.5], [710, 140, 2], [140, 480, 1.2], [680, 520, 1.8],
+      [110, 750, 1.5], [690, 810, 2.2], [400, 260, 1.2], [320, 920, 1.5]
+    ];
+    seedPoints.forEach(pt => {
+      ctx.beginPath();
+      ctx.arc(pt[0], pt[1], pt[2], 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // Draw Translucent Center Lotus Watermark
+    drawLotusWatermark(ctx, 400, canvasH / 2, 380, 'rgba(255, 215, 0, 0.035)');
+
+    // Outer Decorative Border with Gold Corner Accents
+    ctx.lineWidth = 3;
+    const borderGrad = ctx.createLinearGradient(30, 30, canvasW - 30, canvasH - 30);
+    borderGrad.addColorStop(0, 'rgba(255, 215, 0, 0.45)');
+    borderGrad.addColorStop(0.5, 'rgba(148, 196, 148, 0.35)');
+    borderGrad.addColorStop(1, 'rgba(255, 215, 0, 0.45)');
+    ctx.strokeStyle = borderGrad;
+    drawCanvasRoundRect(ctx, 30, 30, canvasW - 60, canvasH - 60, 24, false, true);
+
+    // Inner thin border
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    drawCanvasRoundRect(ctx, 38, 38, canvasW - 76, canvasH - 76, 18, false, true);
+
+    // Corner decorative notches
+    const cornerSize = 10;
+    ctx.fillStyle = '#ffd54f';
+    ctx.fillRect(25, 25, cornerSize, cornerSize);
+    ctx.fillRect(canvasW - 25 - cornerSize, 25, cornerSize, cornerSize);
+    ctx.fillRect(25, canvasH - 25 - cornerSize, cornerSize, cornerSize);
+    ctx.fillRect(canvasW - 25 - cornerSize, canvasH - 25 - cornerSize, cornerSize);
+
+    // --- 1. Top Header ---
+    drawLotusWatermark(ctx, 400, 68, 34, '#ffd54f');
+
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#a3cfa3';
+    ctx.font = "bold 13px 'Outfit', 'Segoe UI', sans-serif";
+    ctx.fillText("DAIMOKU GROW • SGI CAMPAIGN PROGRESS", 400, 104);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = "bold 28px 'Playfair Display', Georgia, serif";
+    ctx.fillText(data.name || "SGI Victory Campaign", 400, 140);
+
+    // Duration pill
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+    drawCanvasRoundRect(ctx, 210, 164, 380, 28, 14, true, false);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+    ctx.lineWidth = 1;
+    drawCanvasRoundRect(ctx, 210, 164, 380, 28, 14, false, true);
+
+    ctx.fillStyle = '#d0e0d0';
+    ctx.font = "600 12px 'Outfit', 'Segoe UI', sans-serif";
+    ctx.fillText(`📅 Period: ${data.periodStr}`, 400, 178);
+
+    // --- 2. Total Daimoku Stats Banner ---
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+    drawCanvasRoundRect(ctx, 50, 206, 700, 84, 16, true, false);
+    ctx.strokeStyle = 'rgba(255, 215, 0, 0.25)';
+    ctx.lineWidth = 1.2;
+    drawCanvasRoundRect(ctx, 50, 206, 700, 84, 16, false, true);
+
+    ctx.fillStyle = '#94c494';
+    ctx.font = "bold 11.5px 'Outfit', 'Segoe UI', sans-serif";
+    ctx.fillText("TOTAL DAIMOKU CHANTED", 400, 226);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = "bold 23px 'Outfit', 'Segoe UI', sans-serif";
+    ctx.fillText(`${data.globalHours.toFixed(1)} / ${data.targetHours} Hours   •   ${data.progressPercentDisplay}`, 400, 252);
+
+    const totalDaimokuCountStr = `~${formatDaimokuCount(data.globalHours, true)} / ${formatDaimokuCount(data.targetHours, true)} Daimoku`;
+    ctx.fillStyle = '#ffd54f';
+    ctx.font = "bold 15px 'Outfit', 'Segoe UI', sans-serif";
+    ctx.fillText(totalDaimokuCountStr, 400, 274);
+
+    // --- MODE DISPATCHING ---
+    if (mode === 'all') {
+      // === ALL-IN-ONE MASTER CARD ===
+      
+      // Left: Bucket Graphic (x: 50 to 360, y: 305 to 550)
+      const bW = 140;
+      const bH = 200;
+      const bX = 130;
+      const bY = 320;
+
+      // Draw Bucket glass body
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+      ctx.lineWidth = 2.5;
+      drawCanvasRoundRect(ctx, bX, bY, bW, bH, { tl: 8, tr: 8, br: 28, bl: 28 }, true, true);
+
+      // Fill liquid in bucket
+      const fillH = bH * (data.progressPercent / 100);
+      if (fillH > 0) {
+        ctx.save();
+        drawCanvasRoundRect(ctx, bX, bY, bW, bH, { tl: 8, tr: 8, br: 28, bl: 28 }, false, false);
+        ctx.clip();
+
+        const lGrad = ctx.createLinearGradient(bX, bY + bH - fillH, bX, bY + bH);
+        lGrad.addColorStop(0, '#ffd54f');
+        lGrad.addColorStop(0.5, '#26a69a');
+        lGrad.addColorStop(1, '#0d47a1');
+        ctx.fillStyle = lGrad;
+        ctx.fillRect(bX, bY + bH - fillH, bW, fillH);
+        ctx.restore();
+      }
+
+      // Percentage label inside bucket
+      ctx.fillStyle = '#ffffff';
+      ctx.font = "bold 26px 'Outfit', 'Segoe UI', sans-serif";
+      ctx.shadowColor = 'rgba(0,0,0,0.8)';
+      ctx.shadowBlur = 8;
+      ctx.fillText(data.progressPercentDisplay, bX + bW / 2, bY + bH / 2);
+      ctx.shadowBlur = 0;
+
+      // Milestone Markers next to Bucket
+      const marks = [
+        { pct: 0.25, h: (data.targetHours * 0.25).toFixed(0), d: formatDaimokuCount(data.targetHours * 0.25, true), y: bY + bH * 0.75 },
+        { pct: 0.50, h: (data.targetHours * 0.50).toFixed(0), d: formatDaimokuCount(data.targetHours * 0.50, true), y: bY + bH * 0.50 },
+        { pct: 0.75, h: (data.targetHours * 0.75).toFixed(0), d: formatDaimokuCount(data.targetHours * 0.75, true), y: bY + bH * 0.25 },
+        { pct: 1.00, h: (data.targetHours).toFixed(0), d: formatDaimokuCount(data.targetHours, true), y: bY + bH * 0.02 }
+      ];
+
+      ctx.textAlign = 'left';
+      marks.forEach(m => {
+        const isReached = data.globalHours >= (data.targetHours * m.pct);
+        ctx.strokeStyle = isReached ? '#ffd54f' : 'rgba(255, 255, 255, 0.25)';
+        ctx.lineWidth = isReached ? 2 : 1;
+        ctx.beginPath();
+        ctx.moveTo(bX + bW + 4, m.y);
+        ctx.lineTo(bX + bW + 16, m.y);
+        ctx.stroke();
+
+        ctx.fillStyle = isReached ? '#ffd54f' : '#8fa88f';
+        ctx.font = isReached ? "bold 11px 'Outfit', sans-serif" : "500 11px 'Outfit', sans-serif";
+        ctx.fillText(`${m.h}h · ${m.d} (${Math.round(m.pct * 100)}%)`, bX + bW + 20, m.y + 1);
+      });
+
+      // Right: Path to Victory 3 mini-cards (x: 420, y: 310, w: 330)
+      const pX = 420;
+      const pW = 330;
+      const pH = 62;
+      const pGap = 8;
+
+      const pathItems = [
+        { label: "⏳ TIME REMAINING", val: data.timeLeftText || "--", sub: data.timeLeftSub || "", color: "#ffffff" },
+        { label: "🔥 DAILY VICTORY STRIDE", val: data.dailyStrideText || "--", sub: data.dailyStrideSub || "", color: "#ffd54f", highlight: true },
+        { label: "🎯 PROJECTED VICTORY", val: data.estFinishVal || "--", sub: data.estFinishSub || "", color: "#ffffff" }
+      ];
+
+      pathItems.forEach((p, idx) => {
+        const itemY = 310 + idx * (pH + pGap);
+        ctx.fillStyle = p.highlight ? 'rgba(255, 215, 0, 0.12)' : 'rgba(0, 0, 0, 0.25)';
+        ctx.strokeStyle = p.highlight ? 'rgba(255, 215, 0, 0.45)' : 'rgba(255, 255, 255, 0.1)';
+        ctx.lineWidth = 1;
+        drawCanvasRoundRect(ctx, pX, itemY, pW, pH, 12, true, true);
+
+        ctx.textAlign = 'left';
+        ctx.fillStyle = p.highlight ? '#ffd54f' : '#94c494';
+        ctx.font = "bold 10px 'Outfit', sans-serif";
+        ctx.fillText(p.label, pX + 14, itemY + 16);
+
+        ctx.fillStyle = p.color;
+        ctx.font = "bold 15px 'Outfit', sans-serif";
+        ctx.fillText(p.val, pX + 14, itemY + 36);
+
+        ctx.fillStyle = '#a3cfa3';
+        ctx.font = "500 10.5px 'Outfit', sans-serif";
+        ctx.fillText(p.sub, pX + 14, itemY + 52);
+      });
+
+      // --- SGI Blocks Leaderboard (y: 535 to 840, x: 50, w: 700) ---
+      const lbY = 535;
+      const lbW = 700;
+      const lbH = 300;
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+      ctx.lineWidth = 1;
+      drawCanvasRoundRect(ctx, 50, lbY, lbW, lbH, 16, true, true);
+
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#ffffff';
+      ctx.font = "bold 14px 'Outfit', sans-serif";
+      ctx.fillText("🏆 SGI BLOCKS LEADERBOARD", 70, lbY + 28);
+
+      const maxBHours = Math.max(...(data.blockSummaries || []).map(b => b.hours), 1);
+      const rowH = 46;
+      const startRowY = lbY + 44;
+
+      (data.blockSummaries || []).forEach((b, idx) => {
+        const ry = startRowY + idx * rowH;
+        const medals = ['🥇', '🥈', '🥉', '4.', '5.'];
+        const relW = Math.min(300, Math.round((b.hours / maxBHours) * 300));
+
+        // Medal & Block Name
+        ctx.fillStyle = '#ffffff';
+        ctx.font = "14px 'Outfit', sans-serif";
+        ctx.fillText(medals[idx] || `${idx + 1}.`, 72, ry + 18);
+
+        // Color Dot
+        ctx.fillStyle = b.color || '#757575';
+        ctx.beginPath();
+        ctx.arc(104, ry + 14, 5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = b.isOwn ? '#ffd54f' : '#ffffff';
+        ctx.font = b.isOwn ? "bold 13px 'Outfit', sans-serif" : "600 13px 'Outfit', sans-serif";
+        ctx.fillText(`${b.name} Block${b.isOwn ? ' (You)' : ''}`, 118, ry + 18);
+
+        // Progress bar background
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+        drawCanvasRoundRect(ctx, 270, ry + 8, 300, 14, 7, true, false);
+
+        // Progress bar fill
+        if (relW > 0) {
+          ctx.fillStyle = b.color || '#26a69a';
+          drawCanvasRoundRect(ctx, 270, ry + 8, relW, 14, 7, true, false);
+        }
+
+        // Hours & Daimoku count text on right
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#ffffff';
+        ctx.font = "bold 12.5px 'Outfit', sans-serif";
+        const dCount = formatDaimokuCount(b.hours, true);
+        ctx.fillText(`${b.hours.toFixed(1)}h (${dCount})`, 720, ry + 18);
+        ctx.textAlign = 'left';
+      });
+
+      // Personal Contribution Footer Row
+      const pFooterY = lbY + lbH + 12;
+      ctx.fillStyle = 'rgba(82, 111, 82, 0.25)';
+      ctx.strokeStyle = 'rgba(148, 196, 148, 0.35)';
+      ctx.lineWidth = 1;
+      drawCanvasRoundRect(ctx, 50, pFooterY, 700, 42, 12, true, true);
+
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#ffffff';
+      ctx.font = "600 13px 'Outfit', sans-serif";
+      ctx.fillText(`🙏 Your Personal Contribution: ${data.personalHours.toFixed(1)} hrs (~${formatDaimokuCount(data.personalHours, true)})  •  ${data.personalPercent}% of ${data.userBlock} Block`, 400, pFooterY + 22);
+
+      // --- Footer Sensei Quote & Branding ---
+      const footerY = 930;
+      ctx.fillStyle = '#a3cfa3';
+      ctx.font = "italic 13.5px 'Playfair Display', Georgia, serif";
+      ctx.fillText('"Even one daimoku can pervade the entire universe. Resounding daimoku moves everything."', 400, footerY);
+
+      ctx.fillStyle = '#ffd54f';
+      ctx.font = "bold 11.5px 'Outfit', sans-serif";
+      ctx.fillText("DAISAKU IKEDA", 400, footerY + 22);
+
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+      ctx.font = "500 11px 'Outfit', sans-serif";
+      ctx.fillText("DAIMOKU GROW GALAXY • SOKA GAKKAI INTERNATIONAL", 400, 1030);
+
+    } else if (mode === 'bucket') {
+      // === BUCKET & VICTORY PATH MODE ===
+      const bW = 180;
+      const bH = 260;
+      const bX = 110;
+      const bY = 320;
+
+      // Draw Grand Bucket glass body
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+      ctx.lineWidth = 3;
+      drawCanvasRoundRect(ctx, bX, bY, bW, bH, { tl: 10, tr: 10, br: 36, bl: 36 }, true, true);
+
+      // Fill liquid
+      const fillH = bH * (data.progressPercent / 100);
+      if (fillH > 0) {
+        ctx.save();
+        drawCanvasRoundRect(ctx, bX, bY, bW, bH, { tl: 10, tr: 10, br: 36, bl: 36 }, false, false);
+        ctx.clip();
+
+        const lGrad = ctx.createLinearGradient(bX, bY + bH - fillH, bX, bY + bH);
+        lGrad.addColorStop(0, '#ffd54f');
+        lGrad.addColorStop(0.5, '#26a69a');
+        lGrad.addColorStop(1, '#0d47a1');
+        ctx.fillStyle = lGrad;
+        ctx.fillRect(bX, bY + bH - fillH, bW, fillH);
+        ctx.restore();
+      }
+
+      // Percentage label inside bucket
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#ffffff';
+      ctx.font = "bold 32px 'Outfit', 'Segoe UI', sans-serif";
+      ctx.shadowColor = 'rgba(0,0,0,0.85)';
+      ctx.shadowBlur = 10;
+      ctx.fillText(data.progressPercentDisplay, bX + bW / 2, bY + bH / 2);
+      ctx.shadowBlur = 0;
+
+      // Milestone Markers next to Bucket
+      const marks = [
+        { pct: 0.25, h: (data.targetHours * 0.25).toFixed(0), d: formatDaimokuCount(data.targetHours * 0.25, true), y: bY + bH * 0.75 },
+        { pct: 0.50, h: (data.targetHours * 0.50).toFixed(0), d: formatDaimokuCount(data.targetHours * 0.50, true), y: bY + bH * 0.50 },
+        { pct: 0.75, h: (data.targetHours * 0.75).toFixed(0), d: formatDaimokuCount(data.targetHours * 0.75, true), y: bY + bH * 0.25 },
+        { pct: 1.00, h: (data.targetHours).toFixed(0), d: formatDaimokuCount(data.targetHours, true), y: bY + bH * 0.02 }
+      ];
+
+      ctx.textAlign = 'left';
+      marks.forEach(m => {
+        const isReached = data.globalHours >= (data.targetHours * m.pct);
+        ctx.strokeStyle = isReached ? '#ffd54f' : 'rgba(255, 255, 255, 0.25)';
+        ctx.lineWidth = isReached ? 2.5 : 1;
+        ctx.beginPath();
+        ctx.moveTo(bX + bW + 4, m.y);
+        ctx.lineTo(bX + bW + 18, m.y);
+        ctx.stroke();
+
+        ctx.fillStyle = isReached ? '#ffd54f' : '#8fa88f';
+        ctx.font = isReached ? "bold 12.5px 'Outfit', sans-serif" : "500 12px 'Outfit', sans-serif";
+        ctx.fillText(`${m.h}h · ${m.d} (${Math.round(m.pct * 100)}%)`, bX + bW + 24, m.y + 2);
+      });
+
+      // Right: Path to Victory 3 cards
+      const pX = 430;
+      const pW = 320;
+      const pH = 78;
+      const pGap = 12;
+
+      const pathItems = [
+        { label: "⏳ TIME REMAINING", val: data.timeLeftText || "--", sub: data.timeLeftSub || "", color: "#ffffff" },
+        { label: "🔥 DAILY VICTORY STRIDE", val: data.dailyStrideText || "--", sub: data.dailyStrideSub || "", color: "#ffd54f", highlight: true },
+        { label: "🎯 PROJECTED VICTORY", val: data.estFinishVal || "--", sub: data.estFinishSub || "", color: "#ffffff" }
+      ];
+
+      pathItems.forEach((p, idx) => {
+        const itemY = 320 + idx * (pH + pGap);
+        ctx.fillStyle = p.highlight ? 'rgba(255, 215, 0, 0.12)' : 'rgba(0, 0, 0, 0.28)';
+        ctx.strokeStyle = p.highlight ? 'rgba(255, 215, 0, 0.45)' : 'rgba(255, 255, 255, 0.1)';
+        ctx.lineWidth = 1.2;
+        drawCanvasRoundRect(ctx, pX, itemY, pW, pH, 14, true, true);
+
+        ctx.textAlign = 'left';
+        ctx.fillStyle = p.highlight ? '#ffd54f' : '#94c494';
+        ctx.font = "bold 11px 'Outfit', sans-serif";
+        ctx.fillText(p.label, pX + 16, itemY + 20);
+
+        ctx.fillStyle = p.color;
+        ctx.font = "bold 17px 'Outfit', sans-serif";
+        ctx.fillText(p.val, pX + 16, itemY + 44);
+
+        ctx.fillStyle = '#a3cfa3';
+        ctx.font = "500 11.5px 'Outfit', sans-serif";
+        ctx.fillText(p.sub, pX + 16, itemY + 64);
+      });
+
+      // Personal Contribution Row
+      const pFooterY = 610;
+      ctx.fillStyle = 'rgba(82, 111, 82, 0.25)';
+      ctx.strokeStyle = 'rgba(148, 196, 148, 0.35)';
+      ctx.lineWidth = 1;
+      drawCanvasRoundRect(ctx, 50, pFooterY, 700, 46, 12, true, true);
+
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#ffffff';
+      ctx.font = "600 13.5px 'Outfit', sans-serif";
+      ctx.fillText(`🙏 Your Personal Contribution: ${data.personalHours.toFixed(1)} hrs (~${formatDaimokuCount(data.personalHours, true)})  •  ${data.personalPercent}% of ${data.userBlock} Block`, 400, pFooterY + 24);
+
+      // Footer
+      const footerY = 695;
+      ctx.fillStyle = '#a3cfa3';
+      ctx.font = "italic 13.5px 'Playfair Display', Georgia, serif";
+      ctx.fillText('"In times of suffering, chant daimoku. In times of joy, chant daimoku."', 400, footerY);
+
+      ctx.fillStyle = '#ffd54f';
+      ctx.font = "bold 11.5px 'Outfit', sans-serif";
+      ctx.fillText("DAISAKU IKEDA", 400, footerY + 22);
+
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+      ctx.font = "500 11px 'Outfit', sans-serif";
+      ctx.fillText("DAIMOKU GROW GALAXY • SOKA GAKKAI INTERNATIONAL", 400, 775);
+
+    } else if (mode === 'leaderboard') {
+      // === LEADERBOARD & PATH MODE ===
+      
+      // Top 3 Path to Victory horizontal cards (y: 310, w: 220 each)
+      const pathItems = [
+        { label: "⏳ TIME REMAINING", val: data.timeLeftText || "--", sub: data.timeLeftSub || "", color: "#ffffff" },
+        { label: "🔥 DAILY STRIDE", val: data.dailyStrideText || "--", sub: data.dailyStrideSub || "", color: "#ffd54f", highlight: true },
+        { label: "🎯 PROJECTED DATE", val: data.estFinishVal || "--", sub: data.estFinishSub || "", color: "#ffffff" }
+      ];
+
+      const cW = 220;
+      const cH = 80;
+      const cGap = 20;
+      const startX = 50;
+      const cY = 310;
+
+      pathItems.forEach((p, idx) => {
+        const itemX = startX + idx * (cW + cGap);
+        ctx.fillStyle = p.highlight ? 'rgba(255, 215, 0, 0.12)' : 'rgba(0, 0, 0, 0.28)';
+        ctx.strokeStyle = p.highlight ? 'rgba(255, 215, 0, 0.45)' : 'rgba(255, 255, 255, 0.1)';
+        ctx.lineWidth = 1.2;
+        drawCanvasRoundRect(ctx, itemX, cY, cW, cH, 14, true, true);
+
+        ctx.textAlign = 'center';
+        ctx.fillStyle = p.highlight ? '#ffd54f' : '#94c494';
+        ctx.font = "bold 10px 'Outfit', sans-serif";
+        ctx.fillText(p.label, itemX + cW / 2, cY + 20);
+
+        ctx.fillStyle = p.color;
+        ctx.font = "bold 16px 'Outfit', sans-serif";
+        ctx.fillText(p.val, itemX + cW / 2, cY + 44);
+
+        ctx.fillStyle = '#a3cfa3';
+        ctx.font = "500 10.5px 'Outfit', sans-serif";
+        ctx.fillText(p.sub, itemX + cW / 2, cY + 64);
+      });
+
+      // SGI Blocks Leaderboard (y: 410, w: 700, h: 260)
+      const lbY = 410;
+      const lbW = 700;
+      const lbH = 260;
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+      ctx.lineWidth = 1;
+      drawCanvasRoundRect(ctx, 50, lbY, lbW, lbH, 16, true, true);
+
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#ffffff';
+      ctx.font = "bold 14px 'Outfit', sans-serif";
+      ctx.fillText("🏆 SGI BLOCKS LEADERBOARD", 70, lbY + 28);
+
+      const maxBHours = Math.max(...(data.blockSummaries || []).map(b => b.hours), 1);
+      const rowH = 40;
+      const startRowY = lbY + 44;
+
+      (data.blockSummaries || []).forEach((b, idx) => {
+        const ry = startRowY + idx * rowH;
+        const medals = ['🥇', '🥈', '🥉', '4.', '5.'];
+        const relW = Math.min(300, Math.round((b.hours / maxBHours) * 300));
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = "14px 'Outfit', sans-serif";
+        ctx.fillText(medals[idx] || `${idx + 1}.`, 72, ry + 18);
+
+        ctx.fillStyle = b.color || '#757575';
+        ctx.beginPath();
+        ctx.arc(104, ry + 14, 5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = b.isOwn ? '#ffd54f' : '#ffffff';
+        ctx.font = b.isOwn ? "bold 13px 'Outfit', sans-serif" : "600 13px 'Outfit', sans-serif";
+        ctx.fillText(`${b.name} Block${b.isOwn ? ' (You)' : ''}`, 118, ry + 18);
+
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+        drawCanvasRoundRect(ctx, 270, ry + 8, 300, 14, 7, true, false);
+
+        if (relW > 0) {
+          ctx.fillStyle = b.color || '#26a69a';
+          drawCanvasRoundRect(ctx, 270, ry + 8, relW, 14, 7, true, false);
+        }
+
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#ffffff';
+        ctx.font = "bold 12.5px 'Outfit', sans-serif";
+        const dCount = formatDaimokuCount(b.hours, true);
+        ctx.fillText(`${b.hours.toFixed(1)}h (${dCount})`, 720, ry + 18);
+        ctx.textAlign = 'left';
+      });
+
+      // Personal Contribution Row
+      const pFooterY = 690;
+      ctx.fillStyle = 'rgba(82, 111, 82, 0.25)';
+      ctx.strokeStyle = 'rgba(148, 196, 148, 0.35)';
+      ctx.lineWidth = 1;
+      drawCanvasRoundRect(ctx, 50, pFooterY, 700, 46, 12, true, true);
+
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#ffffff';
+      ctx.font = "600 13.5px 'Outfit', sans-serif";
+      ctx.fillText(`🙏 Your Personal Contribution: ${data.personalHours.toFixed(1)} hrs (~${formatDaimokuCount(data.personalHours, true)})  •  ${data.personalPercent}% of ${data.userBlock} Block`, 400, pFooterY + 24);
+
+      // Footer
+      const footerY = 770;
+      ctx.fillStyle = '#a3cfa3';
+      ctx.font = "italic 13.5px 'Playfair Display', Georgia, serif";
+      ctx.fillText('"Resounding daimoku morning and evening gallops through the universe."', 400, footerY);
+
+      ctx.fillStyle = '#ffd54f';
+      ctx.font = "bold 11.5px 'Outfit', sans-serif";
+      ctx.fillText("DAISAKU IKEDA", 400, footerY + 22);
+
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+      ctx.font = "500 11px 'Outfit', sans-serif";
+      ctx.fillText("DAIMOKU GROW GALAXY • SOKA GAKKAI INTERNATIONAL", 400, 840);
+    }
+  }
+
+  // Campaign Share Modal Tab Switcher & Action Listeners
+  const campaignShareTabBtns = document.querySelectorAll('.campaign-share-tab-btn');
+  campaignShareTabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      campaignShareTabBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentShareMode = btn.getAttribute('data-mode') || 'all';
+      if (currentShareCampaignData && campaignShareCardCanvas) {
+        drawCampaignShareCard(campaignShareCardCanvas, currentShareMode, currentShareCampaignData);
+      }
+    });
+  });
+
+  if (btnCloseCampaignShare) {
+    btnCloseCampaignShare.addEventListener('click', () => {
+      if (campaignShareModal) {
+        campaignShareModal.style.display = 'none';
+        campaignShareModal.classList.add('hidden');
+      }
+    });
+  }
+
+  if (btnDownloadCampaignShare) {
+    btnDownloadCampaignShare.addEventListener('click', () => {
+      if (campaignShareCardCanvas && currentShareCampaignData) {
+        const link = document.createElement('a');
+        link.download = `daimoku-campaign-${currentShareCampaignData.id || 'poster'}-${currentShareMode}.png`;
+        link.href = campaignShareCardCanvas.toDataURL('image/png');
+        link.click();
+      }
+    });
+  }
+
+  if (btnWhatsappShareCampaign) {
+    btnWhatsappShareCampaign.addEventListener('click', async () => {
+      if (!campaignShareCardCanvas || !currentShareCampaignData) return;
+      
+      const shareTitle = `${currentShareCampaignData.name} - Daimoku Update`;
+      const shareText = `🙏 Daimoku Campaign Update: ${currentShareCampaignData.name}\nTotal Chanted: ${currentShareCampaignData.globalHours.toFixed(1)} / ${currentShareCampaignData.targetHours} hours (~${formatDaimokuCount(currentShareCampaignData.globalHours)} / ${formatDaimokuCount(currentShareCampaignData.targetHours)})\nProgress: ${currentShareCampaignData.progressPercentDisplay}\nKeep chanting for victory! 🌟`;
+
+      if (navigator.share && campaignShareCardCanvas.toBlob) {
+        try {
+          campaignShareCardCanvas.toBlob(async (blob) => {
+            if (!blob) return;
+            const file = new File([blob], `campaign-${currentShareCampaignData.id}.png`, { type: 'image/png' });
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+              try {
+                await navigator.share({
+                  title: shareTitle,
+                  text: shareText,
+                  files: [file]
+                });
+                return;
+              } catch (e) {
+                if (e.name !== 'AbortError') {
+                  console.log("File share error, falling back to download:", e);
+                } else {
+                  return;
+                }
+              }
+            }
+            // Fallback if file sharing not accepted:
+            const link = document.createElement('a');
+            link.download = `campaign-${currentShareCampaignData.id}.png`;
+            link.href = campaignShareCardCanvas.toDataURL('image/png');
+            link.click();
+          }, 'image/png');
+        } catch (err) {
+          console.log("Web share error:", err);
+          const link = document.createElement('a');
+          link.download = `campaign-${currentShareCampaignData.id}.png`;
+          link.href = campaignShareCardCanvas.toDataURL('image/png');
+          link.click();
+        }
+      } else {
+        const link = document.createElement('a');
+        link.download = `campaign-${currentShareCampaignData.id}.png`;
+        link.href = campaignShareCardCanvas.toDataURL('image/png');
+        link.click();
+      }
+    });
+  }
+
+
   // --- Reminder Check Mechanism (12:00 PM and 9:00 PM Checks & Calendar Meeting Checks) ---
   function runNotificationsChecks() {
     const now = new Date();
@@ -4920,6 +5574,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const globalSeconds = campaignContribs.reduce((sum, item) => sum + item.durationSeconds, 0);
       const globalHours = globalSeconds / 3600;
       const targetHours = targets[selectedCampaignId] || 100;
+
+      const targetDaimokuStr = formatDaimokuCount(targetHours, true);
+      const globalDaimokuStr = formatDaimokuCount(globalHours, true);
       
       const rawPercent = (globalHours / targetHours) * 100;
       let progressPercentDisplay = "0%";
@@ -4938,6 +5595,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const p2Mark = (targetHours / 2).toFixed(0);
       const p3Mark = (3 * targetHours / 4).toFixed(0);
       const p4Mark = targetHours.toFixed(0);
+
+      const p1Daimoku = formatDaimokuCount(targetHours * 0.25, true);
+      const p2Daimoku = formatDaimokuCount(targetHours * 0.50, true);
+      const p3Daimoku = formatDaimokuCount(targetHours * 0.75, true);
+      const p4Daimoku = formatDaimokuCount(targetHours, true);
       
       const dates = campaignDates[selectedCampaignId] || { start: '', end: '' };
       let periodStr = "No date set";
@@ -5067,6 +5729,7 @@ document.addEventListener('DOMContentLoaded', () => {
           timeLeftSub = `Ends on ${endFormatted}`;
           
           const idealHoursPerDay = remainingHours / Math.max(1, daysLeft);
+          const idealDaimokuDay = formatDaimokuCount(idealHoursPerDay, true);
           if (idealHoursPerDay >= 1) {
             const ih = Math.floor(idealHoursPerDay);
             const im = Math.round((idealHoursPerDay % 1) * 60);
@@ -5075,7 +5738,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const im = Math.max(1, Math.round(idealHoursPerDay * 60));
             idealPaceVal = `${im} mins <span style="font-size: 11px; font-weight: 600; color: var(--text-muted);">/ day</span>`;
           }
-          idealPaceSub = `Needed to finish on time`;
+          idealPaceSub = `~${idealDaimokuDay}/day needed for victory`;
           daysLeftBadge = `${daysLeft} ${daysLeft === 1 ? 'day' : 'days'} left`;
         } else {
           timeLeftVal = `<span style="color:var(--accent-danger); font-size:15px;">Period Ended</span>`;
@@ -5093,6 +5756,29 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       
       const targetBlock = targetBlocks[selectedCampaignId] || 'All';
+
+      // Store shareable payload for this campaign
+      campaignShareDataMap[selectedCampaignId] = {
+        id: selectedCampaignId,
+        name: campaign.name,
+        targetBlock: targetBlock,
+        periodStr: periodStr,
+        globalHours: globalHours,
+        targetHours: targetHours,
+        progressPercent: progressPercent,
+        progressPercentDisplay: progressPercentDisplay,
+        timeLeftText: timeLeftVal.replace(/<[^>]*>/g, '').trim(),
+        timeLeftSub: timeLeftSub,
+        dailyStrideText: idealPaceVal.replace(/<[^>]*>/g, '').trim(),
+        dailyStrideSub: idealPaceSub,
+        estFinishVal: estFinishVal.replace(/<[^>]*>/g, '').trim(),
+        estFinishSub: estFinishSub,
+        daysLeftBadge: daysLeftBadge,
+        blockSummaries: blockSummaries,
+        personalHours: personalHours,
+        userBlock: currentUser.block || 'Member',
+        personalPercent: Math.round((personalHours / Math.max(blockSummaries.find(b => b.isOwn)?.hours || 1, 0.001)) * 100)
+      };
       
       let visualHtml = '';
       if (targetBlock !== 'All') {
@@ -5120,19 +5806,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="grand-bucket-progress-value" style="font-size: 26px; font-weight: 800; color: #ffffff; text-shadow: 0 2px 10px rgba(0,0,0,0.65), 0 0 15px rgba(255,255,255,0.25); pointer-events: none; z-index: 6; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); transition: all 0.3s ease;">${progressPercentDisplay}</div>
               </div>
               
-              <!-- Dynamic Target Markers Overlaid -->
+              <!-- Dynamic Target Markers Overlaid with Hours & Daimoku Count -->
               <div class="bucket-target-markers">
                 <div class="bucket-marker-line ${globalHours >= (targetHours * 0.25) ? 'filled' : ''}" style="bottom: 25%;">
-                  <span class="bucket-marker-label">${p1Mark}h (25%)</span>
+                  <span class="bucket-marker-label">${p1Mark}h · ${p1Daimoku} (25%)</span>
                 </div>
                 <div class="bucket-marker-line ${globalHours >= (targetHours * 0.5) ? 'filled' : ''}" style="bottom: 50%;">
-                  <span class="bucket-marker-label">${p2Mark}h (50%)</span>
+                  <span class="bucket-marker-label">${p2Mark}h · ${p2Daimoku} (50%)</span>
                 </div>
                 <div class="bucket-marker-line ${globalHours >= (targetHours * 0.75) ? 'filled' : ''}" style="bottom: 75%;">
-                  <span class="bucket-marker-label">${p3Mark}h (75%)</span>
+                  <span class="bucket-marker-label">${p3Mark}h · ${p3Daimoku} (75%)</span>
                 </div>
                 <div class="bucket-marker-line ${globalHours >= targetHours ? 'filled' : ''}" style="bottom: 98%;">
-                  <span class="bucket-marker-label">${p4Mark}h (100%)</span>
+                  <span class="bucket-marker-label">${p4Mark}h · ${p4Daimoku} (100%)</span>
                 </div>
               </div>
             </div>
@@ -5146,12 +5832,15 @@ document.addEventListener('DOMContentLoaded', () => {
       htmlContent += `
         <div class="card campaign-view-card active-campaign-container" style="margin-bottom: 24px; padding: 20px; border: var(--border); border-radius: 16px; background: var(--bg-card);">
           <div class="campaign-title-row" style="display:flex; flex-direction:column; gap:4px; margin-bottom: 16px; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 10px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; width:100%; flex-wrap:wrap; gap:4px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; width:100%; flex-wrap:wrap; gap:6px;">
               <div style="display:flex; align-items:center; gap:10px;">
                 <span class="campaign-header-icon" style="font-size:20px; color:var(--primary);"><i class="fa-solid ${campaign.icon || 'fa-bullhorn'}"></i></span>
                 <h3 style="margin:0; font-family:var(--font-serif); font-size:20px; color:var(--text-main);">${campaign.name}</h3>
               </div>
-              ${targetBlock !== 'All' ? `<span style="background:rgba(255,215,0,0.12); color:#ffaa00; font-size:10px; font-weight:700; padding:4px 10px; border-radius:20px; border:1px solid rgba(255,215,0,0.25);"><i class="fa-solid fa-users"></i> ${targetBlock} Block Campaign</span>` : ''}
+              <div style="display:flex; align-items:center; gap:8px;">
+                ${targetBlock !== 'All' ? `<span style="background:rgba(255,215,0,0.12); color:#ffaa00; font-size:10px; font-weight:700; padding:4px 10px; border-radius:20px; border:1px solid rgba(255,215,0,0.25);"><i class="fa-solid fa-users"></i> ${targetBlock} Block</span>` : ''}
+                <button class="btn-share-campaign" data-campaign-id="${selectedCampaignId}" title="Share Campaign Poster"><i class="fa-solid fa-share-nodes"></i> Share Card</button>
+              </div>
             </div>
             <div class="campaign-period-badge" style="font-size: 11.5px; color: var(--text-muted); font-weight: 500; margin-left: 30px; margin-top: 2px;">
               <i class="fa-regular fa-calendar-days" style="margin-right: 4px;"></i> <strong>Period:</strong> ${periodStr}
@@ -5161,7 +5850,7 @@ document.addEventListener('DOMContentLoaded', () => {
           ${visualHtml}
           
           <div class="campaign-dates-desc" style="text-align: center; margin-top: 14px; margin-bottom: 4px;">
-            <span style="font-size:14px; color:var(--text-main); font-weight:700;"><i class="fa-solid fa-calculator" style="color:var(--primary); margin-right:4px;"></i> Total Chanted: ${globalHours.toFixed(1)} / ${targetHours} hours (${progressPercentDisplay})</span>
+            <span style="font-size:14px; color:var(--text-main); font-weight:700;"><i class="fa-solid fa-calculator" style="color:var(--primary); margin-right:4px;"></i> Total Chanted: ${globalHours.toFixed(1)} / ${targetHours} hours (~${globalDaimokuStr} / ${targetDaimokuStr} Daimoku) (${progressPercentDisplay})</span>
           </div>
 
           <!-- Highlighted Path to Victory & Countdown Showcase Card -->
@@ -5234,7 +5923,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <strong style="color: var(--text-main); font-size: 13px;">${b.name} Block</strong>
                         ${b.isOwn ? '<span class="block-badge" style="background: rgba(38,166,154,0.15); color: #26a69a; font-size: 9px; padding: 2px 6px; border-radius: 10px; font-weight: 700;">Your Block</span>' : ''}
                       </span>
-                      <span style="font-size: 13px; font-weight: 600; color: var(--text-main);">${b.hours.toFixed(1)} hrs</span>
+                      <span style="font-size: 13px; font-weight: 600; color: var(--text-main);">${b.hours.toFixed(1)} hrs <span style="font-size:11px; color:var(--text-muted); font-weight:500;">(~${formatDaimokuCount(b.hours, true)})</span></span>
                     </div>
                     <div class="block-progress-track" style="background: rgba(255,255,255,0.05); height: 8px; border-radius: 4px; overflow: hidden; margin-top: 6px;">
                       <div class="block-progress-fill" style="width: ${relPercent}%; background: ${b.color}; height: 100%; border-radius: 4px; transition: width 0.5s ease;"></div>
@@ -5251,13 +5940,13 @@ document.addEventListener('DOMContentLoaded', () => {
                   <i class="fa-solid fa-hands-praying" style="color: var(--primary); font-size: 14px;"></i>
                   <span>Your Personal Contribution</span>
                 </span>
-                <span class="personal-contrib-value" style="color: var(--primary); font-weight: 800; font-size: 14px; margin-left: 12px; white-space: nowrap;">${personalHours.toFixed(1)} hrs</span>
+                <span class="personal-contrib-value" style="color: var(--primary); font-weight: 800; font-size: 14px; margin-left: 12px; white-space: nowrap;">${personalHours.toFixed(1)} hrs <span style="font-size:11.5px; font-weight:600; color:var(--text-muted);">(~${formatDaimokuCount(personalHours, true)})</span></span>
               </div>
               <div class="block-progress-track" style="background: rgba(0, 0, 0, 0.08); height: 8px; border-radius: 4px; overflow: hidden; width: 100%; position: relative;">
-                <div class="block-progress-fill" style="width: ${Math.min(100, Math.max(personalHours > 0 ? 3 : 0, Math.round((personalHours / Math.max(blockSummaries.find(b => b.isOwn).hours, 1)) * 100)))}%; background: var(--primary); height: 100%; border-radius: 4px; transition: width 0.4s ease;"></div>
+                <div class="block-progress-fill" style="width: ${Math.min(100, Math.max(personalHours > 0 ? 3 : 0, Math.round((personalHours / Math.max(blockSummaries.find(b => b.isOwn)?.hours || 1, 1)) * 100)))}%; background: var(--primary); height: 100%; border-radius: 4px; transition: width 0.4s ease;"></div>
               </div>
               <div style="font-size: 11px; color: var(--text-muted); text-align: right; font-weight: 500;">
-                (${Math.round((personalHours / Math.max(blockSummaries.find(b => b.isOwn).hours, 0.001)) * 100)}% of your block's total)
+                (${Math.round((personalHours / Math.max(blockSummaries.find(b => b.isOwn)?.hours || 0.001, 0.001)) * 100)}% of your block's total)
               </div>
             </div>
           </div>
@@ -5339,6 +6028,22 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     detailsContainer.innerHTML = htmlContent;
+
+    // Attach Share Campaign Button Listeners
+    const shareCampaignBtns = detailsContainer.querySelectorAll('.btn-share-campaign');
+    shareCampaignBtns.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const campaignId = btn.getAttribute('data-campaign-id');
+        const cData = campaignShareDataMap[campaignId];
+        if (cData && campaignShareModal && campaignShareCardCanvas) {
+          currentShareCampaignData = cData;
+          campaignShareModal.style.display = 'flex';
+          campaignShareModal.classList.remove('hidden');
+          drawCampaignShareCard(campaignShareCardCanvas, currentShareMode, currentShareCampaignData);
+        }
+      });
+    });
     
     // Setup Coordinator Portal Bulk Entry submissions
     const coordForms = detailsContainer.querySelectorAll('.coordinator-bulk-entry-form');
@@ -7379,8 +8084,12 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(async (reg) => {
           console.log('Service Worker registered successfully!', reg.scope);
           
-          // Force update check
-          reg.update();
+          // Force update check safely
+          if (reg.update) {
+            reg.update().catch(err => {
+              console.log("Service Worker update check skipped / offline:", err.message);
+            });
+          }
           
           reg.addEventListener('updatefound', () => {
             const newWorker = reg.installing;

@@ -4522,4 +4522,49 @@ body.diurnal-night .side-menu {
   color: var(--accent-danger);
 }
 
+/* -------------------------------------------------------------
+ * Campaign Share Card & Modal Styles
+ * ------------------------------------------------------------- */
+.btn-share-campaign {
+  background: var(--primary-light);
+  color: var(--primary);
+  border: 1px solid rgba(var(--primary-rgb), 0.25);
+  padding: 6px 12px;
+  font-size: 11.5px;
+  font-weight: 700;
+  border-radius: 20px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  outline: none;
+}
+.btn-share-campaign:hover {
+  background: var(--primary);
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.25);
+}
+
+.campaign-share-card-modal {
+  background: var(--bg-card);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: var(--border);
+  border-radius: 20px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
+}
+
+.campaign-share-tabs {
+  border: var(--border);
+}
+
+.campaign-share-tab-btn.active {
+  background: var(--bg-card) !important;
+  color: var(--primary) !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+
 
