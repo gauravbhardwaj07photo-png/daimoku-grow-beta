@@ -443,7 +443,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnDownloadCampaignShare = document.getElementById('btn-download-campaign-share');
   const btnWhatsappShareCampaign = document.getElementById('btn-whatsapp-share-campaign');
   let currentShareCampaignData = null;
-  let currentShareMode = 'all'; // 'all', 'bucket', 'leaderboard'
+  let currentShareMode = 'status'; // 'status', 'leaderboard'
   const campaignShareDataMap = {};
 
 
@@ -3196,14 +3196,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (stroke) ctx.stroke();
   }
 
-  // Render High-Resolution Campaign Share Poster on Canvas
-  function drawCampaignShareCard(canvas, mode = 'all', data) {
+  // Render High-Resolution, Mobile-Optimized Light Campaign Share Cards (Exact match to App Screens)
+  function drawCampaignShareCard(canvas, mode = 'status', data) {
     if (!canvas || !data) return;
     try {
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
 
-      // Sanitize and extract all input data safely
       const name = String(data.name || 'SGI Victory Campaign');
       const periodStr = String(data.periodStr || 'Active Campaign');
       const globalHours = Math.max(0, Number(data.globalHours) || 0);
@@ -3223,504 +3222,343 @@ document.addEventListener('DOMContentLoaded', () => {
         { name: 'Tagore Garden', hours: 0, color: '#e57373', isOwn: true }
       ];
 
-      // Set Canvas Dimensions based on mode
-      let canvasW = 800;
-      let canvasH = 1120;
-      if (mode === 'bucket') {
-        canvasH = 880;
-      } else if (mode === 'leaderboard') {
-        canvasH = 920;
-      }
+      // Exact mobile aspect ratio (750 x 1150)
+      const canvasW = 750;
+      const canvasH = 1150;
       canvas.width = canvasW;
       canvas.height = canvasH;
 
-      // Rich Deep Forest / SGI Sage Palette
-      const bgGrad = ctx.createLinearGradient(0, 0, canvasW, canvasH);
-      bgGrad.addColorStop(0, '#0c1a0e');
-      bgGrad.addColorStop(0.5, '#132815');
-      bgGrad.addColorStop(1, '#081209');
+      // App background theme (soft subtle sage gradient)
+      const bgGrad = ctx.createLinearGradient(0, 0, 0, canvasH);
+      bgGrad.addColorStop(0, '#f8faf7');
+      bgGrad.addColorStop(0.5, '#f1f5f0');
+      bgGrad.addColorStop(1, '#eaf0e8');
       ctx.fillStyle = bgGrad;
       ctx.fillRect(0, 0, canvasW, canvasH);
 
-      // Subtle ambient light points
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
-      const seedPoints = [
-        [90, 110, 1.5], [710, 140, 2], [140, 480, 1.2], [680, 520, 1.8],
-        [110, 750, 1.5], [690, 810, 2.2], [400, 260, 1.2], [320, 920, 1.5]
-      ];
-      seedPoints.forEach(pt => {
-        ctx.beginPath();
-        ctx.arc(pt[0], pt[1], pt[2], 0, Math.PI * 2);
-        ctx.fill();
-      });
+      // Subtle outer app card container
+      ctx.fillStyle = '#f4f7f4';
+      drawCanvasRoundRect(ctx, 16, 16, canvasW - 32, canvasH - 32, 28, true, false);
+      ctx.strokeStyle = 'rgba(74, 124, 89, 0.2)';
+      ctx.lineWidth = 1.5;
+      drawCanvasRoundRect(ctx, 16, 16, canvasW - 32, canvasH - 32, 28, false, true);
 
-      // Draw Translucent Center Lotus Watermark
-      drawLotusWatermark(ctx, 400, canvasH / 2, 380, 'rgba(255, 215, 0, 0.035)');
-
-      // Outer Decorative Gold Border
-      ctx.lineWidth = 3;
-      const borderGrad = ctx.createLinearGradient(30, 30, canvasW - 30, canvasH - 30);
-      borderGrad.addColorStop(0, 'rgba(255, 215, 0, 0.55)');
-      borderGrad.addColorStop(0.5, 'rgba(148, 196, 148, 0.35)');
-      borderGrad.addColorStop(1, 'rgba(255, 215, 0, 0.55)');
-      ctx.strokeStyle = borderGrad;
-      drawCanvasRoundRect(ctx, 30, 30, canvasW - 60, canvasH - 60, 24, false, true);
-
-      // Inner thin border
-      ctx.lineWidth = 1;
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-      drawCanvasRoundRect(ctx, 38, 38, canvasW - 76, canvasH - 76, 18, false, true);
-
-      // Corner decorative notches
-      const cornerSize = 10;
-      ctx.fillStyle = '#ffd54f';
-      ctx.fillRect(25, 25, cornerSize, cornerSize);
-      ctx.fillRect(canvasW - 25 - cornerSize, 25, cornerSize, cornerSize);
-      ctx.fillRect(25, canvasH - 25 - cornerSize, cornerSize, cornerSize);
-      ctx.fillRect(canvasW - 25 - cornerSize, canvasH - 25 - cornerSize, cornerSize, cornerSize);
-
-      // --- Top Header ---
-      drawLotusWatermark(ctx, 400, 68, 36, '#ffd54f');
-
+      // Header Branding
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillStyle = '#a3cfa3';
-      ctx.font = "bold 13px 'Outfit', 'Segoe UI', -apple-system, sans-serif";
-      ctx.fillText("DAIMOKU GROW • SGI CAMPAIGN PROGRESS", 400, 104);
 
+      // Small Leaf / App Icon
+      ctx.fillStyle = '#2e7d32';
+      ctx.font = "bold 14px -apple-system, sans-serif";
+      ctx.fillText("🌿  DAIMOKU GROW  •  SGI CAMPAIGN", canvasW / 2, 54);
+
+      // Campaign Name (Large & Bold)
+      ctx.fillStyle = '#1b3b22';
+      ctx.font = "bold 34px 'Playfair Display', Georgia, serif";
+      ctx.fillText(name, canvasW / 2, 94);
+
+      // Period Pill
       ctx.fillStyle = '#ffffff';
-      ctx.font = "bold 28px 'Playfair Display', Georgia, serif";
-      ctx.fillText(name, 400, 138);
-
-      // Duration pill
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
-      drawCanvasRoundRect(ctx, 200, 162, 400, 28, 14, true, false);
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+      drawCanvasRoundRect(ctx, 175, 122, 400, 32, 16, true, false);
+      ctx.strokeStyle = 'rgba(74, 124, 89, 0.25)';
       ctx.lineWidth = 1;
-      drawCanvasRoundRect(ctx, 200, 162, 400, 28, 14, false, true);
+      drawCanvasRoundRect(ctx, 175, 122, 400, 32, 16, false, true);
 
-      ctx.fillStyle = '#d0e0d0';
-      ctx.font = "600 12.5px 'Outfit', 'Segoe UI', sans-serif";
-      ctx.fillText(`Period: ${periodStr}`, 400, 176);
+      ctx.fillStyle = '#4a7c59';
+      ctx.font = "600 14px -apple-system, sans-serif";
+      ctx.fillText(`📅  Period: ${periodStr}`, canvasW / 2, 138);
 
-      // --- Total Daimoku Stats Banner ---
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.38)';
-      drawCanvasRoundRect(ctx, 50, 204, 700, 88, 16, true, false);
-      ctx.strokeStyle = 'rgba(255, 215, 0, 0.3)';
-      ctx.lineWidth = 1.2;
-      drawCanvasRoundRect(ctx, 50, 204, 700, 88, 16, false, true);
+      if (mode === 'status' || mode === 'all' || mode === 'bucket') {
+        // ==========================================
+        // CARD 1: STATUS & PATH TO VICTORY
+        // ==========================================
 
-      ctx.fillStyle = '#94c494';
-      ctx.font = "bold 12px 'Outfit', sans-serif";
-      ctx.fillText("TOTAL DAIMOKU CHANTED", 400, 224);
+        // Total Chanted & Target Summary Section
+        const topStatY = 176;
+        ctx.fillStyle = '#1b3b22';
+        ctx.font = "bold 19px -apple-system, sans-serif";
+        ctx.fillText(`📊  Total Chanted: ${globalHours.toFixed(1)} hrs (~${formatDaimokuCount(globalHours, true)})`, canvasW / 2, topStatY);
 
-      ctx.fillStyle = '#ffffff';
-      ctx.font = "bold 24px 'Outfit', sans-serif";
-      ctx.fillText(`${globalHours.toFixed(1)} / ${targetHours} Hours   •   ${progressPercentDisplay}`, 400, 250);
+        ctx.fillStyle = '#2e7d32';
+        ctx.font = "600 17px -apple-system, sans-serif";
+        ctx.fillText(`🎯  Target: ${targetHours} hrs (~${formatDaimokuCount(targetHours, true)})  •  ${progressPercentDisplay}`, canvasW / 2, topStatY + 30);
 
-      const totalDaimokuCountStr = `~${formatDaimokuCount(globalHours, true)} / ${formatDaimokuCount(targetHours, true)} Daimoku`;
-      ctx.fillStyle = '#ffd54f';
-      ctx.font = "bold 16px 'Outfit', sans-serif";
-      ctx.fillText(totalDaimokuCountStr, 400, 274);
+        // Main White Card Container (Path to Victory)
+        const mainCardY = 240;
+        const mainCardW = 670;
+        const mainCardH = 750;
+        const mainCardX = 40;
 
-      // --- MODE RENDERING ---
-      if (mode === 'all') {
-        // === ALL-IN-ONE MASTER CARD ===
-        
-        // Left: Bucket Graphic
-        const bW = 150;
-        const bH = 220;
-        const bX = 110;
-        const bY = 320;
-
-        // Draw Bucket glass body
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
-        ctx.lineWidth = 2.5;
-        drawCanvasRoundRect(ctx, bX, bY, bW, bH, { tl: 8, tr: 8, br: 30, bl: 30 }, true, true);
-
-        // Fill liquid in bucket
-        const fillH = Math.max(0, Math.min(bH, bH * (progressPercent / 100)));
-        if (fillH > 0) {
-          ctx.save();
-          drawCanvasRoundRect(ctx, bX, bY, bW, bH, { tl: 8, tr: 8, br: 30, bl: 30 }, false, false);
-          ctx.clip();
-
-          const lGrad = ctx.createLinearGradient(bX, Math.max(bY, bY + bH - fillH), bX, bY + bH);
-          lGrad.addColorStop(0, '#ffd54f');
-          lGrad.addColorStop(0.5, '#26a69a');
-          lGrad.addColorStop(1, '#0d47a1');
-          ctx.fillStyle = lGrad;
-          ctx.fillRect(bX, bY + bH - fillH, bW, fillH);
-          ctx.restore();
-        }
-
-        // Percentage label inside bucket
-        ctx.textAlign = 'center';
         ctx.fillStyle = '#ffffff';
-        ctx.font = "bold 26px 'Outfit', sans-serif";
-        ctx.fillText(progressPercentDisplay, bX + bW / 2, bY + bH / 2);
+        drawCanvasRoundRect(ctx, mainCardX, mainCardY, mainCardW, mainCardH, 24, true, false);
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.08)';
+        ctx.lineWidth = 1.5;
+        drawCanvasRoundRect(ctx, mainCardX, mainCardY, mainCardW, mainCardH, 24, false, true);
 
-        // Milestone Markers next to Bucket
-        const marks = [
-          { pct: 0.25, h: (targetHours * 0.25).toFixed(0), d: formatDaimokuCount(targetHours * 0.25, true), y: bY + bH * 0.75 },
-          { pct: 0.50, h: (targetHours * 0.50).toFixed(0), d: formatDaimokuCount(targetHours * 0.50, true), y: bY + bH * 0.50 },
-          { pct: 0.75, h: (targetHours * 0.75).toFixed(0), d: formatDaimokuCount(targetHours * 0.75, true), y: bY + bH * 0.25 },
-          { pct: 1.00, h: (targetHours).toFixed(0), d: formatDaimokuCount(targetHours, true), y: bY + bH * 0.03 }
-        ];
-
+        // Path to Victory Header Row
         ctx.textAlign = 'left';
-        marks.forEach(m => {
-          const isReached = globalHours >= (targetHours * m.pct);
-          ctx.strokeStyle = isReached ? '#ffd54f' : 'rgba(255, 255, 255, 0.25)';
-          ctx.lineWidth = isReached ? 2 : 1;
-          ctx.beginPath();
-          ctx.moveTo(bX + bW + 4, m.y);
-          ctx.lineTo(bX + bW + 16, m.y);
-          ctx.stroke();
+        ctx.fillStyle = '#1b3b22';
+        ctx.font = "bold 21px -apple-system, sans-serif";
+        ctx.fillText("🏆  PATH TO VICTORY", mainCardX + 28, mainCardY + 42);
 
-          ctx.fillStyle = isReached ? '#ffd54f' : '#8fa88f';
-          ctx.font = isReached ? "bold 11px 'Outfit', sans-serif" : "500 11px 'Outfit', sans-serif";
-          ctx.fillText(`${m.h}h • ${m.d} (${Math.round(m.pct * 100)}%)`, bX + bW + 20, m.y + 1);
-        });
-
-        // Right: Path to Victory 3 mini-cards
-        const pX = 410;
-        const pW = 340;
-        const pH = 66;
-        const pGap = 10;
-
-        const pathItems = [
-          { label: "⏳ TIME REMAINING", val: timeLeftText, sub: timeLeftSub, color: "#ffffff" },
-          { label: "🎯 DAILY VICTORY STRIDE", val: dailyStrideText, sub: dailyStrideSub, color: "#ffd54f", highlight: true },
-          { label: "🏁 PROJECTED VICTORY", val: estFinishVal, sub: estFinishSub, color: "#ffffff" }
-        ];
-
-        pathItems.forEach((p, idx) => {
-          const itemY = 320 + idx * (pH + pGap);
-          ctx.fillStyle = p.highlight ? 'rgba(255, 215, 0, 0.12)' : 'rgba(0, 0, 0, 0.28)';
-          ctx.strokeStyle = p.highlight ? 'rgba(255, 215, 0, 0.45)' : 'rgba(255, 255, 255, 0.1)';
-          ctx.lineWidth = 1;
-          drawCanvasRoundRect(ctx, pX, itemY, pW, pH, 12, true, true);
-
-          ctx.textAlign = 'left';
-          ctx.fillStyle = p.highlight ? '#ffd54f' : '#94c494';
-          ctx.font = "bold 10.5px 'Outfit', sans-serif";
-          ctx.fillText(p.label, pX + 14, itemY + 16);
-
-          ctx.fillStyle = p.color;
-          ctx.font = "bold 15.5px 'Outfit', sans-serif";
-          ctx.fillText(p.val, pX + 14, itemY + 37);
-
-          ctx.fillStyle = '#a3cfa3';
-          ctx.font = "500 11px 'Outfit', sans-serif";
-          ctx.fillText(p.sub, pX + 14, itemY + 54);
-        });
-
-        // SGI Blocks Leaderboard Card
-        const lbY = 565;
-        const lbW = 700;
-        const lbH = 305;
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-        ctx.lineWidth = 1;
-        drawCanvasRoundRect(ctx, 50, lbY, lbW, lbH, 16, true, true);
-
-        ctx.textAlign = 'left';
-        ctx.fillStyle = '#ffffff';
-        ctx.font = "bold 14px 'Outfit', sans-serif";
-        ctx.fillText("🏆 SGI BLOCKS LEADERBOARD", 70, lbY + 28);
-
-        const maxBHours = Math.max(...blockSummaries.map(b => Number(b.hours) || 0), 1);
-        const rowH = 46;
-        const startRowY = lbY + 44;
-
-        blockSummaries.forEach((b, idx) => {
-          const ry = startRowY + idx * rowH;
-          const medals = ['🥇', '🥈', '🥉', '4.', '5.'];
-          const bHours = Math.max(0, Number(b.hours) || 0);
-          const relW = Math.max(0, Math.min(290, Math.round((bHours / maxBHours) * 290)));
-
-          ctx.fillStyle = '#ffffff';
-          ctx.font = "14px 'Outfit', sans-serif";
-          ctx.fillText(medals[idx] || `${idx + 1}.`, 72, ry + 18);
-
-          ctx.fillStyle = b.color || '#757575';
-          ctx.beginPath();
-          ctx.arc(104, ry + 14, 5, 0, Math.PI * 2);
-          ctx.fill();
-
-          ctx.fillStyle = b.isOwn ? '#ffd54f' : '#ffffff';
-          ctx.font = b.isOwn ? "bold 13px 'Outfit', sans-serif" : "600 13px 'Outfit', sans-serif";
-          ctx.fillText(`${b.name || 'Block'} Block${b.isOwn ? ' (You)' : ''}`, 118, ry + 18);
-
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
-          drawCanvasRoundRect(ctx, 275, ry + 8, 290, 14, 7, true, false);
-
-          if (relW > 0) {
-            ctx.fillStyle = b.color || '#26a69a';
-            drawCanvasRoundRect(ctx, 275, ry + 8, relW, 14, 7, true, false);
-          }
-
-          ctx.textAlign = 'right';
-          ctx.fillStyle = '#ffffff';
-          ctx.font = "bold 13px 'Outfit', sans-serif";
-          ctx.fillText(`${bHours.toFixed(1)} hrs`, 720, ry + 18);
-          ctx.textAlign = 'left';
-        });
-
-        // Personal Contribution Footer Row
-        const pFooterY = lbY + lbH + 12;
-        ctx.fillStyle = 'rgba(82, 111, 82, 0.28)';
-        ctx.strokeStyle = 'rgba(148, 196, 148, 0.4)';
-        ctx.lineWidth = 1;
-        drawCanvasRoundRect(ctx, 50, pFooterY, 700, 44, 12, true, true);
+        // Days left badge
+        const badgeText = timeLeftText.includes('d') ? `${timeLeftText.split(' ')[0]} left` : 'Active';
+        ctx.fillStyle = '#f8f4eb';
+        drawCanvasRoundRect(ctx, mainCardX + mainCardW - 170, mainCardY + 24, 142, 34, 17, true, false);
+        ctx.strokeStyle = '#e0cfa5';
+        ctx.lineWidth = 1.2;
+        drawCanvasRoundRect(ctx, mainCardX + mainCardW - 170, mainCardY + 24, 142, 34, 17, false, true);
 
         ctx.textAlign = 'center';
-        ctx.fillStyle = '#ffffff';
-        ctx.font = "600 13.5px 'Outfit', sans-serif";
-        ctx.fillText(`🙏 Your Personal Contribution: ${personalHours.toFixed(1)} hrs  •  ${personalPercent}% of ${userBlock} Block`, 400, pFooterY + 23);
+        ctx.fillStyle = '#87510d';
+        ctx.font = "bold 14px -apple-system, sans-serif";
+        ctx.fillText(`⏳ ${badgeText}`, mainCardX + mainCardW - 99, mainCardY + 41);
 
-        // Footer
-        const footerY = 970;
-        ctx.fillStyle = '#a3cfa3';
-        ctx.font = "italic 13.5px 'Playfair Display', Georgia, serif";
-        ctx.fillText('"Even one daimoku can pervade the entire universe. Resounding daimoku moves everything."', 400, footerY);
+        // 3 Giant Tiles (Time Remaining, Daily Stride, Projected Victory)
+        const tileX = mainCardX + 22;
+        const tileW = mainCardW - 44;
+        const tileH = 150;
+        const tileGap = 20;
+        const startTileY = mainCardY + 80;
 
-        ctx.fillStyle = '#ffd54f';
-        ctx.font = "bold 11.5px 'Outfit', sans-serif";
-        ctx.fillText("DAISAKU IKEDA", 400, footerY + 22);
-
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
-        ctx.font = "500 11px 'Outfit', sans-serif";
-        ctx.fillText("DAIMOKU GROW GALAXY • SOKA GAKKAI INTERNATIONAL", 400, 1070);
-
-      } else if (mode === 'bucket') {
-        // === BUCKET & VICTORY PATH MODE ===
-        const bW = 180;
-        const bH = 270;
-        const bX = 100;
-        const bY = 320;
-
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
-        ctx.lineWidth = 3;
-        drawCanvasRoundRect(ctx, bX, bY, bW, bH, { tl: 10, tr: 10, br: 36, bl: 36 }, true, true);
-
-        const fillH = Math.max(0, Math.min(bH, bH * (progressPercent / 100)));
-        if (fillH > 0) {
-          ctx.save();
-          drawCanvasRoundRect(ctx, bX, bY, bW, bH, { tl: 10, tr: 10, br: 36, bl: 36 }, false, false);
-          ctx.clip();
-
-          const lGrad = ctx.createLinearGradient(bX, Math.max(bY, bY + bH - fillH), bX, bY + bH);
-          lGrad.addColorStop(0, '#ffd54f');
-          lGrad.addColorStop(0.5, '#26a69a');
-          lGrad.addColorStop(1, '#0d47a1');
-          ctx.fillStyle = lGrad;
-          ctx.fillRect(bX, bY + bH - fillH, bW, fillH);
-          ctx.restore();
-        }
+        // Tile 1: Time Remaining
+        const t1Y = startTileY;
+        ctx.fillStyle = '#f9faf7';
+        drawCanvasRoundRect(ctx, tileX, t1Y, tileW, tileH, 18, true, false);
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.07)';
+        ctx.lineWidth = 1.2;
+        drawCanvasRoundRect(ctx, tileX, t1Y, tileW, tileH, 18, false, true);
 
         ctx.textAlign = 'center';
-        ctx.fillStyle = '#ffffff';
-        ctx.font = "bold 32px 'Outfit', sans-serif";
-        ctx.fillText(progressPercentDisplay, bX + bW / 2, bY + bH / 2);
+        ctx.fillStyle = '#6a8470';
+        ctx.font = "bold 15px -apple-system, sans-serif";
+        ctx.fillText("⏳  TIME REMAINING", canvasW / 2, t1Y + 34);
 
-        const marks = [
-          { pct: 0.25, h: (targetHours * 0.25).toFixed(0), d: formatDaimokuCount(targetHours * 0.25, true), y: bY + bH * 0.75 },
-          { pct: 0.50, h: (targetHours * 0.50).toFixed(0), d: formatDaimokuCount(targetHours * 0.50, true), y: bY + bH * 0.50 },
-          { pct: 0.75, h: (targetHours * 0.75).toFixed(0), d: formatDaimokuCount(targetHours * 0.75, true), y: bY + bH * 0.25 },
-          { pct: 1.00, h: (targetHours).toFixed(0), d: formatDaimokuCount(targetHours, true), y: bY + bH * 0.03 }
-        ];
+        ctx.fillStyle = '#14331c';
+        ctx.font = "bold 42px -apple-system, sans-serif";
+        ctx.fillText(timeLeftText, canvasW / 2, t1Y + 82);
 
-        ctx.textAlign = 'left';
-        marks.forEach(m => {
-          const isReached = globalHours >= (targetHours * m.pct);
-          ctx.strokeStyle = isReached ? '#ffd54f' : 'rgba(255, 255, 255, 0.25)';
-          ctx.lineWidth = isReached ? 2 : 1;
-          ctx.beginPath();
-          ctx.moveTo(bX + bW + 4, m.y);
-          ctx.lineTo(bX + bW + 16, m.y);
-          ctx.stroke();
+        ctx.fillStyle = '#55705a';
+        ctx.font = "500 16px -apple-system, sans-serif";
+        ctx.fillText(timeLeftSub, canvasW / 2, t1Y + 122);
 
-          ctx.fillStyle = isReached ? '#ffd54f' : '#8fa88f';
-          ctx.font = isReached ? "bold 12px 'Outfit', sans-serif" : "500 12px 'Outfit', sans-serif";
-          ctx.fillText(`${m.h}h • ${m.d} (${Math.round(m.pct * 100)}%)`, bX + bW + 20, m.y + 1);
-        });
+        // Tile 2: Daily Victory Stride (Highlighted Warm Amber Card)
+        const t2Y = t1Y + tileH + tileGap;
+        ctx.fillStyle = '#fff9ef';
+        drawCanvasRoundRect(ctx, tileX, t2Y, tileW, tileH, 18, true, false);
+        ctx.strokeStyle = '#e6be78';
+        ctx.lineWidth = 2;
+        drawCanvasRoundRect(ctx, tileX, t2Y, tileW, tileH, 18, false, true);
 
-        // Path Cards Right Side
-        const pX = 420;
-        const pW = 330;
-        const pH = 80;
-        const pGap = 15;
+        ctx.fillStyle = '#b76e1c';
+        ctx.font = "bold 15.5px -apple-system, sans-serif";
+        ctx.fillText("🎯  DAILY VICTORY STRIDE", canvasW / 2, t2Y + 34);
 
-        const pathItems = [
-          { label: "⏳ TIME REMAINING", val: timeLeftText, sub: timeLeftSub, color: "#ffffff" },
-          { label: "🎯 DAILY VICTORY STRIDE", val: dailyStrideText, sub: dailyStrideSub, color: "#ffd54f", highlight: true },
-          { label: "🏁 PROJECTED VICTORY", val: estFinishVal, sub: estFinishSub, color: "#ffffff" }
-        ];
+        ctx.fillStyle = '#c87a1e';
+        ctx.font = "bold 44px -apple-system, sans-serif";
+        ctx.fillText(dailyStrideText, canvasW / 2, t2Y + 84);
 
-        pathItems.forEach((p, idx) => {
-          const itemY = 320 + idx * (pH + pGap);
-          ctx.fillStyle = p.highlight ? 'rgba(255, 215, 0, 0.12)' : 'rgba(0, 0, 0, 0.28)';
-          ctx.strokeStyle = p.highlight ? 'rgba(255, 215, 0, 0.45)' : 'rgba(255, 255, 255, 0.1)';
-          ctx.lineWidth = 1;
-          drawCanvasRoundRect(ctx, pX, itemY, pW, pH, 14, true, true);
+        ctx.fillStyle = '#87510d';
+        ctx.font = "600 16.5px -apple-system, sans-serif";
+        ctx.fillText(dailyStrideSub, canvasW / 2, t2Y + 124);
 
-          ctx.textAlign = 'left';
-          ctx.fillStyle = p.highlight ? '#ffd54f' : '#94c494';
-          ctx.font = "bold 11px 'Outfit', sans-serif";
-          ctx.fillText(p.label, pX + 16, itemY + 20);
+        // Tile 3: Projected Victory
+        const t3Y = t2Y + tileH + tileGap;
+        ctx.fillStyle = '#f9faf7';
+        drawCanvasRoundRect(ctx, tileX, t3Y, tileW, tileH, 18, true, false);
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.07)';
+        ctx.lineWidth = 1.2;
+        drawCanvasRoundRect(ctx, tileX, t3Y, tileW, tileH, 18, false, true);
 
-          ctx.fillStyle = p.color;
-          ctx.font = "bold 18px 'Outfit', sans-serif";
-          ctx.fillText(p.val, pX + 16, itemY + 44);
+        ctx.fillStyle = '#6a8470';
+        ctx.font = "bold 15px -apple-system, sans-serif";
+        ctx.fillText("🏁  PROJECTED VICTORY", canvasW / 2, t3Y + 34);
 
-          ctx.fillStyle = '#a3cfa3';
-          ctx.font = "500 12px 'Outfit', sans-serif";
-          ctx.fillText(p.sub, pX + 16, itemY + 64);
-        });
+        ctx.fillStyle = '#14331c';
+        ctx.font = "bold 40px -apple-system, sans-serif";
+        ctx.fillText(estFinishVal, canvasW / 2, t3Y + 82);
 
-        // Personal Contribution Row
-        const pFooterY = 630;
-        ctx.fillStyle = 'rgba(82, 111, 82, 0.28)';
-        ctx.strokeStyle = 'rgba(148, 196, 148, 0.4)';
-        ctx.lineWidth = 1;
-        drawCanvasRoundRect(ctx, 50, pFooterY, 700, 48, 12, true, true);
+        ctx.fillStyle = '#55705a';
+        ctx.font = "500 16px -apple-system, sans-serif";
+        ctx.fillText(estFinishSub, canvasW / 2, t3Y + 122);
 
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#ffffff';
-        ctx.font = "600 14px 'Outfit', sans-serif";
-        ctx.fillText(`🙏 Your Personal Contribution: ${personalHours.toFixed(1)} hrs  •  ${personalPercent}% of ${userBlock} Block`, 400, pFooterY + 25);
+        // Footer Guidance Quote
+        const footerY = 1030;
+        ctx.fillStyle = '#3e5c46';
+        ctx.font = "italic 16px 'Playfair Display', Georgia, serif";
+        ctx.fillText('"Even one daimoku can pervade the entire universe. Resounding daimoku moves everything."', canvasW / 2, footerY);
 
-        // Footer
-        const footerY = 730;
-        ctx.fillStyle = '#a3cfa3';
-        ctx.font = "italic 13.5px 'Playfair Display', Georgia, serif";
-        ctx.fillText('"In times of suffering, chant daimoku. In times of joy, chant daimoku."', 400, footerY);
+        ctx.fillStyle = '#b76e1c';
+        ctx.font = "bold 13px -apple-system, sans-serif";
+        ctx.fillText("DAISAKU IKEDA", canvasW / 2, footerY + 28);
 
-        ctx.fillStyle = '#ffd54f';
-        ctx.font = "bold 11.5px 'Outfit', sans-serif";
-        ctx.fillText("DAISAKU IKEDA", 400, footerY + 22);
-
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
-        ctx.font = "500 11px 'Outfit', sans-serif";
-        ctx.fillText("DAIMOKU GROW GALAXY • SOKA GAKKAI INTERNATIONAL", 400, 830);
+        ctx.fillStyle = '#7a9682';
+        ctx.font = "600 12px -apple-system, sans-serif";
+        ctx.fillText("DAIMOKU GROW  •  SOKA GAKKAI INTERNATIONAL", canvasW / 2, footerY + 68);
 
       } else if (mode === 'leaderboard') {
-        // === LEADERBOARD & PATH MODE ===
-        
-        const pathItems = [
-          { label: "⏳ TIME REMAINING", val: timeLeftText, sub: timeLeftSub, color: "#ffffff" },
-          { label: "🎯 DAILY STRIDE", val: dailyStrideText, sub: dailyStrideSub, color: "#ffd54f", highlight: true },
-          { label: "🏁 PROJECTED DATE", val: estFinishVal, sub: estFinishSub, color: "#ffffff" }
-        ];
+        // ==========================================
+        // CARD 2: SGI BLOCKS LEADERBOARD
+        // ==========================================
 
-        const cW = 220;
-        const cH = 82;
-        const cGap = 20;
-        const startX = 50;
-        const cY = 315;
+        // Target Summary Line
+        const topStatY = 176;
+        ctx.fillStyle = '#1b3b22';
+        ctx.font = "bold 19px -apple-system, sans-serif";
+        ctx.fillText(`🎯  Campaign Target: ${targetHours} hrs (~${formatDaimokuCount(targetHours, true)})`, canvasW / 2, topStatY);
 
-        pathItems.forEach((p, idx) => {
-          const itemX = startX + idx * (cW + cGap);
-          ctx.fillStyle = p.highlight ? 'rgba(255, 215, 0, 0.12)' : 'rgba(0, 0, 0, 0.28)';
-          ctx.strokeStyle = p.highlight ? 'rgba(255, 215, 0, 0.45)' : 'rgba(255, 255, 255, 0.1)';
-          ctx.lineWidth = 1.2;
-          drawCanvasRoundRect(ctx, itemX, cY, cW, cH, 14, true, true);
+        ctx.fillStyle = '#2e7d32';
+        ctx.font = "600 17px -apple-system, sans-serif";
+        ctx.fillText(`Total Chanted: ${globalHours.toFixed(1)} hrs (${progressPercentDisplay})  •  ${timeLeftText} Remaining`, canvasW / 2, topStatY + 30);
 
-          ctx.textAlign = 'center';
-          ctx.fillStyle = p.highlight ? '#ffd54f' : '#94c494';
-          ctx.font = "bold 10.5px 'Outfit', sans-serif";
-          ctx.fillText(p.label, itemX + cW / 2, cY + 20);
+        // Main White Card Container (SGI Blocks Leaderboard)
+        const mainCardY = 240;
+        const mainCardW = 670;
+        const mainCardH = 750;
+        const mainCardX = 40;
 
-          ctx.fillStyle = p.color;
-          ctx.font = "bold 16px 'Outfit', sans-serif";
-          ctx.fillText(p.val, itemX + cW / 2, cY + 44);
-
-          ctx.fillStyle = '#a3cfa3';
-          ctx.font = "500 11px 'Outfit', sans-serif";
-          ctx.fillText(p.sub, itemX + cW / 2, cY + 64);
-        });
-
-        // SGI Blocks Leaderboard
-        const lbY = 425;
-        const lbW = 700;
-        const lbH = 265;
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-        ctx.lineWidth = 1;
-        drawCanvasRoundRect(ctx, 50, lbY, lbW, lbH, 16, true, true);
-
-        ctx.textAlign = 'left';
         ctx.fillStyle = '#ffffff';
-        ctx.font = "bold 14px 'Outfit', sans-serif";
-        ctx.fillText("🏆 SGI BLOCKS LEADERBOARD", 70, lbY + 28);
+        drawCanvasRoundRect(ctx, mainCardX, mainCardY, mainCardW, mainCardH, 24, true, false);
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.08)';
+        ctx.lineWidth = 1.5;
+        drawCanvasRoundRect(ctx, mainCardX, mainCardY, mainCardW, mainCardH, 24, false, true);
 
+        // Card Header Row
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#1b3b22';
+        ctx.font = "bold 22px -apple-system, sans-serif";
+        ctx.fillText("📊  SGI Blocks Leaderboard", mainCardX + 28, mainCardY + 42);
+
+        // 5 Spacious Block Rows
+        const rowX = mainCardX + 22;
+        const rowW = mainCardW - 44;
+        const rowH = 82;
+        const rowGap = 14;
+        const startRowY = mainCardY + 70;
         const maxBHours = Math.max(...blockSummaries.map(b => Number(b.hours) || 0), 1);
-        const rowH = 42;
-        const startRowY = lbY + 44;
 
         blockSummaries.forEach((b, idx) => {
-          const ry = startRowY + idx * rowH;
-          const medals = ['🥇', '🥈', '🥉', '4.', '5.'];
+          const ry = startRowY + idx * (rowH + rowGap);
           const bHours = Math.max(0, Number(b.hours) || 0);
-          const relW = Math.max(0, Math.min(290, Math.round((bHours / maxBHours) * 290)));
+          const relPct = Math.max(0, Math.min(100, Math.round((bHours / maxBHours) * 100)));
 
-          ctx.fillStyle = '#ffffff';
-          ctx.font = "14px 'Outfit', sans-serif";
-          ctx.fillText(medals[idx] || `${idx + 1}.`, 72, ry + 18);
-
-          ctx.fillStyle = b.color || '#757575';
-          ctx.beginPath();
-          ctx.arc(104, ry + 14, 5, 0, Math.PI * 2);
-          ctx.fill();
-
-          ctx.fillStyle = b.isOwn ? '#ffd54f' : '#ffffff';
-          ctx.font = b.isOwn ? "bold 13px 'Outfit', sans-serif" : "600 13px 'Outfit', sans-serif";
-          ctx.fillText(`${b.name || 'Block'} Block${b.isOwn ? ' (You)' : ''}`, 118, ry + 18);
-
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
-          drawCanvasRoundRect(ctx, 275, ry + 8, 290, 14, 7, true, false);
-
-          if (relW > 0) {
-            ctx.fillStyle = b.color || '#26a69a';
-            drawCanvasRoundRect(ctx, 275, ry + 8, relW, 14, 7, true, false);
+          // Tile Container
+          if (b.isOwn) {
+            ctx.fillStyle = 'rgba(255, 248, 235, 0.9)';
+            drawCanvasRoundRect(ctx, rowX, ry, rowW, rowH, 16, true, false);
+            ctx.strokeStyle = '#d49b42';
+            ctx.lineWidth = 1.8;
+            drawCanvasRoundRect(ctx, rowX, ry, rowW, rowH, 16, false, true);
+          } else {
+            ctx.fillStyle = '#f9faf7';
+            drawCanvasRoundRect(ctx, rowX, ry, rowW, rowH, 16, true, false);
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.06)';
+            ctx.lineWidth = 1.2;
+            drawCanvasRoundRect(ctx, rowX, ry, rowW, rowH, 16, false, true);
           }
 
-          ctx.textAlign = 'right';
-          ctx.fillStyle = '#ffffff';
-          ctx.font = "bold 13px 'Outfit', sans-serif";
-          ctx.fillText(`${bHours.toFixed(1)} hrs`, 720, ry + 18);
+          // Dot Color Indicator
+          ctx.fillStyle = b.color || '#757575';
+          ctx.beginPath();
+          ctx.arc(rowX + 22, ry + 28, 7, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Block Name
           ctx.textAlign = 'left';
+          ctx.fillStyle = '#1b3b22';
+          ctx.font = "bold 20px -apple-system, sans-serif";
+          ctx.fillText(`${b.name || 'Block'} Block`, rowX + 38, ry + 29);
+
+          // YOUR BLOCK Badge Pill
+          if (b.isOwn) {
+            const nameWidth = ctx.measureText(`${b.name || 'Block'} Block`).width;
+            const badgeX = rowX + 38 + nameWidth + 10;
+            ctx.fillStyle = 'rgba(38, 166, 154, 0.18)';
+            drawCanvasRoundRect(ctx, badgeX, ry + 16, 92, 24, 12, true, false);
+            ctx.strokeStyle = '#26a69a';
+            ctx.lineWidth = 1;
+            drawCanvasRoundRect(ctx, badgeX, ry + 16, 92, 24, 12, false, true);
+
+            ctx.fillStyle = '#00695c';
+            ctx.font = "bold 11px -apple-system, sans-serif";
+            ctx.fillText("YOUR BLOCK", badgeX + 11, ry + 29);
+          }
+
+          // Hours Value (Right Aligned, Huge & Bold)
+          ctx.textAlign = 'right';
+          ctx.fillStyle = '#1b3b22';
+          ctx.font = "bold 22px -apple-system, sans-serif";
+          ctx.fillText(`${bHours.toFixed(1)} hrs`, rowX + rowW - 22, ry + 29);
+
+          // Full-width Progress Bar underneath
+          const barTrackX = rowX + 20;
+          const barTrackY = ry + 52;
+          const barTrackW = rowW - 40;
+          const barFillW = Math.max(0, Math.min(barTrackW, Math.round((relPct / 100) * barTrackW)));
+
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+          drawCanvasRoundRect(ctx, barTrackX, barTrackY, barTrackW, 10, 5, true, false);
+
+          if (barFillW > 0) {
+            ctx.fillStyle = b.color || '#26a69a';
+            drawCanvasRoundRect(ctx, barTrackX, barTrackY, barFillW, 10, 5, true, false);
+          }
         });
 
-        // Personal Contribution Row
-        const pFooterY = 710;
-        ctx.fillStyle = 'rgba(82, 111, 82, 0.28)';
-        ctx.strokeStyle = 'rgba(148, 196, 148, 0.4)';
-        ctx.lineWidth = 1;
-        drawCanvasRoundRect(ctx, 50, pFooterY, 700, 48, 12, true, true);
+        // Personal Contribution Box
+        const pContY = startRowY + 5 * (rowH + rowGap) + 12;
+        const pContH = 95;
+        ctx.fillStyle = 'rgba(200, 162, 101, 0.08)';
+        drawCanvasRoundRect(ctx, rowX, pContY, rowW, pContH, 16, true, false);
+        ctx.strokeStyle = '#c8a265';
+        ctx.lineWidth = 1.5;
+        drawCanvasRoundRect(ctx, rowX, pContY, rowW, pContH, 16, false, true);
 
+        // Top Row: Title & Value
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#87510d';
+        ctx.font = "bold 17px -apple-system, sans-serif";
+        ctx.fillText("🙏  Your Personal Contribution", rowX + 20, pContY + 30);
+
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#87510d';
+        ctx.font = "bold 22px -apple-system, sans-serif";
+        ctx.fillText(`${personalHours.toFixed(1)} hrs`, rowX + rowW - 20, pContY + 30);
+
+        // Progress Bar
+        const pBarTrackX = rowX + 20;
+        const pBarTrackY = pContY + 48;
+        const pBarTrackW = rowW - 40;
+        const pBarFillW = Math.max(0, Math.min(pBarTrackW, Math.round((personalPercent / 100) * pBarTrackW)));
+
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
+        drawCanvasRoundRect(ctx, pBarTrackX, pBarTrackY, pBarTrackW, 10, 5, true, false);
+
+        if (pBarFillW > 0) {
+          ctx.fillStyle = '#b76e1c';
+          drawCanvasRoundRect(ctx, pBarTrackX, pBarTrackY, pBarFillW, 10, 5, true, false);
+        }
+
+        // Percentage label
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#6a8470';
+        ctx.font = "500 13px -apple-system, sans-serif";
+        ctx.fillText(`(${personalPercent}% of your block's total)`, rowX + rowW - 20, pContY + 80);
+
+        // Footer Guidance Quote
+        const footerY = 1030;
         ctx.textAlign = 'center';
-        ctx.fillStyle = '#ffffff';
-        ctx.font = "600 14px 'Outfit', sans-serif";
-        ctx.fillText(`🙏 Your Personal Contribution: ${personalHours.toFixed(1)} hrs  •  ${personalPercent}% of ${userBlock} Block`, 400, pFooterY + 25);
+        ctx.fillStyle = '#3e5c46';
+        ctx.font = "italic 16px 'Playfair Display', Georgia, serif";
+        ctx.fillText('"Resounding daimoku morning and evening gallops through the universe."', canvasW / 2, footerY);
 
-        // Footer
-        const footerY = 790;
-        ctx.fillStyle = '#a3cfa3';
-        ctx.font = "italic 13.5px 'Playfair Display', Georgia, serif";
-        ctx.fillText('"Resounding daimoku morning and evening gallops through the universe."', 400, footerY);
+        ctx.fillStyle = '#b76e1c';
+        ctx.font = "bold 13px -apple-system, sans-serif";
+        ctx.fillText("DAISAKU IKEDA", canvasW / 2, footerY + 28);
 
-        ctx.fillStyle = '#ffd54f';
-        ctx.font = "bold 11.5px 'Outfit', sans-serif";
-        ctx.fillText("DAISAKU IKEDA", 400, footerY + 22);
-
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
-        ctx.font = "500 11px 'Outfit', sans-serif";
-        ctx.fillText("DAIMOKU GROW GALAXY • SOKA GAKKAI INTERNATIONAL", 400, 875);
+        ctx.fillStyle = '#7a9682';
+        ctx.font = "600 12px -apple-system, sans-serif";
+        ctx.fillText("DAIMOKU GROW  •  SOKA GAKKAI INTERNATIONAL", canvasW / 2, footerY + 68);
       }
     } catch (err) {
       console.error('Error in drawCampaignShareCard:', err);
@@ -3733,7 +3571,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.addEventListener('click', () => {
       campaignShareTabBtns.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      currentShareMode = btn.getAttribute('data-mode') || 'all';
+      currentShareMode = btn.getAttribute('data-mode') || 'status';
       if (currentShareCampaignData && campaignShareCardCanvas) {
         drawCampaignShareCard(campaignShareCardCanvas, currentShareMode, currentShareCampaignData);
       }
@@ -8157,7 +7995,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js?v=133')
+      navigator.serviceWorker.register('sw.js?v=137')
         .then(async (reg) => {
           console.log('Service Worker registered successfully!', reg.scope);
           

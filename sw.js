@@ -1,4 +1,4 @@
-const CACHE_NAME = 'daimoku-grow-v135';
+const CACHE_NAME = 'daimoku-grow-v138';
 const ASSETS = [
   './',
   './index.html',
@@ -22,7 +22,7 @@ self.addEventListener('install', (e) => {
           });
         })
       );
-    })
+    }).catch(() => {})
   );
   self.skipWaiting();
 });
@@ -33,11 +33,11 @@ self.addEventListener('activate', (e) => {
       return Promise.all(
         keys.map((key) => {
           if (key !== CACHE_NAME) {
-            return caches.delete(key);
+            return caches.delete(key).catch(() => {});
           }
         })
       );
-    })
+    }).catch(() => {})
   );
   self.clients.claim();
 });
@@ -54,13 +54,13 @@ self.addEventListener('fetch', (e) => {
         if (res.status === 200) {
           const resClone = res.clone();
           caches.open(CACHE_NAME).then((cache) => {
-            cache.put(e.request, resClone);
-          });
+            cache.put(e.request, resClone).catch(() => {});
+          }).catch(() => {});
         }
         return res;
       })
       .catch(() => {
-        return caches.match(e.request, { ignoreSearch: true });
+        return caches.match(e.request, { ignoreSearch: true }).catch(() => null);
       })
   );
 });
