@@ -27,7 +27,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <!-- Stylesheets -->
-  <link rel="stylesheet" href="styles.css?v=138">
+  <link rel="stylesheet" href="styles.css?v=139">
   
   <script>
     // Clean up any legacy debug error banners if cached
@@ -1540,10 +1540,11 @@
         <button id="btn-close-campaign-share" class="btn-close-modal"><i class="fa-solid fa-xmark"></i></button>
       </div>
 
-      <!-- Card Style Selector Tabs (2 Mobile Optimized Light Cards) -->
-      <div class="campaign-share-tabs" style="display: flex; gap: 8px; margin-bottom: 14px; background: var(--primary-light); padding: 4px; border-radius: 12px;">
-        <button class="campaign-share-tab-btn active" data-mode="status" style="flex: 1; padding: 10px 8px; font-size: 13px; font-weight: 700; border: none; border-radius: 8px; cursor: pointer; transition: all 0.2s; background: var(--bg-card); color: var(--primary); box-shadow: 0 2px 6px rgba(0,0,0,0.06);"><i class="fa-solid fa-chart-pie" style="margin-right:4px;"></i> Status & Goal</button>
-        <button class="campaign-share-tab-btn" data-mode="leaderboard" style="flex: 1; padding: 10px 8px; font-size: 13px; font-weight: 700; border: none; border-radius: 8px; cursor: pointer; transition: all 0.2s; background: transparent; color: var(--text-muted);"><i class="fa-solid fa-trophy" style="margin-right:4px;"></i> Leaderboard</button>
+      <!-- Card Style Selector Tabs (3 Mobile Optimized Light Cards) -->
+      <div class="campaign-share-tabs" style="display: flex; gap: 6px; margin-bottom: 14px; background: var(--primary-light); padding: 4px; border-radius: 12px;">
+        <button class="campaign-share-tab-btn active" data-mode="status" style="flex: 1; padding: 9px 6px; font-size: 12px; font-weight: 700; border: none; border-radius: 8px; cursor: pointer; transition: all 0.2s; background: var(--bg-card); color: var(--primary); box-shadow: 0 2px 6px rgba(0,0,0,0.06);"><i class="fa-solid fa-chart-pie" style="margin-right:3px;"></i> Status</button>
+        <button class="campaign-share-tab-btn" data-mode="bucket" style="flex: 1; padding: 9px 6px; font-size: 12px; font-weight: 700; border: none; border-radius: 8px; cursor: pointer; transition: all 0.2s; background: transparent; color: var(--text-muted);"><i class="fa-solid fa-fill-drip" style="margin-right:3px;"></i> Bucket</button>
+        <button class="campaign-share-tab-btn" data-mode="leaderboard" style="flex: 1; padding: 9px 6px; font-size: 12px; font-weight: 700; border: none; border-radius: 8px; cursor: pointer; transition: all 0.2s; background: transparent; color: var(--text-muted);"><i class="fa-solid fa-trophy" style="margin-right:3px;"></i> Blocks</button>
       </div>
 
       <div class="share-preview-container" style="display: flex; justify-content: center; align-items: center; margin-bottom: 14px; background: rgba(0,0,0,0.03); border-radius: 12px; padding: 8px; border: var(--border);">
@@ -1693,8 +1694,8 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js" crossorigin="anonymous"></script>
 
   <!-- Include App Logic and Scripts -->
-  <script src="plant.js?v=138"></script>
-  <script src="firebase-config.js?v=138"></script>
-  <script src="app.js?v=138"></script>
+  <script src="plant.js?v=139"></script>
+  <script src="firebase-config.js?v=139"></script>
+  <script src="app.js?v=139"></script>
 </body>
 </html>

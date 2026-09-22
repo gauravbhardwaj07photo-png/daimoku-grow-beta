@@ -3268,12 +3268,11 @@ document.addEventListener('DOMContentLoaded', () => {
       ctx.font = "600 14px -apple-system, sans-serif";
       ctx.fillText(`📅  Period: ${periodStr}`, canvasW / 2, 138);
 
-      if (mode === 'status' || mode === 'all' || mode === 'bucket') {
+      if (mode === 'status') {
         // ==========================================
         // CARD 1: STATUS & PATH TO VICTORY
         // ==========================================
 
-        // Total Chanted & Target Summary Section
         const topStatY = 176;
         ctx.fillStyle = '#1b3b22';
         ctx.font = "bold 19px -apple-system, sans-serif";
@@ -3396,9 +3395,233 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.font = "600 12px -apple-system, sans-serif";
         ctx.fillText("DAIMOKU GROW  •  SOKA GAKKAI INTERNATIONAL", canvasW / 2, footerY + 68);
 
+      } else if (mode === 'bucket') {
+        // ==========================================
+        // CARD 2: GRAND WATER BUCKET & GOAL PROGRESS
+        // ==========================================
+
+        const topStatY = 176;
+        ctx.fillStyle = '#1b3b22';
+        ctx.font = "bold 19px -apple-system, sans-serif";
+        ctx.fillText(`🎯  Campaign Target: ${targetHours} hrs (~${formatDaimokuCount(targetHours, true)})`, canvasW / 2, topStatY);
+
+        ctx.fillStyle = '#2e7d32';
+        ctx.font = "600 17px -apple-system, sans-serif";
+        ctx.fillText(`Total Chanted: ${globalHours.toFixed(1)} hrs (${progressPercentDisplay})  •  ${timeLeftText} Remaining`, canvasW / 2, topStatY + 30);
+
+        // Main White Card Container
+        const mainCardY = 240;
+        const mainCardW = 670;
+        const mainCardH = 750;
+        const mainCardX = 40;
+
+        ctx.fillStyle = '#ffffff';
+        drawCanvasRoundRect(ctx, mainCardX, mainCardY, mainCardW, mainCardH, 24, true, false);
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.08)';
+        ctx.lineWidth = 1.5;
+        drawCanvasRoundRect(ctx, mainCardX, mainCardY, mainCardW, mainCardH, 24, false, true);
+
+        // Header Row
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#1b3b22';
+        ctx.font = "bold 22px -apple-system, sans-serif";
+        ctx.fillText("🌊  Campaign Victory Bucket", mainCardX + 28, mainCardY + 42);
+
+        // Percentage badge on top right
+        ctx.fillStyle = '#e8f5e9';
+        drawCanvasRoundRect(ctx, mainCardX + mainCardW - 160, mainCardY + 24, 132, 34, 17, true, false);
+        ctx.strokeStyle = '#81c784';
+        ctx.lineWidth = 1.2;
+        drawCanvasRoundRect(ctx, mainCardX + mainCardW - 160, mainCardY + 24, 132, 34, 17, false, true);
+
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#2e7d32';
+        ctx.font = "bold 16px -apple-system, sans-serif";
+        ctx.fillText(progressPercentDisplay, mainCardX + mainCardW - 94, mainCardY + 41);
+
+        // --- Grand Glass Bucket Graphic ---
+        const bktX = mainCardX + 60;
+        const bktY = mainCardY + 80;
+        const bktW = 240;
+        const bktH = 340;
+
+        // Bucket Handle Arc
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(74, 124, 89, 0.4)';
+        ctx.lineWidth = 5;
+        ctx.arc(bktX + bktW / 2, bktY + 30, bktW * 0.45, Math.PI, 0);
+        ctx.stroke();
+
+        // Bucket Body (Glass background)
+        const bktGrad = ctx.createLinearGradient(bktX, bktY, bktX + bktW, bktY + bktH);
+        bktGrad.addColorStop(0, 'rgba(235, 245, 255, 0.6)');
+        bktGrad.addColorStop(1, 'rgba(215, 235, 250, 0.85)');
+        ctx.fillStyle = bktGrad;
+        drawCanvasRoundRect(ctx, bktX, bktY, bktW, bktH, { tl: 14, tr: 14, bl: 42, br: 42 }, true, false);
+
+        // Water Fill Level
+        const fillFraction = Math.max(0.04, Math.min(1.0, progressPercent / 100));
+        const waterH = Math.round(bktH * fillFraction);
+        const waterY = bktY + bktH - waterH;
+
+        ctx.save();
+        // Clip to bucket container
+        ctx.beginPath();
+        drawCanvasRoundRect(ctx, bktX, bktY, bktW, bktH, { tl: 14, tr: 14, bl: 42, br: 42 }, false, false);
+        ctx.clip();
+
+        // Water Gradient Fill (Vibrant Aqua / Emerald)
+        const waterGrad = ctx.createLinearGradient(bktX, waterY, bktX, bktY + bktH);
+        waterGrad.addColorStop(0, '#26a69a');
+        waterGrad.addColorStop(0.5, '#00897b');
+        waterGrad.addColorStop(1, '#004d40');
+        ctx.fillStyle = waterGrad;
+        ctx.fillRect(bktX, waterY, bktW, waterH);
+
+        // Wave Crest Highlight
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+        ctx.fillRect(bktX, waterY, bktW, 6);
+
+        // Water reflection / shine
+        const shineGrad = ctx.createLinearGradient(bktX, bktY, bktX + bktW * 0.35, bktY);
+        shineGrad.addColorStop(0, 'rgba(255,255,255,0.4)');
+        shineGrad.addColorStop(1, 'rgba(255,255,255,0.0)');
+        ctx.fillStyle = shineGrad;
+        ctx.fillRect(bktX, bktY, bktW * 0.35, bktH);
+
+        ctx.restore();
+
+        // Bucket Glass Outline & Rim
+        ctx.strokeStyle = '#4a7c59';
+        ctx.lineWidth = 3.5;
+        drawCanvasRoundRect(ctx, bktX, bktY, bktW, bktH, { tl: 14, tr: 14, bl: 42, br: 42 }, false, true);
+
+        // Big Percentage inside or across Bucket
+        ctx.textAlign = 'center';
+        ctx.fillStyle = waterH > bktH * 0.5 ? '#ffffff' : '#14331c';
+        ctx.font = "bold 38px -apple-system, sans-serif";
+        ctx.fillText(progressPercentDisplay, bktX + bktW / 2, bktY + bktH / 2);
+
+        // --- Target Milestone Markers (Right of Bucket) ---
+        const markX = bktX + bktW + 30;
+        const markW = 280;
+        const milestones = [
+          { pct: 100, hrs: targetHours, label: "100% Target", icon: "🏆", yOffset: 0.04 },
+          { pct: 75, hrs: (targetHours * 0.75).toFixed(0), label: "75% Milestone", icon: "⭐", yOffset: 0.28 },
+          { pct: 50, hrs: (targetHours * 0.5).toFixed(0), label: "50% Halfway", icon: "✨", yOffset: 0.52 },
+          { pct: 25, hrs: (targetHours * 0.25).toFixed(0), label: "25% Foundation", icon: "🌱", yOffset: 0.76 }
+        ];
+
+        milestones.forEach(m => {
+          const my = bktY + bktH * m.yOffset;
+          const isReached = progressPercent >= m.pct;
+
+          // Milestone Container
+          ctx.fillStyle = isReached ? '#e8f5e9' : '#f9faf7';
+          drawCanvasRoundRect(ctx, markX, my - 16, markW, 52, 12, true, false);
+          ctx.strokeStyle = isReached ? '#66bb6a' : 'rgba(0,0,0,0.08)';
+          ctx.lineWidth = isReached ? 1.8 : 1;
+          drawCanvasRoundRect(ctx, markX, my - 16, markW, 52, 12, false, true);
+
+          // Milestone Label & Value
+          ctx.textAlign = 'left';
+          ctx.fillStyle = isReached ? '#2e7d32' : '#334e38';
+          ctx.font = "bold 14.5px -apple-system, sans-serif";
+          ctx.fillText(`${m.icon}  ${m.label}`, markX + 14, my + 4);
+
+          ctx.textAlign = 'right';
+          ctx.fillStyle = isReached ? '#1b5e20' : '#14331c';
+          ctx.font = "bold 15px -apple-system, sans-serif";
+          ctx.fillText(`${m.hrs} hrs`, markX + markW - 14, my + 4);
+
+          ctx.textAlign = 'left';
+          ctx.fillStyle = '#6a8470';
+          ctx.font = "500 11.5px -apple-system, sans-serif";
+          ctx.fillText(`(~${formatDaimokuCount(Number(m.hrs), true)})`, markX + 34, my + 24);
+        });
+
+        // --- Bottom 2 Showcase Stat Cards ---
+        const statBoxY = bktY + bktH + 24;
+        const statBoxW = (mainCardW - 54) / 2;
+        const statBoxH = 100;
+
+        // Stat Box 1: Total Chanted
+        ctx.fillStyle = '#f9faf7';
+        drawCanvasRoundRect(ctx, mainCardX + 22, statBoxY, statBoxW, statBoxH, 16, true, false);
+        ctx.strokeStyle = 'rgba(0,0,0,0.07)';
+        ctx.lineWidth = 1.2;
+        drawCanvasRoundRect(ctx, mainCardX + 22, statBoxY, statBoxW, statBoxH, 16, false, true);
+
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#55705a';
+        ctx.font = "bold 13px -apple-system, sans-serif";
+        ctx.fillText("💧  DAIMOKU IN BUCKET", mainCardX + 38, statBoxY + 28);
+
+        ctx.fillStyle = '#14331c';
+        ctx.font = "bold 26px -apple-system, sans-serif";
+        ctx.fillText(`${globalHours.toFixed(1)} hrs`, mainCardX + 38, statBoxY + 62);
+
+        ctx.fillStyle = '#2e7d32';
+        ctx.font = "600 13px -apple-system, sans-serif";
+        ctx.fillText(`~${formatDaimokuCount(globalHours, true)} Daimoku`, mainCardX + 38, statBoxY + 86);
+
+        // Stat Box 2: Water Remaining
+        ctx.fillStyle = '#fff9ef';
+        drawCanvasRoundRect(ctx, mainCardX + 32 + statBoxW, statBoxY, statBoxW, statBoxH, 16, true, false);
+        ctx.strokeStyle = '#e6be78';
+        ctx.lineWidth = 1.5;
+        drawCanvasRoundRect(ctx, mainCardX + 32 + statBoxW, statBoxY, statBoxW, statBoxH, 16, false, true);
+
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#b76e1c';
+        ctx.font = "bold 13px -apple-system, sans-serif";
+        ctx.fillText("⏳  REMAINING TO FILL", mainCardX + 48 + statBoxW, statBoxY + 28);
+
+        ctx.fillStyle = '#c87a1e';
+        ctx.font = "bold 26px -apple-system, sans-serif";
+        ctx.fillText(`${remainingHours.toFixed(1)} hrs`, mainCardX + 48 + statBoxW, statBoxY + 62);
+
+        ctx.fillStyle = '#87510d';
+        ctx.font = "600 13px -apple-system, sans-serif";
+        ctx.fillText(`~${formatDaimokuCount(remainingHours, true)} Daimoku`, mainCardX + 48 + statBoxW, statBoxY + 86);
+
+        // Personal Contribution Bar
+        const pContY = statBoxY + statBoxH + 16;
+        const pContW = mainCardW - 44;
+        const pContH = 68;
+        ctx.fillStyle = 'rgba(200, 162, 101, 0.08)';
+        drawCanvasRoundRect(ctx, mainCardX + 22, pContY, pContW, pContH, 14, true, false);
+        ctx.strokeStyle = '#c8a265';
+        ctx.lineWidth = 1.2;
+        drawCanvasRoundRect(ctx, mainCardX + 22, pContY, pContW, pContH, 14, false, true);
+
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#87510d';
+        ctx.font = "bold 16px -apple-system, sans-serif";
+        ctx.fillText(`🙏 Your Personal Contribution: ${personalHours.toFixed(1)} hrs  •  ${personalPercent}% of ${userBlock} Block`, canvasW / 2, pContY + 30);
+
+        ctx.fillStyle = '#55705a';
+        ctx.font = "500 13px -apple-system, sans-serif";
+        ctx.fillText(`Every drop of Daimoku enriches our shared victory!`, canvasW / 2, pContY + 52);
+
+        // Footer Guidance Quote
+        const footerY = 1030;
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#3e5c46';
+        ctx.font = "italic 16px 'Playfair Display', Georgia, serif";
+        ctx.fillText('"Gathering even small drops creates a mighty ocean of victory."', canvasW / 2, footerY);
+
+        ctx.fillStyle = '#b76e1c';
+        ctx.font = "bold 13px -apple-system, sans-serif";
+        ctx.fillText("DAISAKU IKEDA", canvasW / 2, footerY + 28);
+
+        ctx.fillStyle = '#7a9682';
+        ctx.font = "600 12px -apple-system, sans-serif";
+        ctx.fillText("DAIMOKU GROW  •  SOKA GAKKAI INTERNATIONAL", canvasW / 2, footerY + 68);
+
       } else if (mode === 'leaderboard') {
         // ==========================================
-        // CARD 2: SGI BLOCKS LEADERBOARD
+        // CARD 3: SGI BLOCKS LEADERBOARD
         // ==========================================
 
         // Target Summary Line
