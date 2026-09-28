@@ -6011,17 +6011,24 @@ document.addEventListener('DOMContentLoaded', () => {
                   <input type="text" class="coord-member-name" placeholder="e.g. Mrs. Sharma / Sunday Meeting" required style="width: 100%; padding: 9px 12px; border-radius: 8px; border: var(--border); background: var(--accent-cream); color: var(--text-main); font-size: 13px; outline: none; box-sizing: border-box;">
                 </div>
                 
-                <div style="display: flex; gap: 10px; width: 100%;">
-                  <div style="flex: 1; min-width: 0;">
+                <div style="display: flex; gap: 8px; width: 100%; flex-wrap: wrap;">
+                  <div style="flex: 1; min-width: 75px;">
                     <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 4px;">
-                      Hours Chanted
+                      Hours
                     </label>
-                    <input type="number" step="0.1" min="0.1" max="500" class="coord-hours-input" placeholder="e.g. 2.5" required style="width: 100%; padding: 9px 12px; border-radius: 8px; border: var(--border); background: var(--accent-cream); color: var(--text-main); font-size: 13px; outline: none; box-sizing: border-box;">
+                    <input type="number" min="0" max="10000" class="coord-hours-input" placeholder="0" value="0" style="width: 100%; padding: 9px 10px; border-radius: 8px; border: var(--border); background: var(--accent-cream); color: var(--text-main); font-size: 13px; outline: none; box-sizing: border-box;">
                   </div>
                   
-                  <div style="flex: 1; min-width: 0;">
+                  <div style="flex: 1; min-width: 75px;">
                     <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 4px;">
-                      Date
+                      Minutes (0-59)
+                    </label>
+                    <input type="number" min="0" max="59" class="coord-minutes-input" placeholder="0" value="0" style="width: 100%; padding: 9px 10px; border-radius: 8px; border: var(--border); background: var(--accent-cream); color: var(--text-main); font-size: 13px; outline: none; box-sizing: border-box;">
+                  </div>
+                  
+                  <div style="flex: 1.2; min-width: 120px;">
+                    <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 4px;">
+                      Date (Past or Today)
                     </label>
                     <input type="date" class="coord-date-input" value="${new Date().toISOString().split('T')[0]}" max="${new Date().toISOString().split('T')[0]}" required style="width: 100%; padding: 9px 10px; border-radius: 8px; border: var(--border); background: var(--accent-cream); color: var(--text-main); font-size: 13px; outline: none; box-sizing: border-box;">
                   </div>
@@ -6042,16 +6049,25 @@ document.addEventListener('DOMContentLoaded', () => {
                   if (coordEntries.length === 0) {
                     return '<div style="font-size: 11px; color: var(--text-muted); font-style: italic; padding: 2px 0;">No on-behalf hours logged yet.</div>';
                   }
-                  return coordEntries.map(entry => `
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; background: rgba(255,255,255,0.02); border-radius: 6px; margin-bottom: 4px; font-size: 12px;">
-                      <div>
-                        <strong style="color: var(--text-main);">${entry.onBehalfOf || 'Member'}</strong>: 
-                        <span style="color: var(--primary); font-weight: 700;">${(entry.durationSeconds / 3600).toFixed(1)} hrs</span>
-                        <span style="color: var(--text-muted); font-size: 10.5px; margin-left: 6px;">(${entry.date.split('T')[0]})</span>
+                  return coordEntries.map(entry => {
+                    const totSec = Number(entry.durationSeconds) || 0;
+                    const entryHrs = Math.floor(totSec / 3600);
+                    const entryMins = Math.round((totSec % 3600) / 60);
+                    const timeFormatted = entryHrs > 0 && entryMins > 0 
+                      ? `${entryHrs}h ${entryMins}m` 
+                      : (entryHrs > 0 ? `${entryHrs} hrs` : `${entryMins} mins`);
+
+                    return `
+                      <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; background: rgba(255,255,255,0.02); border-radius: 6px; margin-bottom: 4px; font-size: 12px;">
+                        <div>
+                          <strong style="color: var(--text-main);">${entry.onBehalfOf || 'Member'}</strong>: 
+                          <span style="color: var(--primary); font-weight: 700;">${timeFormatted}</span>
+                          <span style="color: var(--text-muted); font-size: 10.5px; margin-left: 6px;">(${entry.date.split('T')[0]})</span>
+                        </div>
+                        <button class="btn-delete-coord-entry" data-id="${entry.id || ''}" data-date="${entry.date}" data-duration="${entry.durationSeconds}" data-email="${entry.userEmail}" style="background: none; border: none; color: var(--accent-danger); cursor: pointer; padding: 4px;"><i class="fa-regular fa-trash-can"></i></button>
                       </div>
-                      <button class="btn-delete-coord-entry" data-id="${entry.id || ''}" data-date="${entry.date}" data-duration="${entry.durationSeconds}" data-email="${entry.userEmail}" style="background: none; border: none; color: var(--accent-danger); cursor: pointer; padding: 4px;"><i class="fa-regular fa-trash-can"></i></button>
-                    </div>
-                  `).join('');
+                    `;
+                  }).join('');
                 })()}
               </div>
             </div>
@@ -6115,17 +6131,55 @@ document.addEventListener('DOMContentLoaded', () => {
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const campaignId = form.getAttribute('data-campaign-id');
-        const memberName = form.querySelector('.coord-member-name').value.trim();
-        const hours = parseFloat(form.querySelector('.coord-hours-input').value);
-        const date = form.querySelector('.coord-date-input').value;
+        const memberName = (form.querySelector('.coord-member-name')?.value || '').trim();
+        const hoursVal = parseFloat(form.querySelector('.coord-hours-input')?.value) || 0;
+        const minutesVal = parseFloat(form.querySelector('.coord-minutes-input')?.value) || 0;
+        const date = form.querySelector('.coord-date-input')?.value;
         const submitBtn = form.querySelector('button[type="submit"]');
 
-        if (!memberName || isNaN(hours) || hours <= 0 || !date) {
-          alert("Please fill in all fields with valid hours.");
+        // Validation 1: Member Name / Note
+        if (!memberName || memberName.length < 2) {
+          alert("Please enter the member's name or meeting note (at least 2 characters).");
           return;
         }
 
-        const durationSeconds = Math.round(hours * 3600);
+        // Validation 2: Hours cannot be negative (no 24h cap, can be > 24)
+        if (isNaN(hoursVal) || hoursVal < 0) {
+          alert("Hours cannot be negative. Please enter a valid number of hours (0 or more).");
+          return;
+        }
+
+        // Validation 3: Minutes must be between 0 and 59
+        if (isNaN(minutesVal) || minutesVal < 0 || minutesVal >= 60) {
+          alert("Minutes must be between 0 and 59. For 60 or more minutes, please convert into the Hours field.");
+          return;
+        }
+
+        // Validation 4: Total duration must be > 0
+        const totalMinutes = (hoursVal * 60) + minutesVal;
+        if (totalMinutes <= 0) {
+          alert("Please enter a total duration greater than 0 minutes.");
+          return;
+        }
+
+        // Validation 5: Date check (past dates accepted, future dates blocked)
+        if (!date) {
+          alert("Please select a date.");
+          return;
+        }
+        const chosenDate = new Date(date + 'T00:00:00');
+        const todayEnd = new Date();
+        todayEnd.setHours(23, 59, 59, 999);
+        if (chosenDate > todayEnd) {
+          alert("Future dates are not allowed. Past dates and today are acceptable.");
+          return;
+        }
+
+        const durationSeconds = Math.round(totalMinutes * 60);
+        const formattedTime = hoursVal > 0 && minutesVal > 0 
+          ? `${hoursVal}h ${minutesVal}m` 
+          : (hoursVal > 0 ? `${hoursVal} hrs` : `${minutesVal} mins`);
+
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting...';
 
@@ -6139,7 +6193,8 @@ document.addEventListener('DOMContentLoaded', () => {
             date + 'T12:00:00.000Z',
             memberName
           );
-          alert(`Logged ${hours.toFixed(1)} hours on behalf of "${memberName}" for ${currentUser.block} Block!`);
+          alert(`Logged ${formattedTime} on behalf of "${memberName}" for ${currentUser.block} Block!`);
+          form.reset();
           window.dispatchEvent(new Event('db-contributions-updated'));
         } catch (err) {
           alert("Failed to submit hours: " + err.message);
