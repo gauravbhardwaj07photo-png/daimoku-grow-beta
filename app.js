@@ -3541,68 +3541,49 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         // --- Bottom 2 Showcase Stat Cards ---
-        const statBoxY = bktY + bktH + 24;
+        const statBoxY = bktY + bktH + 28;
         const statBoxW = (mainCardW - 54) / 2;
-        const statBoxH = 100;
+        const statBoxH = 125;
 
         // Stat Box 1: Total Chanted
         ctx.fillStyle = '#f9faf7';
-        drawCanvasRoundRect(ctx, mainCardX + 22, statBoxY, statBoxW, statBoxH, 16, true, false);
+        drawCanvasRoundRect(ctx, mainCardX + 22, statBoxY, statBoxW, statBoxH, 18, true, false);
         ctx.strokeStyle = 'rgba(0,0,0,0.07)';
         ctx.lineWidth = 1.2;
-        drawCanvasRoundRect(ctx, mainCardX + 22, statBoxY, statBoxW, statBoxH, 16, false, true);
+        drawCanvasRoundRect(ctx, mainCardX + 22, statBoxY, statBoxW, statBoxH, 18, false, true);
 
         ctx.textAlign = 'left';
         ctx.fillStyle = '#55705a';
-        ctx.font = "bold 13px -apple-system, sans-serif";
-        ctx.fillText("💧  DAIMOKU IN BUCKET", mainCardX + 38, statBoxY + 28);
+        ctx.font = "bold 13.5px -apple-system, sans-serif";
+        ctx.fillText("💧  DAIMOKU IN BUCKET", mainCardX + 38, statBoxY + 34);
 
         ctx.fillStyle = '#14331c';
-        ctx.font = "bold 26px -apple-system, sans-serif";
-        ctx.fillText(`${globalHours.toFixed(1)} hrs`, mainCardX + 38, statBoxY + 62);
+        ctx.font = "bold 28px -apple-system, sans-serif";
+        ctx.fillText(`${globalHours.toFixed(1)} hrs`, mainCardX + 38, statBoxY + 74);
 
         ctx.fillStyle = '#2e7d32';
-        ctx.font = "600 13px -apple-system, sans-serif";
-        ctx.fillText(`~${formatDaimokuCount(globalHours, true)} Daimoku`, mainCardX + 38, statBoxY + 86);
+        ctx.font = "600 14px -apple-system, sans-serif";
+        ctx.fillText(`~${formatDaimokuCount(globalHours, true)} Daimoku`, mainCardX + 38, statBoxY + 102);
 
         // Stat Box 2: Water Remaining
         ctx.fillStyle = '#fff9ef';
-        drawCanvasRoundRect(ctx, mainCardX + 32 + statBoxW, statBoxY, statBoxW, statBoxH, 16, true, false);
+        drawCanvasRoundRect(ctx, mainCardX + 32 + statBoxW, statBoxY, statBoxW, statBoxH, 18, true, false);
         ctx.strokeStyle = '#e6be78';
         ctx.lineWidth = 1.5;
-        drawCanvasRoundRect(ctx, mainCardX + 32 + statBoxW, statBoxY, statBoxW, statBoxH, 16, false, true);
+        drawCanvasRoundRect(ctx, mainCardX + 32 + statBoxW, statBoxY, statBoxW, statBoxH, 18, false, true);
 
         ctx.textAlign = 'left';
         ctx.fillStyle = '#b76e1c';
-        ctx.font = "bold 13px -apple-system, sans-serif";
-        ctx.fillText("⏳  REMAINING TO FILL", mainCardX + 48 + statBoxW, statBoxY + 28);
+        ctx.font = "bold 13.5px -apple-system, sans-serif";
+        ctx.fillText("⏳  REMAINING TO FILL", mainCardX + 48 + statBoxW, statBoxY + 34);
 
         ctx.fillStyle = '#c87a1e';
-        ctx.font = "bold 26px -apple-system, sans-serif";
-        ctx.fillText(`${remainingHours.toFixed(1)} hrs`, mainCardX + 48 + statBoxW, statBoxY + 62);
+        ctx.font = "bold 28px -apple-system, sans-serif";
+        ctx.fillText(`${remainingHours.toFixed(1)} hrs`, mainCardX + 48 + statBoxW, statBoxY + 74);
 
         ctx.fillStyle = '#87510d';
-        ctx.font = "600 13px -apple-system, sans-serif";
-        ctx.fillText(`~${formatDaimokuCount(remainingHours, true)} Daimoku`, mainCardX + 48 + statBoxW, statBoxY + 86);
-
-        // Personal Contribution Bar
-        const pContY = statBoxY + statBoxH + 16;
-        const pContW = mainCardW - 44;
-        const pContH = 68;
-        ctx.fillStyle = 'rgba(200, 162, 101, 0.08)';
-        drawCanvasRoundRect(ctx, mainCardX + 22, pContY, pContW, pContH, 14, true, false);
-        ctx.strokeStyle = '#c8a265';
-        ctx.lineWidth = 1.2;
-        drawCanvasRoundRect(ctx, mainCardX + 22, pContY, pContW, pContH, 14, false, true);
-
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#87510d';
-        ctx.font = "bold 16px -apple-system, sans-serif";
-        ctx.fillText(`🙏 Your Personal Contribution: ${personalHours.toFixed(1)} hrs  •  ${personalPercent}% of ${userBlock} Block`, canvasW / 2, pContY + 30);
-
-        ctx.fillStyle = '#55705a';
-        ctx.font = "500 13px -apple-system, sans-serif";
-        ctx.fillText(`Every drop of Daimoku enriches our shared victory!`, canvasW / 2, pContY + 52);
+        ctx.font = "600 14px -apple-system, sans-serif";
+        ctx.fillText(`~${formatDaimokuCount(remainingHours, true)} Daimoku`, mainCardX + 48 + statBoxW, statBoxY + 102);
 
         // Footer Guidance Quote
         const footerY = 1030;
@@ -3649,15 +3630,15 @@ document.addEventListener('DOMContentLoaded', () => {
         // Card Header Row
         ctx.textAlign = 'left';
         ctx.fillStyle = '#1b3b22';
-        ctx.font = "bold 22px -apple-system, sans-serif";
-        ctx.fillText("📊  SGI Blocks Leaderboard", mainCardX + 28, mainCardY + 42);
+        ctx.font = "bold 23px -apple-system, sans-serif";
+        ctx.fillText("📊  SGI Blocks Leaderboard", mainCardX + 28, mainCardY + 44);
 
-        // 5 Spacious Block Rows
+        // 5 Spacious Block Rows (Expansive layout without personal box)
         const rowX = mainCardX + 22;
         const rowW = mainCardW - 44;
-        const rowH = 82;
-        const rowGap = 14;
-        const startRowY = mainCardY + 70;
+        const rowH = 100;
+        const rowGap = 18;
+        const startRowY = mainCardY + 76;
         const maxBHours = Math.max(...blockSummaries.map(b => Number(b.hours) || 0), 1);
 
         blockSummaries.forEach((b, idx) => {
@@ -3668,105 +3649,50 @@ document.addEventListener('DOMContentLoaded', () => {
           // Tile Container
           if (b.isOwn) {
             ctx.fillStyle = 'rgba(255, 248, 235, 0.9)';
-            drawCanvasRoundRect(ctx, rowX, ry, rowW, rowH, 16, true, false);
+            drawCanvasRoundRect(ctx, rowX, ry, rowW, rowH, 18, true, false);
             ctx.strokeStyle = '#d49b42';
             ctx.lineWidth = 1.8;
-            drawCanvasRoundRect(ctx, rowX, ry, rowW, rowH, 16, false, true);
+            drawCanvasRoundRect(ctx, rowX, ry, rowW, rowH, 18, false, true);
           } else {
             ctx.fillStyle = '#f9faf7';
-            drawCanvasRoundRect(ctx, rowX, ry, rowW, rowH, 16, true, false);
+            drawCanvasRoundRect(ctx, rowX, ry, rowW, rowH, 18, true, false);
             ctx.strokeStyle = 'rgba(0, 0, 0, 0.06)';
             ctx.lineWidth = 1.2;
-            drawCanvasRoundRect(ctx, rowX, ry, rowW, rowH, 16, false, true);
+            drawCanvasRoundRect(ctx, rowX, ry, rowW, rowH, 18, false, true);
           }
 
           // Dot Color Indicator
           ctx.fillStyle = b.color || '#757575';
           ctx.beginPath();
-          ctx.arc(rowX + 22, ry + 28, 7, 0, Math.PI * 2);
+          ctx.arc(rowX + 24, ry + 36, 8, 0, Math.PI * 2);
           ctx.fill();
 
           // Block Name
           ctx.textAlign = 'left';
           ctx.fillStyle = '#1b3b22';
-          ctx.font = "bold 20px -apple-system, sans-serif";
-          ctx.fillText(`${b.name || 'Block'} Block`, rowX + 38, ry + 29);
-
-          // YOUR BLOCK Badge Pill
-          if (b.isOwn) {
-            const nameWidth = ctx.measureText(`${b.name || 'Block'} Block`).width;
-            const badgeX = rowX + 38 + nameWidth + 10;
-            ctx.fillStyle = 'rgba(38, 166, 154, 0.18)';
-            drawCanvasRoundRect(ctx, badgeX, ry + 16, 92, 24, 12, true, false);
-            ctx.strokeStyle = '#26a69a';
-            ctx.lineWidth = 1;
-            drawCanvasRoundRect(ctx, badgeX, ry + 16, 92, 24, 12, false, true);
-
-            ctx.fillStyle = '#00695c';
-            ctx.font = "bold 11px -apple-system, sans-serif";
-            ctx.fillText("YOUR BLOCK", badgeX + 11, ry + 29);
-          }
+          ctx.font = "bold 22px -apple-system, sans-serif";
+          ctx.fillText(`${b.name || 'Block'} Block`, rowX + 42, ry + 37);
 
           // Hours Value (Right Aligned, Huge & Bold)
           ctx.textAlign = 'right';
           ctx.fillStyle = '#1b3b22';
-          ctx.font = "bold 22px -apple-system, sans-serif";
-          ctx.fillText(`${bHours.toFixed(1)} hrs`, rowX + rowW - 22, ry + 29);
+          ctx.font = "bold 24px -apple-system, sans-serif";
+          ctx.fillText(`${bHours.toFixed(1)} hrs`, rowX + rowW - 24, ry + 37);
 
-          // Full-width Progress Bar underneath
-          const barTrackX = rowX + 20;
-          const barTrackY = ry + 52;
-          const barTrackW = rowW - 40;
+          // Full-width Progress Bar underneath (Height 12px)
+          const barTrackX = rowX + 22;
+          const barTrackY = ry + 66;
+          const barTrackW = rowW - 44;
           const barFillW = Math.max(0, Math.min(barTrackW, Math.round((relPct / 100) * barTrackW)));
 
           ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
-          drawCanvasRoundRect(ctx, barTrackX, barTrackY, barTrackW, 10, 5, true, false);
+          drawCanvasRoundRect(ctx, barTrackX, barTrackY, barTrackW, 12, 6, true, false);
 
           if (barFillW > 0) {
             ctx.fillStyle = b.color || '#26a69a';
-            drawCanvasRoundRect(ctx, barTrackX, barTrackY, barFillW, 10, 5, true, false);
+            drawCanvasRoundRect(ctx, barTrackX, barTrackY, barFillW, 12, 6, true, false);
           }
         });
-
-        // Personal Contribution Box
-        const pContY = startRowY + 5 * (rowH + rowGap) + 12;
-        const pContH = 95;
-        ctx.fillStyle = 'rgba(200, 162, 101, 0.08)';
-        drawCanvasRoundRect(ctx, rowX, pContY, rowW, pContH, 16, true, false);
-        ctx.strokeStyle = '#c8a265';
-        ctx.lineWidth = 1.5;
-        drawCanvasRoundRect(ctx, rowX, pContY, rowW, pContH, 16, false, true);
-
-        // Top Row: Title & Value
-        ctx.textAlign = 'left';
-        ctx.fillStyle = '#87510d';
-        ctx.font = "bold 17px -apple-system, sans-serif";
-        ctx.fillText("🙏  Your Personal Contribution", rowX + 20, pContY + 30);
-
-        ctx.textAlign = 'right';
-        ctx.fillStyle = '#87510d';
-        ctx.font = "bold 22px -apple-system, sans-serif";
-        ctx.fillText(`${personalHours.toFixed(1)} hrs`, rowX + rowW - 20, pContY + 30);
-
-        // Progress Bar
-        const pBarTrackX = rowX + 20;
-        const pBarTrackY = pContY + 48;
-        const pBarTrackW = rowW - 40;
-        const pBarFillW = Math.max(0, Math.min(pBarTrackW, Math.round((personalPercent / 100) * pBarTrackW)));
-
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
-        drawCanvasRoundRect(ctx, pBarTrackX, pBarTrackY, pBarTrackW, 10, 5, true, false);
-
-        if (pBarFillW > 0) {
-          ctx.fillStyle = '#b76e1c';
-          drawCanvasRoundRect(ctx, pBarTrackX, pBarTrackY, pBarFillW, 10, 5, true, false);
-        }
-
-        // Percentage label
-        ctx.textAlign = 'right';
-        ctx.fillStyle = '#6a8470';
-        ctx.font = "500 13px -apple-system, sans-serif";
-        ctx.fillText(`(${personalPercent}% of your block's total)`, rowX + rowW - 20, pContY + 80);
 
         // Footer Guidance Quote
         const footerY = 1030;
