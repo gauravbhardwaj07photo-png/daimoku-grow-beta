@@ -222,10 +222,12 @@ function attachUserProfileListener(email) {
   userProfileUnsubscribe = db.collection('users').doc(normEmail).onSnapshot((doc) => {
     if (doc.exists) {
       const data = doc.data();
+      const isAdmin = !!(data.isAdmin === true || data.isAdmin === 'true');
+      const isCoordinator = !!(data.isCoordinator === true || data.isCoordinator === 'true' || isAdmin);
       const updatedProfile = {
         ...data,
-        isAdmin: !!data.isAdmin,
-        isCoordinator: !!(data.isCoordinator || data.isAdmin)
+        isAdmin,
+        isCoordinator
       };
       MockFirebase.auth.currentUser = updatedProfile;
       localStorage.setItem('daimoku_session_user', JSON.stringify(updatedProfile));
@@ -404,7 +406,11 @@ const MockFirebase = {
       if (saved) {
         try {
           const user = JSON.parse(saved);
-          if (user.isAdmin) user.isCoordinator = true;
+          if (user.isAdmin === true || user.isAdmin === 'true') {
+            user.isAdmin = true;
+            user.isCoordinator = true;
+          }
+          if (user.isCoordinator === 'true') user.isCoordinator = true;
           this.currentUser = user;
           return user;
         } catch (e) {
@@ -1199,12 +1205,12 @@ const MockFirebase = {
             await batch.commit();
             console.log("Admin email change completed in Firestore.");
           } else {
-            // Just update username, block, and roles on the existing document
+            // Update username, block, and roles on document (creates if doesn't exist yet)
             const userRef = db.collection('users').doc(normOld);
-            const updates = { username, block };
+            const updates = { email: normOld, username, block };
             if (isAdmin !== undefined) updates.isAdmin = !!isAdmin;
             if (assignedCoord !== undefined) updates.isCoordinator = assignedCoord;
-            await userRef.update(updates);
+            await userRef.set(updates, { merge: true });
             console.log("Admin profile update completed in Firestore (no email change).");
           }
         } catch (e) {

@@ -6042,12 +6042,13 @@ document.addEventListener('DOMContentLoaded', () => {
               <!-- Recent Coordinator Entries Table -->
               <div class="coordinator-entries-list" style="margin-top: 12px; border-top: 1px dashed rgba(255,255,255,0.08); padding-top: 8px;">
                 <span style="font-size: 10.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px;">
-                  <i class="fa-solid fa-list-check"></i> Recent On-Behalf Submissions:
+                  <i class="fa-solid fa-list-check"></i> Recent On-Behalf Submissions (${currentUser.block} Block):
                 </span>
                 ${(() => {
-                  const coordEntries = campaignContribs.filter(c => c.isCoordinatorEntry && (c.userEmail.toLowerCase() === currentUser.email.toLowerCase() || currentUser.isAdmin));
+                  const userBlock = (currentUser && currentUser.block ? currentUser.block : '').toLowerCase();
+                  const coordEntries = campaignContribs.filter(c => c.isCoordinatorEntry && (c.block || '').toLowerCase() === userBlock);
                   if (coordEntries.length === 0) {
-                    return '<div style="font-size: 11px; color: var(--text-muted); font-style: italic; padding: 2px 0;">No on-behalf hours logged yet.</div>';
+                    return `<div style="font-size: 11px; color: var(--text-muted); font-style: italic; padding: 2px 0;">No on-behalf hours logged for ${currentUser.block} Block yet.</div>`;
                   }
                   return coordEntries.map(entry => {
                     const totSec = Number(entry.durationSeconds) || 0;
@@ -6183,17 +6184,19 @@ document.addEventListener('DOMContentLoaded', () => {
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting...';
 
+        const userBlock = currentUser.block || 'Wisdom';
+
         try {
           await MockFirebase.db.addCoordinatorBulkContribution(
             currentUser.email,
             currentUser.username,
-            currentUser.block,
+            userBlock,
             campaignId,
             durationSeconds,
             date + 'T12:00:00.000Z',
             memberName
           );
-          alert(`Logged ${formattedTime} on behalf of "${memberName}" for ${currentUser.block} Block!`);
+          alert(`Logged ${formattedTime} on behalf of "${memberName}" for ${userBlock} Block!`);
           form.reset();
           window.dispatchEvent(new Event('db-contributions-updated'));
         } catch (err) {
@@ -8287,6 +8290,10 @@ document.addEventListener('DOMContentLoaded', () => {
       healUserStateFromContributions(user);
     }
     updateUI();
+    const viewCampaign = document.getElementById('view-campaign');
+    if (viewCampaign && viewCampaign.classList.contains('active')) {
+      renderCampaignDashboard();
+    }
   });
 
   // Listen for real-time campaign settings modifications
@@ -9508,6 +9515,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       
       updateUI();
+      renderCampaignDashboard();
     }
   });
 
