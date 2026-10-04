@@ -153,8 +153,11 @@ body {
 
 /* App Header */
 .app-header {
-  height: 64px;
-  padding: 0 24px;
+  height: calc(64px + env(safe-area-inset-top, 0px));
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: 0;
+  padding-left: max(20px, env(safe-area-inset-left));
+  padding-right: max(20px, env(safe-area-inset-right));
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -165,6 +168,7 @@ body {
   position: sticky;
   top: 0;
   z-index: 100;
+  box-sizing: border-box;
 }
 
 .logo {
@@ -1763,7 +1767,7 @@ body.theme-forest-dark .btn-debug-action {
 
 /* Responsive adjustments for tiny phones */
 @media (max-height: 667px) {
-  .app-header { height: 56px; }
+  .app-header { height: calc(56px + env(safe-area-inset-top, 0px)); }
   .app-nav { height: 64px; }
   .plant-card { min-height: 290px; }
   .timer-display-container { height: 90px; }
@@ -1974,13 +1978,19 @@ body.theme-forest-dark select {
   background: transparent;
   border: none;
   color: var(--text-muted);
-  font-size: 16px;
+  font-size: 17px;
   cursor: pointer;
-  padding: 6px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: color 0.2s, transform 0.1s;
+  border-radius: 8px;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 .btn-header-action:hover {
