@@ -5603,6 +5603,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const globalHours = globalSeconds / 3600;
       const targetHours = targets[selectedCampaignId] || 100;
 
+      // Trigger 1M / milestone celebration announcement if reached and not yet notified
+      if (typeof checkCampaignMilestoneNotification === 'function') {
+        checkCampaignMilestoneNotification(selectedCampaignId, globalHours);
+      }
+
       const targetDaimokuStr = formatDaimokuCount(targetHours, true);
       const globalDaimokuStr = formatDaimokuCount(globalHours, true);
       
@@ -7954,6 +7959,84 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         isCelebrationActive = false;
         showNextCelebration();
+      }
+    });
+  }
+
+  // Campaign 1 Million / Milestone Celebration Announcement Controller
+  function checkCampaignMilestoneNotification(campaignId, globalHours) {
+    if (isNaN(globalHours) || globalHours < 333) return;
+    const cid = campaignId || 'campaign-1';
+    const totalDaimoku = (globalHours * 1000000) / 333;
+    const millionsDone = Math.floor(totalDaimoku / 1000000);
+    if (millionsDone < 1) return;
+
+    for (let m = 1; m <= millionsDone; m++) {
+      const storageKey = `daimoku_milestone_${cid}_${m}M_announced`;
+      if (!localStorage.getItem(storageKey)) {
+        // Mark as seen immediately so it is ONE TIME ONLY
+        localStorage.setItem(storageKey, 'true');
+        showMilestoneAnnouncement(m);
+        break;
+      }
+    }
+  }
+
+  function showMilestoneAnnouncement(milestoneMillion) {
+    const modal = document.getElementById('campaign-milestone-modal');
+    const headline = document.getElementById('milestone-announce-headline');
+    const subtext = document.getElementById('milestone-announce-subtext');
+    if (!modal) return;
+
+    if (headline) {
+      headline.innerHTML = `
+        <div style="font-size: clamp(38px, 11vw, 48px); font-weight: 900; line-height: 1; letter-spacing: -0.5px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 60%, #b45309 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 2px 8px rgba(217, 119, 6, 0.25)); font-family: var(--font-serif);">
+          ${milestoneMillion} MILLION
+        </div>
+        <div style="font-size: 20px; font-weight: 800; letter-spacing: 1.5px; color: var(--primary); text-transform: uppercase; margin-top: 5px;">
+          DAIMOKU DONE!
+        </div>
+      `;
+    }
+    if (subtext) {
+      subtext.textContent = `Tremendous victory milestone achieved together across all blocks! Let's keep chanting towards our campaign victory goal!`;
+    }
+
+    modal.style.display = 'flex';
+    modal.classList.remove('hidden');
+
+    if (typeof startFireworks === 'function') {
+      startFireworks('legendary');
+    }
+  }
+
+  function dismissMilestoneAnnouncement() {
+    const modal = document.getElementById('campaign-milestone-modal');
+    if (modal) {
+      modal.style.display = 'none';
+      modal.classList.add('hidden');
+    }
+    if (typeof stopFireworksGracefully === 'function') {
+      stopFireworksGracefully();
+    }
+  }
+
+  const btnCloseMilestoneAnnounce = document.getElementById('btn-close-milestone-announce');
+  if (btnCloseMilestoneAnnounce) {
+    btnCloseMilestoneAnnounce.addEventListener('click', dismissMilestoneAnnouncement);
+  }
+
+  const btnIconCloseMilestone = document.getElementById('btn-icon-close-milestone');
+  if (btnIconCloseMilestone) {
+    btnIconCloseMilestone.addEventListener('click', dismissMilestoneAnnouncement);
+  }
+
+  const milestoneModalOverlay = document.getElementById('campaign-milestone-modal');
+  if (milestoneModalOverlay) {
+    milestoneModalOverlay.addEventListener('click', (e) => {
+      // Close if user taps on the dark backdrop outside the card
+      if (e.target === milestoneModalOverlay) {
+        dismissMilestoneAnnouncement();
       }
     });
   }
