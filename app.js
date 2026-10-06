@@ -534,6 +534,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
+  // Pointwise determination buttons & text helper
+  const btnAddNumberPoint = document.getElementById('btn-add-number-point');
+  const btnAddBulletPoint = document.getElementById('btn-add-bullet-point');
+  if (btnAddNumberPoint && targetText) {
+    btnAddNumberPoint.addEventListener('click', () => {
+      const val = targetText.value;
+      const lines = val.split('\n').filter(l => l.trim().length > 0);
+      const nextNum = lines.length + 1;
+      const prefix = val.endsWith('\n') || val.length === 0 ? '' : '\n';
+      targetText.value = val + prefix + `${nextNum}. `;
+      targetText.focus();
+    });
+  }
+  if (btnAddBulletPoint && targetText) {
+    btnAddBulletPoint.addEventListener('click', () => {
+      const val = targetText.value;
+      const prefix = val.endsWith('\n') || val.length === 0 ? '' : '\n';
+      targetText.value = val + prefix + '• ';
+      targetText.focus();
+    });
+  }
+
+  function escapeHTML(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
   // --- Web Audio API Gong Synthesizer ---
   function playGong() {
     const audio = document.getElementById('gong-audio');
@@ -2565,50 +2597,140 @@ document.addEventListener('DOMContentLoaded', () => {
       
       const body = section.querySelector('.history-month-body');
       
+      // Club sessions within this month BY DAY
+      const days = {};
+      const dayOrder = [];
+      
+      const now = new Date();
+      const todayYMD = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const yest = new Date(Date.now() - 86400000);
+      const yestYMD = `${yest.getFullYear()}-${String(yest.getMonth() + 1).padStart(2, '0')}-${String(yest.getDate()).padStart(2, '0')}`;
+
       group.sessions.forEach(session => {
-        const item = document.createElement('div');
-        item.className = 'log-item';
+        const sDate = new Date(session.date);
+        if (isNaN(sDate.getTime())) return;
+        const dKey = `${sDate.getFullYear()}-${String(sDate.getMonth() + 1).padStart(2, '0')}-${String(sDate.getDate()).padStart(2, '0')}`;
         
-        const sessionDate = new Date(session.date);
-        const dateString = sessionDate.toLocaleDateString(undefined, { 
-          weekday: 'short', 
-          month: 'short', 
-          day: 'numeric', 
-          hour: '2-digit', 
-          minute: '2-digit' 
-        });
+        if (!days[dKey]) {
+          days[dKey] = {
+            date: sDate,
+            key: dKey,
+            sessions: [],
+            totalDurationSeconds: 0
+          };
+          dayOrder.push(dKey);
+        }
+        days[dKey].sessions.push(session);
+        days[dKey].totalDurationSeconds += session.durationSeconds;
+      });
+      
+      // Sort days in descending order (newest day first)
+      dayOrder.sort((a, b) => b.localeCompare(a));
+      
+      dayOrder.forEach(dKey => {
+        const dayData = days[dKey];
+        // Sort sessions in that day descending by time
+        dayData.sessions.sort((a, b) => new Date(b.date) - new Date(a.date));
         
-        const durationMins = (session.durationSeconds / 60).toFixed(0);
-        const hoursText = session.durationSeconds >= 3600 ? `${Math.floor(session.durationSeconds / 3600)}h ` : '';
-        const minsText = `${durationMins % 60}m`;
-        const durationText = `${hoursText}${minsText}`;
+        const dayTotalMins = Math.round(dayData.totalDurationSeconds / 60);
+        const dayH = Math.floor(dayTotalMins / 60);
+        const dayM = dayTotalMins % 60;
+        const dayHoursText = dayH > 0 ? `${dayH}h ${dayM}m` : '';
         
-        let methodIcon = '<i class="fa-regular fa-clock" title="Stopwatch"></i>';
-        if (session.method === 'countdown') {
-          methodIcon = '<i class="fa-solid fa-hourglass-half" title="Focus Timer"></i>';
-        } else if (session.method === 'manual') {
-          methodIcon = '<i class="fa-solid fa-pen-to-square" title="Manual Log"></i>';
+        let dayTag = '';
+        if (dKey === todayYMD) {
+          dayTag = '<span style="font-size: 10px; font-weight: 700; background: var(--primary); color: #fff; padding: 2px 7px; border-radius: 10px; margin-left: 6px;">Today</span>';
+        } else if (dKey === yestYMD) {
+          dayTag = '<span style="font-size: 10px; font-weight: 600; background: rgba(0,0,0,0.06); color: var(--text-muted); padding: 2px 7px; border-radius: 10px; margin-left: 6px;">Yesterday</span>';
         }
         
-        item.innerHTML = `
-          <div class="log-info" style="flex-grow: 1;">
-            <div class="log-time-amount">${methodIcon} ${durationText} chanted</div>
-            <div class="log-date-label">${dateString}</div>
-          </div>
-          <div class="log-actions">
-            <button class="btn-delete-log" data-id="${session.id}" title="Delete"><i class="fa-regular fa-trash-can"></i></button>
-          </div>
-        `;
-        
-        // Delete Log event handler
-        item.querySelector('.btn-delete-log').addEventListener('click', async (e) => {
-          const id = e.currentTarget.getAttribute('data-id');
-          if (confirm("Are you sure you want to delete this session? This will adjust your total chanting progress.")) {
-            await deleteChantSession(id);
-          }
+        const dayLabel = dayData.date.toLocaleDateString(undefined, { 
+          weekday: 'short', 
+          month: 'short', 
+          day: 'numeric' 
         });
         
-        body.appendChild(item);
+        const dayCard = document.createElement('div');
+        dayCard.className = 'history-day-card';
+        
+        dayCard.innerHTML = `
+          <div class="history-day-header">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="day-toggle-arrow" style="font-size: 10px; color: var(--text-muted); transition: transform 0.2s;"><i class="fa-solid fa-chevron-down"></i></span>
+              <div>
+                <div style="display: flex; align-items: center;">
+                  <strong style="font-size: 13.5px; color: var(--text-main); font-weight: 700;">${dayLabel}</strong>
+                  ${dayTag}
+                </div>
+                <div style="font-size: 11px; color: var(--text-muted); margin-top: 1px;">
+                  ${dayData.sessions.length} session${dayData.sessions.length > 1 ? 's' : ''}
+                </div>
+              </div>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-size: 14.5px; font-weight: 800; color: var(--primary);">${dayTotalMins} min</div>
+              ${dayHoursText ? `<div style="font-size: 10.5px; color: var(--text-muted); font-weight: 600;">(${dayHoursText})</div>` : ''}
+            </div>
+          </div>
+          <div class="history-day-sessions" style="display: flex; flex-direction: column; gap: 6px; padding: 8px 10px;"></div>
+        `;
+        
+        const dayHeaderEl = dayCard.querySelector('.history-day-header');
+        const daySessionsEl = dayCard.querySelector('.history-day-sessions');
+        const dayArrowEl = dayCard.querySelector('.day-toggle-arrow');
+        
+        dayHeaderEl.addEventListener('click', () => {
+          const isCollapsed = daySessionsEl.style.display === 'none';
+          daySessionsEl.style.display = isCollapsed ? 'flex' : 'none';
+          dayArrowEl.style.transform = isCollapsed ? 'rotate(0deg)' : 'rotate(-90deg)';
+        });
+        
+        dayData.sessions.forEach(session => {
+          const sDate = new Date(session.date);
+          const timeString = sDate.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+          const durationMins = (session.durationSeconds / 60).toFixed(0);
+          const hoursText = session.durationSeconds >= 3600 ? `${Math.floor(session.durationSeconds / 3600)}h ` : '';
+          const minsText = `${durationMins % 60}m`;
+          const durationText = `${hoursText}${minsText}`;
+          
+          let methodIcon = '<i class="fa-regular fa-clock" title="Stopwatch"></i>';
+          if (session.method === 'countdown') {
+            methodIcon = '<i class="fa-solid fa-hourglass-half" title="Focus Timer"></i>';
+          } else if (session.method === 'manual') {
+            methodIcon = '<i class="fa-solid fa-pen-to-square" title="Manual Log"></i>';
+          }
+          
+          const sessionItem = document.createElement('div');
+          sessionItem.className = 'day-session-item';
+          
+          sessionItem.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="color: var(--primary); font-size: 13px;">${methodIcon}</span>
+              <div>
+                <span style="font-weight: 700; color: var(--text-main); font-size: 12.5px;">${durationText}</span>
+                <span style="color: var(--text-muted); font-size: 11px; margin-left: 6px;">at ${timeString}</span>
+              </div>
+            </div>
+            <button class="btn-delete-log" data-id="${session.id}" title="Delete session" style="background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 4px 6px; font-size: 12px; opacity: 0.65; transition: opacity 0.2s, color 0.2s;">
+              <i class="fa-regular fa-trash-can"></i>
+            </button>
+          `;
+          
+          const delBtn = sessionItem.querySelector('.btn-delete-log');
+          delBtn.addEventListener('mouseenter', () => { delBtn.style.color = 'var(--accent-danger)'; delBtn.style.opacity = '1'; });
+          delBtn.addEventListener('mouseleave', () => { delBtn.style.color = 'var(--text-muted)'; delBtn.style.opacity = '0.65'; });
+          delBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const id = session.id;
+            if (confirm("Are you sure you want to delete this session? This will adjust your total chanting progress.")) {
+              await deleteChantSession(id);
+            }
+          });
+          
+          daySessionsEl.appendChild(sessionItem);
+        });
+        
+        body.appendChild(dayCard);
       });
       
       logsListContainer.appendChild(section);
@@ -4231,8 +4353,8 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="edit-target-form" style="display:flex; flex-direction:column; gap:10px; width:100%; padding: 4px;">
               <!-- Goal Text -->
               <div class="form-group" style="margin-bottom:0;">
-                <label style="font-size:11px; font-weight:600; color:var(--text-muted); margin-bottom:4px; display:block;"><i class="fa-solid fa-bullseye"></i> Goal / Determination</label>
-                <input type="text" class="edit-target-text-input" value="${t.text}" style="width: 100%; border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 10px; font-size: 13.5px; background: var(--bg-card); color: var(--text-main); font-weight: 600; outline: none; box-sizing: border-box;" placeholder="e.g. Family health..." required>
+                <label style="font-size:11px; font-weight:600; color:var(--text-muted); margin-bottom:4px; display:block;"><i class="fa-solid fa-bullseye"></i> Goal / Determination (Pointwise supported)</label>
+                <textarea class="edit-target-text-input" rows="3" style="width: 100%; border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 10px; font-size: 13.5px; background: var(--bg-card); color: var(--text-main); font-weight: 500; outline: none; box-sizing: border-box; resize: vertical; min-height: 68px; line-height: 1.45; font-family: inherit;" placeholder="e.g. Family health, pointwise determinations..." required>${escapeHTML(t.text)}</textarea>
               </div>
               
               ${t.type === 'hours' ? `
@@ -4287,7 +4409,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const editInput = item.querySelector('.edit-target-text-input');
           if (editInput) {
             editInput.addEventListener('keydown', (e) => {
-              if (e.key === 'Enter') {
+              if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
                 saveBtn.click();
               } else if (e.key === 'Escape') {
                 editingTargetId = null;
@@ -4303,10 +4425,10 @@ document.addEventListener('DOMContentLoaded', () => {
           const isExpanded = expandedTargetIds.has(t.id);
           
           item.innerHTML = `
-            <div class="target-header" style="display:flex; justify-content:space-between; align-items:center; cursor:pointer; width:100%; padding: 4px 0; user-select: none;">
-              <div style="display:flex; align-items:center; gap:8px; flex:1; min-width: 0;">
-                <i class="fa-solid fa-chevron-right target-chevron" style="font-size:10px; color:var(--text-muted); transition: transform 0.2s; transform: ${isExpanded ? 'rotate(90deg)' : 'rotate(0deg)'}; flex-shrink: 0;"></i>
-                <span class="target-title" style="font-weight:600; color:var(--text-main); font-size:13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${t.text}</span>
+            <div class="target-header" style="display:flex; justify-content:space-between; align-items:flex-start; cursor:pointer; width:100%; padding: 4px 0; user-select: none;">
+              <div style="display:flex; align-items:flex-start; gap:8px; flex:1; min-width: 0;">
+                <i class="fa-solid fa-chevron-right target-chevron" style="font-size:10px; color:var(--text-muted); transition: transform 0.2s; transform: ${isExpanded ? 'rotate(90deg)' : 'rotate(0deg)'}; flex-shrink: 0; margin-top: 5px;"></i>
+                <div class="target-title" style="font-weight:600; color:var(--text-main); font-size:13.5px; white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; line-height: 1.45; flex: 1;">${escapeHTML(t.text)}</div>
               </div>
               ${t.type === 'hours' ? `
                 <span style="font-size:10.5px; font-weight:700; background:var(--primary-light); color:var(--primary); padding:2px 8px; border-radius:12px; margin-left:8px; flex-shrink:0;">${Math.min(100, Math.round((t.accumulatedSeconds / t.targetSeconds) * 100))}%</span>
@@ -4409,8 +4531,8 @@ document.addEventListener('DOMContentLoaded', () => {
               <i class="fa-solid fa-check"></i>
             </div>
           </div>
-          <div class="target-content-box">
-            <span class="target-title">${t.text}</span>
+          <div class="target-content-box" style="flex: 1; min-width: 0;">
+            <div class="target-title" style="white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; line-height: 1.45;">${escapeHTML(t.text)}</div>
             <span class="target-progress-text">${progressText}</span>
           </div>
           <button class="btn-delete-target" data-id="${t.id}" title="Delete Target"><i class="fa-regular fa-trash-can"></i></button>
@@ -8525,11 +8647,11 @@ document.addEventListener('DOMContentLoaded', () => {
         item.style.alignItems = 'center';
         
         item.innerHTML = `
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <span style="color: #4caf50; font-size: 16px;"><i class="fa-solid fa-circle-check"></i></span>
-            <div>
-              <div style="font-weight: 700; font-size: 13px; color: var(--text-main);">${escapeHTML(t.text)}</div>
-              <div style="font-size: 10.5px; color: var(--text-muted);">${hrsText}</div>
+          <div style="display: flex; align-items: flex-start; gap: 10px; flex: 1; min-width: 0; margin-right: 8px;">
+            <span style="color: #4caf50; font-size: 16px; margin-top: 2px;"><i class="fa-solid fa-circle-check"></i></span>
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-weight: 700; font-size: 13px; color: var(--text-main); white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; line-height: 1.45;">${escapeHTML(t.text)}</div>
+              <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 2px;">${hrsText}</div>
             </div>
           </div>
           <span style="font-size: 11px; font-weight: 600; color: #4caf50; background: rgba(76, 175, 80, 0.1); padding: 4px 8px; border-radius: 12px;">
@@ -9068,7 +9190,7 @@ document.addEventListener('DOMContentLoaded', () => {
           textCol.style.cssText = "display: flex; flex-direction: column; gap: 2px; text-align: left;";
           
           const txtSpan = document.createElement('span');
-          txtSpan.style.cssText = "font-size: 11.5px; font-weight: 600; color: var(--text-main);";
+          txtSpan.style.cssText = "font-size: 11.5px; font-weight: 600; color: var(--text-main); white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; line-height: 1.4;";
           txtSpan.textContent = `${partner.username}: ${det.text}`;
           textCol.appendChild(txtSpan);
           
@@ -9329,7 +9451,7 @@ document.addEventListener('DOMContentLoaded', () => {
       textCol.style.cssText = "display:flex; flex-direction:column; gap:2px;";
       
       const textSpan = document.createElement('span');
-      textSpan.style.cssText = "font-size:12px; font-weight:600; color:var(--text-main); text-align:left;";
+      textSpan.style.cssText = "font-size:12px; font-weight:600; color:var(--text-main); text-align:left; white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; line-height: 1.4;";
       textSpan.textContent = item.text;
       textCol.appendChild(textSpan);
       

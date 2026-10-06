@@ -1726,10 +1726,13 @@ body.theme-forest-dark .btn-debug-action {
 }
 
 .target-title {
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 600;
   color: var(--text-main);
-  line-height: 1.3;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .target-item.completed .target-title {
@@ -3129,6 +3132,48 @@ body.theme-forest-dark select {
 .history-month-section.collapsed .history-month-header {
   border-bottom: none;
 }
+
+/* Daywise Clubbed History Styles */
+.history-day-card {
+  margin-bottom: 8px;
+  background: var(--bg-card);
+  border-radius: 12px;
+  border: var(--border);
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.history-day-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 11px 14px;
+  background: rgba(var(--primary-rgb), 0.05);
+  cursor: pointer;
+  user-select: none;
+  transition: background var(--transition-speed) ease;
+}
+
+.history-day-header:hover {
+  background: rgba(var(--primary-rgb), 0.09);
+}
+
+.day-session-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--bg-card);
+  border: 1px solid rgba(0,0,0,0.05);
+  border-radius: 8px;
+  font-size: 12px;
+  transition: background 0.15s ease;
+}
+
+.day-session-item:hover {
+  background: var(--bg-card-hover);
+}
+
 
 /* -------------------------------------------------------------
  * Garden View Switcher Subtabs & Subviews

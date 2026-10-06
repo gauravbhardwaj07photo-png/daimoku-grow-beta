@@ -27,7 +27,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <!-- Stylesheets -->
-  <link rel="stylesheet" href="styles.css?v=145">
+  <link rel="stylesheet" href="styles.css?v=146">
   
   <script>
     // Clean up any legacy debug error banners if cached
@@ -285,8 +285,19 @@
               <h2>New Determination</h2>
               <form id="add-target-form">
                 <div class="form-group">
-                  <label for="target-text">Prayer Target / Goal</label>
-                  <input type="text" id="target-text" placeholder="e.g., Family health, Career breakthrough..." required>
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                    <label for="target-text" style="margin-bottom: 0;">Prayer Target / Determinations</label>
+                    <span style="font-size: 11px; color: var(--text-muted);"><i class="fa-solid fa-list-ol"></i> Pointwise & multi-line supported</span>
+                  </div>
+                  <textarea id="target-text" rows="3" placeholder="Write your determination here...&#10;Tip: Press Enter to write pointwise (e.g.&#10;1. Family health & harmony&#10;2. Career promotion)" required style="width: 100%; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; font-size: 13.5px; background: var(--bg-card); color: var(--text-main); resize: vertical; min-height: 74px; font-family: inherit; line-height: 1.45; box-sizing: border-box;"></textarea>
+                  <div style="display: flex; gap: 8px; margin-top: 6px; margin-bottom: 4px;">
+                    <button type="button" id="btn-add-number-point" style="background: none; border: 1px dashed var(--border-color); border-radius: 6px; padding: 3px 8px; font-size: 11px; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                      <i class="fa-solid fa-list-ol"></i> Add 1. Point
+                    </button>
+                    <button type="button" id="btn-add-bullet-point" style="background: none; border: 1px dashed var(--border-color); border-radius: 6px; padding: 3px 8px; font-size: 11px; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                      <i class="fa-solid fa-list-ul"></i> Add • Bullet
+                    </button>
+                  </div>
                 </div>
                 <div class="form-group-row">
                   <div class="form-group">
@@ -1733,8 +1744,8 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js" crossorigin="anonymous"></script>
 
   <!-- Include App Logic and Scripts -->
-  <script src="plant.js?v=145"></script>
-  <script src="firebase-config.js?v=145"></script>
-  <script src="app.js?v=145"></script>
+  <script src="plant.js?v=146"></script>
+  <script src="firebase-config.js?v=146"></script>
+  <script src="app.js?v=146"></script>
 </body>
 </html>
