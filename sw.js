@@ -1,4 +1,4 @@
-const CACHE_NAME = 'daimoku-grow-v146';
+const CACHE_NAME = 'daimoku-grow-v148';
 const ASSETS = [
   './',
   './index.html',
@@ -8,6 +8,7 @@ const ASSETS = [
   './firebase-config.js',
   './manifest.json',
   './sounds/gong.mp3',
+  './sounds/silence.wav',
   './icons/lion-head.png',
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css'
 ];

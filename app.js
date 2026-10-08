@@ -2020,6 +2020,95 @@ document.addEventListener('DOMContentLoaded', () => {
     ].join(':');
   }
 
+  // --- Screen Wake Lock API to prevent phone screen from sleeping during chanting ---
+  let wakeLockSentinel = null;
+
+  async function requestWakeLock() {
+    try {
+      if ('wakeLock' in navigator && !wakeLockSentinel) {
+        wakeLockSentinel = await navigator.wakeLock.request('screen');
+        wakeLockSentinel.addEventListener('release', () => {
+          wakeLockSentinel = null;
+        });
+      }
+    } catch (err) {
+      console.warn('Wake Lock request error or not supported:', err);
+    }
+  }
+
+  function releaseWakeLock() {
+    if (wakeLockSentinel) {
+      try {
+        wakeLockSentinel.release();
+      } catch (e) {}
+      wakeLockSentinel = null;
+    }
+  }
+
+  // --- Lock Screen Timer Widget via Media Session API & Background Audio ---
+  const timerMediaAudio = document.getElementById('timer-media-audio');
+
+  function updateLockScreenMediaSession(displayTimeStr, isRunning) {
+    if (!('mediaSession' in navigator)) return;
+
+    try {
+      const blockName = (state.userProfile && state.userProfile.block) ? `${state.userProfile.block} Block` : 'Daimoku Grow';
+      const modeTitle = timerType === 'countdown' ? 'Focus Countdown' : 'Chanting Stopwatch';
+
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: `Chanting Daimoku 🦁🌸 (${displayTimeStr})`,
+        artist: `${blockName} • ${modeTitle}`,
+        album: `Current Session: ${displayTimeStr}`,
+        artwork: [
+          { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+          { src: 'icons/lion-head.png', sizes: '512x512', type: 'image/png' }
+        ]
+      });
+
+      navigator.mediaSession.playbackState = isRunning ? 'playing' : 'paused';
+
+      if ('setPositionState' in navigator.mediaSession) {
+        const totalDuration = timerType === 'countdown' ? countdownTargetSeconds : Math.max(timerSecondsElapsed, 1);
+        const currentPos = Math.min(timerSecondsElapsed, totalDuration);
+        navigator.mediaSession.setPositionState({
+          duration: totalDuration,
+          playbackRate: isRunning ? 1 : 0,
+          position: currentPos
+        });
+      }
+    } catch (e) {
+      console.warn('Error updating Lock Screen media session:', e);
+    }
+  }
+
+  function clearLockScreenMediaSession() {
+    if (!('mediaSession' in navigator)) return;
+    try {
+      navigator.mediaSession.playbackState = 'none';
+      navigator.mediaSession.metadata = null;
+    } catch (e) {}
+  }
+
+  function setupMediaSessionActionHandlers() {
+    if (!('mediaSession' in navigator)) return;
+    try {
+      navigator.mediaSession.setActionHandler('play', () => {
+        resumeTimer(false);
+      });
+      navigator.mediaSession.setActionHandler('pause', () => {
+        pauseTimer();
+      });
+      navigator.mediaSession.setActionHandler('stop', () => {
+        if (btnTimerStop) btnTimerStop.click();
+      });
+    } catch (e) {
+      console.warn('MediaSession action handler setup error:', e);
+    }
+  }
+
+  setupMediaSessionActionHandlers();
+
   // Start Chanting Timer
   if (btnTimerStart) {
     btnTimerStart.addEventListener('click', () => {
@@ -2033,7 +2122,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     timerState = 'running';
     timerStartTime = Date.now();
+    requestWakeLock();
     
+    // Play silent background audio loop and initialize Lock Screen Media Session
+    if (timerMediaAudio) {
+      timerMediaAudio.play().catch(e => console.warn('Silent audio play failed:', e));
+    }
+    const initialDisplay = timerType === 'countdown' ? formatDuration(Math.max(0, countdownTargetSeconds - timerSecondsElapsed)) : formatDuration(timerSecondsElapsed);
+    updateLockScreenMediaSession(initialDisplay, true);
+
     btnTimerStart.classList.add('hidden');
     btnTimerPause.classList.remove('hidden');
     btnTimerStop.classList.remove('hidden');
@@ -2093,6 +2190,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (dashboardMiniTimerTime) {
         dashboardMiniTimerTime.textContent = displayTimeStr;
       }
+
+      // Keep lock screen media session updated every second
+      updateLockScreenMediaSession(displayTimeStr, true);
     }, 1000);
   }
 
@@ -2104,9 +2204,17 @@ document.addEventListener('DOMContentLoaded', () => {
   function pauseTimer() {
     if (timerState !== 'running') return;
     timerState = 'paused';
+    releaseWakeLock();
     clearInterval(timerInterval);
     timerAccumulatedPaused += (Date.now() - timerStartTime);
     timerStateLabel.textContent = 'Paused';
+
+    if (timerMediaAudio) {
+      timerMediaAudio.pause();
+    }
+    const pauseDisplay = timerType === 'countdown' ? formatDuration(Math.max(0, countdownTargetSeconds - timerSecondsElapsed)) : formatDuration(timerSecondsElapsed);
+    updateLockScreenMediaSession(pauseDisplay, false);
+
     btnTimerPause.classList.add('hidden');
     btnTimerStart.classList.remove('hidden');
     
@@ -2125,6 +2233,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Stop and record
   if (btnTimerStop) {
     btnTimerStop.addEventListener('click', () => {
+      releaseWakeLock();
       playGong(); // Play gong on stop
       const duration = timerSecondsElapsed;
       if (duration >= 5) { // Only log if at least 5 seconds
@@ -2144,9 +2253,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function resetTimerControls() {
     timerState = 'idle';
+    releaseWakeLock();
     clearInterval(timerInterval);
     timerAccumulatedPaused = 0;
     
+    if (timerMediaAudio) {
+      timerMediaAudio.pause();
+      timerMediaAudio.currentTime = 0;
+    }
+    clearLockScreenMediaSession();
+
     updateAllianceChantingState(false, 0);
     
     btnTimerStart.classList.remove('hidden');
@@ -2173,6 +2289,52 @@ document.addEventListener('DOMContentLoaded', () => {
     saveActiveTimer();
     resetTimerDisplay();
   }
+
+  // Handle visibility changes to keep timer and wake lock resilient across backgrounding / phone unlock
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      if (timerState === 'running') {
+        requestWakeLock();
+        // Immediately sync elapsed time display upon returning to foreground
+        const now = Date.now();
+        const elapsedMs = now - timerStartTime + timerAccumulatedPaused;
+        if (timerType === 'stopwatch') {
+          timerSecondsElapsed = Math.floor(elapsedMs / 1000);
+          const displayTimeStr = formatDuration(timerSecondsElapsed);
+          if (timerTimeDisplay) timerTimeDisplay.textContent = displayTimeStr;
+          if (dashboardMiniTimerTime) dashboardMiniTimerTime.textContent = displayTimeStr;
+          updateLockScreenMediaSession(displayTimeStr, true);
+        } else {
+          timerSecondsElapsed = Math.floor(elapsedMs / 1000);
+          const remaining = countdownTargetSeconds - timerSecondsElapsed;
+          if (remaining <= 0) {
+            clearInterval(timerInterval);
+            releaseWakeLock();
+            playGong();
+            saveChantSession(countdownTargetSeconds, 'countdown');
+            resetTimerControls();
+            alert("Congratulations! Your chanting focus session is complete.");
+          } else {
+            const displayTimeStr = formatDuration(remaining);
+            if (timerTimeDisplay) timerTimeDisplay.textContent = displayTimeStr;
+            if (dashboardMiniTimerTime) dashboardMiniTimerTime.textContent = displayTimeStr;
+            updateLockScreenMediaSession(displayTimeStr, true);
+          }
+        }
+      }
+    } else {
+      // When page goes into background, persist current checkpoint to localStorage
+      if (timerState === 'running' || timerState === 'paused') {
+        saveActiveTimer();
+      }
+    }
+  });
+
+  window.addEventListener('pageshow', () => {
+    if (timerState === 'running') {
+      requestWakeLock();
+    }
+  });
 
   function saveChantSession(durationSeconds, method) {
     const now = new Date();
@@ -2650,13 +2812,14 @@ document.addEventListener('DOMContentLoaded', () => {
           day: 'numeric' 
         });
         
+        const isToday = (dKey === todayYMD);
         const dayCard = document.createElement('div');
         dayCard.className = 'history-day-card';
         
         dayCard.innerHTML = `
           <div class="history-day-header">
             <div style="display: flex; align-items: center; gap: 8px;">
-              <span class="day-toggle-arrow" style="font-size: 10px; color: var(--text-muted); transition: transform 0.2s;"><i class="fa-solid fa-chevron-down"></i></span>
+              <span class="day-toggle-arrow" style="font-size: 10px; color: var(--text-muted); transition: transform 0.2s; transform: ${isToday ? 'rotate(0deg)' : 'rotate(-90deg)'};"><i class="fa-solid fa-chevron-down"></i></span>
               <div>
                 <div style="display: flex; align-items: center;">
                   <strong style="font-size: 13.5px; color: var(--text-main); font-weight: 700;">${dayLabel}</strong>
@@ -2672,7 +2835,7 @@ document.addEventListener('DOMContentLoaded', () => {
               ${dayHoursText ? `<div style="font-size: 10.5px; color: var(--text-muted); font-weight: 600;">(${dayHoursText})</div>` : ''}
             </div>
           </div>
-          <div class="history-day-sessions" style="display: flex; flex-direction: column; gap: 6px; padding: 8px 10px;"></div>
+          <div class="history-day-sessions" style="display: ${isToday ? 'flex' : 'none'}; flex-direction: column; gap: 6px; padding: 8px 10px;"></div>
         `;
         
         const dayHeaderEl = dayCard.querySelector('.history-day-header');
@@ -2722,7 +2885,7 @@ document.addEventListener('DOMContentLoaded', () => {
           delBtn.addEventListener('click', async (e) => {
             e.stopPropagation();
             const id = session.id;
-            if (confirm("Are you sure you want to delete this session? This will adjust your total chanting progress.")) {
+            if (confirm(`Are you sure you want to delete this chanting session of ${durationText} at ${timeString}? This will adjust your total progress.`)) {
               await deleteChantSession(id);
             }
           });
@@ -2889,10 +3052,11 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnClearHistory) {
     btnClearHistory.addEventListener('click', async () => {
       if (confirm("WARNING: This will delete ALL your chanting history and reset your plant to a seed. Proceed?")) {
-        const currentUser = MockFirebase.auth.getCurrentUser();
-        if (currentUser) {
-          await MockFirebase.db.clearUserCampaignContributions(currentUser.email);
-        }
+        if (confirm("FINAL RECONFIRMATION: Are you completely sure you want to permanently erase all your chanting records? This cannot be undone.")) {
+          const currentUser = MockFirebase.auth.getCurrentUser();
+          if (currentUser) {
+            await MockFirebase.db.clearUserCampaignContributions(currentUser.email);
+          }
         
         state.totalSeconds = 0;
         state.health = 100;
@@ -2912,8 +3076,9 @@ document.addEventListener('DOMContentLoaded', () => {
         saveState();
         renderHistoryLogs();
       }
-    });
-  }
+    }
+  });
+}
 
   function updateHistoryAnalytics() {
     analyticSessions.textContent = state.sessions.length;
@@ -4573,7 +4738,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function deleteTarget(id) {
-    if (confirm("Are you sure you want to delete this determination? This will remove it from your records.")) {
+    const t = state.targets.find(target => target.id === id);
+    const label = t ? (t.text.length > 50 ? t.text.substring(0, 50) + '...' : t.text) : 'this determination';
+    if (confirm(`Are you sure you want to delete determination: "${label}"? This will remove it from your records.`)) {
       state.targets = state.targets.filter(t => t.id !== id);
       saveState();
       renderTargetsList();
@@ -8541,8 +8708,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  window.addEventListener('pagehide', handleTimerExitAutoSave);
+  // Only auto-save on explicit beforeunload (e.g. tab closing/refresh).
+  // Do NOT terminate timer on 'pagehide' as mobile browsers fire pagehide on screen sleep/app switch!
   window.addEventListener('beforeunload', handleTimerExitAutoSave);
+  window.addEventListener('pagehide', () => {
+    if (timerState === 'running' || timerState === 'paused') {
+      saveActiveTimer();
+    }
+  });
 
   // --- Gratitude Journal & My Victories Rendering ---
   function escapeHTML(str) {
@@ -9467,10 +9640,12 @@ document.addEventListener('DOMContentLoaded', () => {
       delBtn.style.cssText = "color:var(--text-muted); cursor:pointer; background:none; border:none;";
       delBtn.innerHTML = `<i class="fa-solid fa-trash-can"></i>`;
       delBtn.addEventListener('click', () => {
-        state.treeDeterminations.splice(idx, 1);
-        saveState();
-        syncLocalDeterminationsToAlliance();
-        renderLeavesList();
+        if (confirm(`Are you sure you want to delete determination: "${item.text}"?`)) {
+          state.treeDeterminations.splice(idx, 1);
+          saveState();
+          syncLocalDeterminationsToAlliance();
+          renderLeavesList();
+        }
       });
       row.appendChild(delBtn);
       
